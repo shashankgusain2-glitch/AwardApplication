@@ -14,8 +14,7 @@ In 10 days I will build a small working demo of a  system running two Awards tha
 //Key finding
 
 1."Moving to one platform" is five problems: people, organisations, award setup, history, and habits (old URLs and emails).
-2. Applicants are organisations, not individuals. This matters for rule 2 (conflict of interest), because two spellings of one company must be treated as the same.  like Tata Power and Tata Powe Delhi.
-3. Also adding a payment gateway as ,some Awards require entery fee
+2. Applicants are organisations, not individuals. This matters for rule 2 (conflict of interest), because two spellings of one company must be treated as the same.  like Tata Power and Tata Power Delhi.
 
 
 
