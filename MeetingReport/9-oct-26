@@ -1,0 +1,25 @@
+# Meeting Summary & Action Plan
+
+**Date:** October 9, 2026  
+**Objective:** Resolve key system rules and start the project building phase.
+
+---
+
+## 1. Key Decisions & Problem Solutions
+
+* **Partner Collaboration:** The organization collaborates with external bodies to manage and evaluate awards.
+* **Anti-Sabotage & Verification:**
+    * Submissions require a designated company email.
+    * The person submitting must provide official ID (PAN card).
+    * System uses a verification pattern similar to GST checks to block fake entries.
+* **Duplicate Entry Fix:**
+    * System strips common suffixes (`Ltd.`, `Co.`, `Inc.`).
+    * Similar names are grouped and reviewed.
+    * Verified matches merge into one official profile.
+
+---
+
+## 2. Next Tasks
+
+1. **User Flows:** Map exact steps for Applicants, Judges, Staff, and Leaders.
+2. **Roadmap:** Set development timeline and technical milestones.
