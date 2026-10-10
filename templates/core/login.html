@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Log in · {{ org.name }}{% endblock %}
+
+{% block content %}
+<div class="login-wrap">
+  <div class="card login-card">
+    <h1 style="font-size:1.6rem">Log in</h1>
+    <p class="muted">We'll email you a one-time login link. No password needed.</p>
+    <form class="stack">
+      <div class="field">
+        <label for="email">Work email</label>
+        <input id="email" type="email" placeholder="you@yourcompany.com" autocomplete="email">
+        <p class="hint">Use your organisation's email if you can. It helps us link you to your company.</p>
+      </div>
+      <button class="btn btn-primary btn-block" data-demo="Demo screen: in the real app, a login link is emailed to you.">Email me a login link</button>
+    </form>
+
+    <div class="divider">Demo: open a portal directly</div>
+    <div class="grid grid-2" style="gap:.6rem">
+      <a class="btn btn-outline btn-sm" href="{% url 'entries:dashboard' %}">Applicant</a>
+      <a class="btn btn-outline btn-sm" href="{% url 'judging:assignments' %}">Judge</a>
+      <a class="btn btn-outline btn-sm" href="{% url 'awards:staff_home' %}">Programme staff</a>
+      <a class="btn btn-outline btn-sm" href="{% url 'dashboard:overview' %}">Leadership</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

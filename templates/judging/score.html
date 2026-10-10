@@ -1,0 +1,55 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Score entry {{ assignment.entry }}{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'judging:assignments' %}">My assignments</a> / {{ assignment.entry }}</p>{% endblock %}
+{% block heading %}Entry {{ assignment.entry }}{% endblock %}
+{% block subheading %}<p class="muted small" style="margin:.25rem 0 0">{{ assignment.award }} · {{ assignment.round }} · ✓ Scores saved automatically</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="RK" name="Dr. R. Kapoor" detail="Judge" %}{% endblock %}
+
+{% block content %}
+<div class="callout callout-teal" style="margin-bottom:1.5rem">
+  <div><strong>🔒 Blind judging is on for this award</strong>Answers that reveal who applied are removed before they reach you. Please score only what you see.</div>
+</div>
+
+<div class="grid grid-2" style="align-items:start">
+  <div class="card">
+    <h2 style="font-size:1.1rem">The entry</h2>
+    {% for ans in answers %}
+      <div class="settings-row" style="display:block">
+        <p class="muted small" style="margin:0 0 .25rem">{{ ans.label }}</p>
+        {% if ans.value %}<p style="margin:0">{{ ans.value }}</p>{% else %}<span class="hidden-value">🔒 Hidden for blind judging</span>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <form class="stack">
+    <div class="card">
+      <div class="row-between" style="margin-bottom:.5rem"><h2 style="font-size:1.1rem;margin:0">Your scores</h2><span class="muted small">{{ progress }}% done</span></div>
+      <div class="progress" style="margin-bottom:1rem"><span style="width:{{ progress }}%"></span></div>
+      {% for c in scorecard %}
+        {% with cid=forloop.counter %}
+        <fieldset class="settings-row" style="display:block;border:0;padding:1rem 0;margin:0">
+          <legend class="label" style="font-weight:600">{{ c.name }} <span class="muted small">· weight {{ c.weight }}%</span></legend>
+          <div class="score-scale" style="margin:.5rem 0">
+            {% for n in scale %}
+              <label><input type="radio" name="c{{ cid }}" value="{{ n }}" {% if c.score == n %}checked{% endif %}><span>{{ n }}</span></label>
+            {% endfor %}
+          </div>
+          <textarea style="min-height:70px" placeholder="Short comment for this criterion">{{ c.comment }}</textarea>
+        </fieldset>
+        {% endwith %}
+      {% endfor %}
+    </div>
+
+    <div class="callout callout-info"><div><strong>Before you submit</strong>After you submit, any change needs a reason. The change is recorded with your name and the time.</div></div>
+
+    <div class="row-between">
+      <button class="btn btn-danger" data-demo="Demo screen: conflict declared. This entry leaves your list and staff reassign it.">Declare a conflict</button>
+      <div class="row">
+        <button class="btn btn-outline" data-demo="Saved. Come back any time before 15 Jan 2027.">Save and exit</button>
+        <button class="btn btn-primary" data-demo="Demo screen: scores not submitted yet.">Submit scores</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

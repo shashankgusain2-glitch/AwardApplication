@@ -1,6 +1,104 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <h1>Awards Platform</h1>
-  <p>One platform for every award programme. The project skeleton is running.</p>
+<section class="hero">
+  <div class="container">
+    <span class="eyebrow">National Awards 2026–27 · Entries open</span>
+    <h1>Celebrating the best of <span>Indian industry</span></h1>
+    <p>{{ org.name }} runs more than 80 awards for business excellence, energy, safety, design, innovation, sustainability and the shop floor. One place to apply, one fair process for everyone.</p>
+    <div class="row">
+      <a class="btn btn-primary" href="{% url 'core:awards' %}">Explore awards</a>
+      <a class="btn btn-outline-light" href="{% url 'core:login' %}">Start your application</a>
+    </div>
+    <div class="hero-badges">
+      {% for sector in sectors %}<span>{{ sector }}</span>{% endfor %}
+    </div>
+  </div>
+</section>
+
+<div class="container stats-band">
+  <div class="stats">
+    {% for stat in stats %}
+      <div class="stat"><strong>{{ stat.value }}</strong><span>{{ stat.label }}</span></div>
+    {% endfor %}
+  </div>
+</div>
+
+<section class="section">
+  <div class="container">
+    <div class="row-between section-head" style="max-width:none">
+      <div>
+        <span class="eyebrow">Open now</span>
+        <h2>Awards accepting entries</h2>
+      </div>
+      <a class="btn btn-outline" href="{% url 'core:awards' %}">View all awards →</a>
+    </div>
+    <div class="grid grid-3">
+      {% for award in featured %}{% include "partials/award_card.html" %}{% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt" id="how-it-works">
+  <div class="container">
+    <div class="section-head center center">
+      <span class="eyebrow">How it works</span>
+      <h2>From application to recognition in four steps</h2>
+      <p class="muted">The same simple journey for every award, whether you're a large company or a shop-floor team.</p>
+    </div>
+    <div class="grid grid-4 steps">
+      {% for step in steps %}
+        <div class="step"><h3>{{ step.title }}</h3><p class="muted small">{{ step.text }}</p></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Our promise</span>
+      <h2>Judging you can trust</h2>
+      <p class="muted">Every award on this platform keeps four rules. They are built into the system, not left to chance.</p>
+    </div>
+    <div class="grid grid-2">
+      {% for p in promises %}
+        <div class="promise">
+          <span class="promise-icon">{{ forloop.counter }}</span>
+          <div><h3>{{ p.title }}</h3><p class="small" style="margin:0">{{ p.text }}</p></div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Hall of fame</span>
+      <h2>Recent winners</h2>
+    </div>
+    <div class="grid grid-3">
+      {% for w in winners %}
+        <div class="card">
+          <span class="badge badge-results">🏅 Winner</span>
+          <h3 style="margin-top:.75rem">{{ w.org }}</h3>
+          <p class="muted small" style="margin:0">{{ w.award }} · {{ w.city }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="cta-band">
+      <div>
+        <h2>Ready to be recognised?</h2>
+        <p>Create your organisation profile once and apply to any award.</p>
+      </div>
+      <a class="btn btn-primary" href="{% url 'core:login' %}">Get started</a>
+    </div>
+  </div>
+</section>
 {% endblock %}

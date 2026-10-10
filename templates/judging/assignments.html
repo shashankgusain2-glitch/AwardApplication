@@ -1,0 +1,49 @@
+{% extends "portal_base.html" %}
+
+{% block title %}My assignments{% endblock %}
+{% block heading %}My assignments{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">2 entries need you this week. Scores save as you go, so a few minutes at a time is enough.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="RK" name=judge.name detail=judge.expertise %}{% endblock %}
+
+{% block content %}
+<div class="grid grid-4" style="margin-bottom:1.5rem">
+  <div class="kpi"><span>Assigned</span><strong>4</strong></div>
+  <div class="kpi"><span>In progress</span><strong>1</strong></div>
+  <div class="kpi"><span>Submitted</span><strong>1</strong></div>
+  <div class="kpi"><span>Next due</span><strong style="font-size:1.2rem">15 Jan 2027</strong></div>
+</div>
+
+<div class="stack">
+  {% for a in assignments %}
+    <div class="card">
+      <div class="row-between">
+        <div>
+          <div class="row" style="margin-bottom:.35rem">
+            <strong style="font-size:1.1rem">Entry {{ a.entry }}</strong>
+            <span class="badge badge-{{ a.status|slugify }}">{{ a.status }}</span>
+            {% if a.blind %}<span class="badge badge-sector">🔒 Blind</span>{% endif %}
+          </div>
+          <p class="muted small" style="margin:0">{{ a.award }} · {{ a.round }} · Due {{ a.due }}</p>
+          <p class="small" style="margin:.35rem 0 0">Applicant:
+            {% if a.blind %}<span class="hidden-value">Hidden for blind judging</span>{% else %}<strong>{{ a.applicant }}</strong>{% endif %}
+          </p>
+        </div>
+        <div class="row">
+          {% if a.status == "Awaiting response" %}
+            <button class="btn btn-success btn-sm" data-demo="Demo screen: accepted (not saved yet).">Accept</button>
+            <button class="btn btn-outline btn-sm" data-demo="Demo screen: the entry goes back to the pool for another judge.">Decline</button>
+            <button class="btn btn-danger btn-sm" data-demo="Demo screen: conflict declared. The entry is removed from your list and staff are told.">Declare conflict</button>
+          {% elif a.status == "Submitted" %}
+            <a class="btn btn-outline btn-sm" href="{% url 'judging:score' %}">View scores</a>
+          {% else %}
+            <a class="btn btn-primary btn-sm" href="{% url 'judging:score' %}">{% if a.progress %}Continue scoring{% else %}Start scoring{% endif %}</a>
+          {% endif %}
+        </div>
+      </div>
+      {% if a.progress and a.progress < 100 %}
+        <div class="progress" style="margin-top:1rem"><span style="width:{{ a.progress }}%"></span></div>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

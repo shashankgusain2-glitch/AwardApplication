@@ -1,0 +1,43 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block heading %}Welcome back, Priya{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">{{ organisation.name }}</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="PK" name="Priya Kulkarni" detail="Applicant" %}{% endblock %}
+
+{% block content %}
+<div class="callout callout-warning" style="margin-bottom:1.5rem">
+  <div><strong>Your Business Excellence application is 58% done</strong>The deadline is 30 Nov 2026. Your answers are saved automatically.</div>
+  <a class="btn btn-dark btn-sm" style="margin-left:auto;align-self:center" href="{% url 'entries:form' %}">Continue</a>
+</div>
+
+<div class="card" style="margin-bottom:1.5rem">
+  <div class="card-head"><h2>My applications</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Entry</th><th>Award</th><th>Status</th><th>Progress</th><th>Form</th><th></th></tr></thead>
+      <tbody>
+        {% for app in applications %}
+          <tr>
+            <td><strong>{{ app.id }}</strong></td>
+            <td>{{ app.award }}<br><span class="muted small">Deadline: {{ app.deadline }}</span></td>
+            <td><span class="badge badge-{{ app.status|slugify }}">{{ app.status }}</span></td>
+            <td style="min-width:120px"><div class="progress"><span style="width:{{ app.progress }}%"></span></div><span class="muted small">{{ app.progress }}%</span></td>
+            <td><span class="muted small">{{ app.form_version }}</span></td>
+            <td>
+              {% if app.status == "Draft" %}<a class="btn btn-primary btn-sm" href="{% url 'entries:form' %}">Continue</a>
+              {% else %}<a class="btn btn-outline btn-sm" href="{% url 'entries:status' %}">View</a>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted small" style="margin:1rem 0 0">Last year's entry (A-0019) still opens with the 2025 questions it was sent with.</p>
+</div>
+
+<div class="row-between" style="margin-bottom:1rem"><h2 style="margin:0;font-size:1.2rem">Awards you can enter</h2><a href="{% url 'core:awards' %}">See all →</a></div>
+<div class="grid grid-3">
+  {% for award in open_awards %}{% include "partials/award_card.html" %}{% endfor %}
+</div>
+{% endblock %}

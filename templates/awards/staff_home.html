@@ -1,0 +1,39 @@
+{% extends "portal_base.html" %}
+
+{% block title %}My awards{% endblock %}
+{% block heading %}Good morning, Meena{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Here's what needs attention today across your awards.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="MS" name="Meena Shah" detail="Programme staff" %}{% endblock %}
+
+{% block content %}
+<div class="grid grid-4" style="margin-bottom:1.5rem">
+  <div class="kpi"><span>New entries to check</span><strong>1</strong></div>
+  <div class="kpi"><span>Possible duplicates</span><strong>{{ duplicates|length }}</strong></div>
+  <div class="kpi"><span>Waiting for applicant</span><strong>1</strong></div>
+  <div class="kpi"><span>Need judges</span><strong>2</strong></div>
+</div>
+
+<div class="grid grid-2" style="margin-bottom:1.5rem">
+  {% for award in awards %}
+    <div class="card">
+      <div class="card-head">
+        <h2>{{ award.icon }} {{ award.name }}</h2>
+        <span class="badge badge-{{ award.status|slugify }}">{{ award.status }}</span>
+      </div>
+      <p class="muted small">{{ award.rounds }} round{{ award.rounds|pluralize }} · {% if award.blind %}Blind judging{% else %}Open judging{% endif %} · {{ award.judges_per_entry }} judges per entry · Closes {{ award.deadline }}</p>
+      <div class="row">
+        <a class="btn btn-outline btn-sm" href="{% url 'awards:settings' %}">Settings</a>
+        <a class="btn btn-outline btn-sm" href="{% url 'awards:form_builder' %}">Form</a>
+        <a class="btn btn-outline btn-sm" href="{% url 'awards:entries' %}">Entries</a>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Today's to-do</h2></div>
+  <div class="settings-row"><span>📥 Check eligibility of <strong>A-0060</strong> (Vertex Pharma Labs)</span><a class="btn btn-primary btn-sm" href="{% url 'awards:entries' %}">Open</a></div>
+  <div class="settings-row"><span>🔁 Review <strong>{{ duplicates|length }}</strong> possible duplicate organisations</span><a class="btn btn-primary btn-sm" href="{% url 'awards:duplicates' %}">Review</a></div>
+  <div class="settings-row"><span>⚖️ Assign judges to <strong>A-0038</strong></span><a class="btn btn-primary btn-sm" href="{% url 'awards:assign' %}">Assign</a></div>
+</div>
+{% endblock %}

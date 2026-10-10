@@ -12,7 +12,7 @@ pytest
 
 | Rule / area | Test file | Checks | Status |
 |---|---|---|---|
-| App starts | `tests/test_smoke.py` | Home page loads | ✅ Running |
+| Screens load | `tests/test_smoke.py` | Every page of the website and all four portals opens; unknown award gives 404; sector filter works | ✅ Running |
 | **R1 Blind judging** | `tests/rules/test_rule1_blind_judging.py` | Identifying answers hidden from judges; organisation not in judge data; non-blind awards show it; live Round 2 is not blind | ⏳ Planned |
 | **R2 Conflict of interest** | `tests/rules/test_rule2_conflict_of_interest.py` | Conflicted judge never suggested; staff can't force it; conflicts match merged duplicate organisations; late conflict removes and reassigns | ⏳ Planned |
 | **R3 Score audit** | `tests/rules/test_rule3_score_audit.py` | Change needs a reason; records who, when, old and new value; records can't be edited or deleted; Leader can't change scores | ⏳ Planned |

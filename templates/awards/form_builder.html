@@ -1,0 +1,46 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Form builder{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem">{{ award.name }}</p>{% endblock %}
+{% block heading %}Application form{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Build the questions applicants answer. No code needed.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="MS" name="Meena Shah" detail="Programme staff" %}{% endblock %}
+
+{% block content %}
+<div class="callout callout-warning" style="margin-bottom:1.5rem">
+  <div><strong>Version {{ award.form_version }} is published and locked</strong>64 applications use it. To change questions, create a new version. Old applications always keep the questions they were sent with.</div>
+  <button class="btn btn-dark btn-sm" style="margin-left:auto;align-self:center" data-demo="Demo screen: a new draft version would be created as a copy.">Create new version</button>
+</div>
+
+<div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(260px,1fr);align-items:start">
+  <div class="card">
+    <div class="card-head"><h2>Questions</h2><button class="btn btn-outline btn-sm" data-demo="Demo screen: this version is locked.">+ Add question</button></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Question</th><th>Type</th><th>Required</th><th>Hides in blind judging</th></tr></thead>
+        <tbody>
+          {% for q in questions %}
+            {% ifchanged q.section %}<tr><td colspan="4" style="background:var(--bg)"><strong class="small">{{ q.section }}</strong></td></tr>{% endifchanged %}
+            <tr>
+              <td>{{ q.label }}</td>
+              <td><span class="muted small">{{ q.type }}</span></td>
+              <td>{{ q.required|yesno:"Yes,No" }}</td>
+              <td>{% if q.identifying %}<span class="badge badge-sector">🔒 Hidden</span>{% else %}<span class="muted small">Shown</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Version history</h3>
+    {% for v in versions %}
+      <div class="settings-row" style="display:block">
+        <div class="row-between"><strong>{{ v.version }}</strong><span class="badge badge-{{ v.status|slugify }}">{{ v.status }}</span></div>
+        <p class="muted small" style="margin:.25rem 0 0">Published {{ v.date }} · {{ v.applications }} applications</p>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
