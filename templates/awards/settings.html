@@ -1,0 +1,54 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Award settings{% endblock %}
+{% block heading %}Award settings{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Each award works its own way. Change it here, with no developer needed.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="MS" name="Meena Shah" detail="Programme staff" %}{% endblock %}
+
+{% block content %}
+<div class="grid grid-2" style="align-items:start">
+  {% for award in awards %}
+    <form class="card">
+      <div class="card-head"><h2>{{ award.icon }} {{ award.name }}</h2><span class="badge badge-sector">{{ award.sector }}</span></div>
+
+      <div class="settings-row">
+        <div><strong>Judging rounds</strong><p class="muted small" style="margin:0">Round 2 is a live presentation for the shortlist.</p></div>
+        <div class="segmented">
+          <label><input type="radio" name="rounds-{{ award.slug }}" {% if award.rounds == 1 %}checked{% endif %}><span>1 round</span></label>
+          <label><input type="radio" name="rounds-{{ award.slug }}" {% if award.rounds == 2 %}checked{% endif %}><span>2 rounds</span></label>
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <div><strong>Blind judging</strong><p class="muted small" style="margin:0">Judges don't see who applied (Round 1).</p></div>
+        <label class="switch"><input type="checkbox" {% if award.blind %}checked{% endif %}><span class="track"></span><span class="sr-only">Blind judging</span></label>
+      </div>
+
+      <div class="settings-row">
+        <div><strong>Judges per entry</strong><p class="muted small" style="margin:0">Final score is the average of their scores.</p></div>
+        <input type="number" value="{{ award.judges_per_entry }}" min="1" max="7" style="width:80px">
+      </div>
+
+      <div class="settings-row">
+        <div><strong>Who applies</strong></div>
+        <select style="width:180px"><option {% if award.applicant_type == "Organisation" %}selected{% endif %}>Organisation</option><option {% if award.applicant_type == "Team" %}selected{% endif %}>Team</option><option>Plant / unit</option></select>
+      </div>
+
+      <div class="settings-row">
+        <div><strong>Entry fee</strong></div>
+        <label class="switch"><input type="checkbox" {% if award.fee != "No entry fee" %}checked{% endif %}><span class="track"></span><span class="sr-only">Entry fee</span></label>
+      </div>
+
+      <div class="settings-row">
+        <div><strong>Closing date</strong></div>
+        <input type="text" value="{{ award.deadline }}" style="width:180px">
+      </div>
+
+      <div class="row" style="margin-top:1rem">
+        <button class="btn btn-primary" data-demo="Demo screen: settings not saved yet.">Save settings</button>
+        <a class="btn btn-outline" href="{% url 'awards:form_builder' %}">Edit form →</a>
+      </div>
+    </form>
+  {% endfor %}
+</div>
+{% endblock %}

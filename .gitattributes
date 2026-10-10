@@ -1,0 +1,5 @@
+# Keep LF line endings so files work the same on Windows, Linux and in Docker.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary

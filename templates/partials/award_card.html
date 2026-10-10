@@ -1,0 +1,13 @@
+<a class="award-card" href="{% url 'core:award_detail' award.slug %}" style="text-decoration:none;color:inherit">
+  <div class="row-between">
+    <span class="icon" aria-hidden="true">{{ award.icon }}</span>
+    <span class="badge badge-{{ award.status|slugify }}">{{ award.status }}</span>
+  </div>
+  <span class="badge badge-sector" style="align-self:flex-start;margin-bottom:.5rem">{{ award.sector }}</span>
+  <h3>{{ award.name }}</h3>
+  <p>{{ award.summary }}</p>
+  <div class="meta">
+    <span>Deadline: <strong>{{ award.deadline }}</strong></span>
+    <span>{{ award.rounds }} round{{ award.rounds|pluralize }}{% if award.blind %} · Blind{% endif %}</span>
+  </div>
+</a>

@@ -1,0 +1,35 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Overview{% endblock %}
+{% block heading %}All awards at a glance{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">2026–27 cycle · showing 5 of 80 awards</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="AV" name="A. Verma" detail="Programme Leader" %}{% endblock %}
+
+{% block content %}
+<div class="grid grid-4" style="margin-bottom:1.5rem">
+  <div class="kpi"><span>Total entries</span><strong>{{ total_entries }}</strong></div>
+  <div class="kpi"><span>Awards open for entries</span><strong>{{ open_count }}</strong></div>
+  <div class="kpi"><span>Items needing a decision</span><strong>{{ total_flags }}</strong></div>
+  <div class="kpi"><span>Results to approve</span><strong>1</strong></div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Awards</h2><a class="btn btn-primary btn-sm" href="{% url 'dashboard:review' %}">Open review queue</a></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Award</th><th>Stage</th><th>Entries</th><th style="width:22%">Judging progress</th><th>Flags</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td><strong>{{ r.award }}</strong></td>
+            <td><span class="badge badge-{{ r.stage|slugify }}">{{ r.stage }}</span></td>
+            <td>{{ r.entries }}</td>
+            <td><div class="progress"><span style="width:{{ r.judged }}%"></span></div><span class="muted small">{{ r.judged }}%</span></td>
+            <td>{% if r.flags %}<a class="badge badge-high" href="{% url 'dashboard:review' %}" style="text-decoration:none">{{ r.flags }} to review</a>{% else %}<span class="muted small">—</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

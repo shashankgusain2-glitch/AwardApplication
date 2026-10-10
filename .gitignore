@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Environment (never commit real secrets)
+.env
+
+# Django
+db.sqlite3
+/staticfiles/
+/media/
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/

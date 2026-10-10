@@ -1,0 +1,32 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Application status{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem">Entry {{ application.id }}</p>{% endblock %}
+{% block heading %}{{ application.award }}{% endblock %}
+{% block subheading %}<p style="margin:.5rem 0 0"><span class="badge badge-{{ application.status|slugify }}">{{ application.status }}</span></p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="PK" name="Priya Kulkarni" detail="Applicant" %}{% endblock %}
+
+{% block content %}
+<div class="grid grid-2" style="align-items:start">
+  <div class="card">
+    <h2 style="font-size:1.1rem">Where your entry is</h2>
+    <ol class="timeline" style="margin-top:1rem">
+      {% for step in timeline %}
+        <li class="{{ step.state }}"><span class="dot"></span><strong>{{ step.label }}</strong><span class="muted small">{{ step.date }}</span></li>
+      {% endfor %}
+    </ol>
+  </div>
+  <div class="stack">
+    <div class="callout callout-success"><div><strong>Your entry is locked</strong>It was submitted on 2 Oct 2026 and can't be changed, unless our staff ask you for more information.</div></div>
+    <div class="card">
+      <h3>Your submission</h3>
+      <p class="muted small">Sent with form version {{ application.form_version }}. It will always open exactly as you sent it.</p>
+      <button class="btn btn-outline btn-sm" data-demo="Demo screen: view not built yet.">View submitted answers</button>
+    </div>
+    <div class="card">
+      <h3>Need help?</h3>
+      <p class="muted small">If something is wrong with your entry, contact the programme team at {{ org.email }}.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ org.name }} Awards{% endblock %}</title>
+  <meta name="description" content="{{ org.tagline }}">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+</head>
+<body>
+  <div class="demo-banner">Demo build: sample data only. {{ org.name }} is a fictional organisation.</div>
+
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="{% url 'core:home' %}">
+        <span class="brand-mark">{{ org.short_name }}</span>
+        <span>{{ org.name }}<small>Awards Platform</small></span>
+      </a>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+      {% with name=request.resolver_match.url_name %}
+      <nav class="main-nav" aria-label="Main">
+        <a href="{% url 'core:home' %}" {% if name == 'home' %}class="active"{% endif %}>Home</a>
+        <a href="{% url 'core:awards' %}" {% if name == 'awards' or name == 'award_detail' %}class="active"{% endif %}>Awards</a>
+        <a href="{% url 'core:about' %}" {% if name == 'about' %}class="active"{% endif %}>About us</a>
+        <a href="{% url 'core:home' %}#how-it-works">How it works</a>
+        <a href="{% url 'core:about' %}#contact">Contact</a>
+        <a class="btn btn-primary btn-sm" href="{% url 'core:login' %}">Log in</a>
+      </nav>
+      {% endwith %}
+    </div>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="grid grid-4">
+        <div>
+          <a class="brand" href="{% url 'core:home' %}"><span class="brand-mark">{{ org.short_name }}</span><span>{{ org.name }}</span></a>
+          <p class="small" style="margin-top:1rem">{{ org.tagline }}. Running national awards since {{ org.founded }}.</p>
+        </div>
+        <div>
+          <h4>Awards</h4>
+          <a href="{% url 'core:awards' %}">All awards</a>
+          <a href="{% url 'core:award_detail' 'business-excellence' %}">Business Excellence</a>
+          <a href="{% url 'core:award_detail' 'kaizen' %}">Kaizen Competition</a>
+        </div>
+        <div>
+          <h4>Organisation</h4>
+          <a href="{% url 'core:about' %}">About us</a>
+          <a href="{% url 'core:about' %}#how-we-judge">How we judge</a>
+          <a href="{% url 'core:about' %}#contact">Contact</a>
+        </div>
+        <div>
+          <h4>Contact</h4>
+          <p class="small">{{ org.address }}<br>{{ org.email }}<br>{{ org.phone }}</p>
+        </div>
+      </div>
+      <div class="footer-bottom row-between">
+        <span>© 2026 {{ org.name }} (fictional, for demo)</span>
+        <span>Fair · Independent · Transparent</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="{% static 'js/main.js' %}"></script>
+</body>
+</html>

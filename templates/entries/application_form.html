@@ -1,0 +1,49 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Application form{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem">Entry A-0042 · {{ award.name }}</p>{% endblock %}
+{% block heading %}{{ current.name }}{% endblock %}
+{% block subheading %}<p class="muted small" style="margin:.25rem 0 0">Form version {{ award.form_version }} · ✓ All changes saved 2 minutes ago</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="PK" name="Priya Kulkarni" detail="Applicant" %}{% endblock %}
+
+{% block content %}
+<div class="grid" style="grid-template-columns:260px minmax(0,1fr);align-items:start">
+  <aside class="card" style="position:sticky;top:1rem">
+    <p class="small" style="margin:0 0 .4rem"><strong>{{ progress }}% complete</strong></p>
+    <div class="progress" style="margin-bottom:1rem"><span style="width:{{ progress }}%"></span></div>
+    <nav class="section-nav" aria-label="Form sections">
+      {% for s in sections %}
+        <a href="#" {% if s == current %}class="active"{% endif %} data-demo="Demo screen: only this section is filled in.">
+          <span>{{ forloop.counter }}. {{ s.name }}</span>
+          <span class="muted small">{% if s.done == s.total %}✓{% else %}{{ s.done }}/{{ s.total }}{% endif %}</span>
+        </a>
+      {% endfor %}
+    </nav>
+    <button class="btn btn-outline btn-block btn-sm" style="margin-top:1rem" data-demo="Demo screen: download not built yet.">Download as PDF</button>
+  </aside>
+
+  <form class="stack">
+    {% for q in current.questions %}
+      <div class="card field">
+        <label for="q{{ forloop.counter }}">{{ forloop.counter }}. {{ q.label }} <span class="muted">*</span></label>
+        {% if q.type == "textarea" %}
+          <textarea id="q{{ forloop.counter }}" placeholder="Write your answer here…">{{ q.value }}</textarea>
+          <p class="hint">Tip: give real examples and numbers. Up to 500 words.</p>
+        {% elif q.type == "file" %}
+          <div class="file-drop">📎 <strong>{{ q.value }}</strong> uploaded · <a href="#" data-demo="Demo screen: upload not built yet.">Replace</a><br><span class="small">PDF, JPG or PNG, up to 10 MB</span></div>
+        {% else %}
+          <input id="q{{ forloop.counter }}" type="text" value="{{ q.value }}">
+        {% endif %}
+      </div>
+    {% endfor %}
+
+    <div class="row-between">
+      <a class="btn btn-outline" href="#" data-demo="Demo screen: only this section is filled in.">← Previous</a>
+      <div class="row">
+        <button class="btn btn-outline" data-demo="Saved. You can come back any time before 30 Nov 2026.">Save and exit</button>
+        <button class="btn btn-primary" data-demo="Demo screen: only this section is filled in.">Next section →</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

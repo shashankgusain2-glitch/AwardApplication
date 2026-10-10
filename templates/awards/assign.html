@@ -1,0 +1,36 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Assign judges{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'awards:entries' %}">Entries</a> / {{ entry.id }}</p>{% endblock %}
+{% block heading %}Assign judges to {{ entry.id }}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">{{ entry.org }} · Business Excellence Award · needs 3 judges</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="MS" name="Meena Shah" detail="Programme staff" %}{% endblock %}
+
+{% block content %}
+<div class="callout callout-teal" style="margin-bottom:1.5rem">
+  <div><strong>🛡️ 1 judge is not shown because of a declared conflict</strong>Judges with a conflict with this organisation are never offered, and can't be added by hand.</div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Suggested judges</h2><span class="muted small">Sorted by expertise match, then lightest workload</span></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th></th><th>Judge</th><th>Expertise</th><th>Match</th><th>Workload</th></tr></thead>
+      <tbody>
+        {% for j in judges %}
+          <tr>
+            <td><input type="checkbox" aria-label="Select {{ j.name }}" {% if forloop.counter != 3 %}checked{% endif %}></td>
+            <td><strong>{{ j.name }}</strong></td>
+            <td class="muted small">{{ j.expertise }}</td>
+            <td><span class="badge badge-{{ j.match|slugify }}">{{ j.match }}</span></td>
+            <td class="small">{{ j.load }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="row" style="margin-top:1rem">
+    <button class="btn btn-primary" data-demo="Demo screen: 3 judges assigned (not saved yet). They'd get an email.">Assign 3 judges</button>
+  </div>
+</div>
+{% endblock %}
