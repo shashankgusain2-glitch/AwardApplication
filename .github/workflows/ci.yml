@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_DB: awards
+          POSTGRES_USER: awards
+          POSTGRES_PASSWORD: awards
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U awards"
+          --health-interval 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://awards:awards@localhost:5432/awards
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - name: Check migrations are up to date
+        run: python manage.py makemigrations --check --dry-run
+      - name: Run tests
+        run: pytest

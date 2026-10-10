@@ -1,0 +1,33 @@
+# Local development only. The database password here is a local test value.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: awards
+      POSTGRES_USER: awards
+      POSTGRES_PASSWORD: awards
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U awards"]
+      interval: 5s
+      retries: 10
+
+  web:
+    build: .
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    environment:
+      DEBUG: "True"
+      DATABASE_URL: postgres://awards:awards@db:5432/awards
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
