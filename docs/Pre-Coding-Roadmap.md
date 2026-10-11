@@ -31,25 +31,41 @@ If the project is a road trip:
 
 ## The route at a glance
 
+The 10 steps are grouped into **4 stages**. Each stage answers one question and ends with something you can show.
+
+| Stage | Question it answers | Steps | Ends with | Status |
+|---|---|---|---|---|
+| **A. Discover** | What is the problem, really? | 1–2 | Problem understood and confirmed with the client | ✅ Done |
+| **B. Define** | What exactly will we build, and how will we know it worked? | 3–6 | Goals, decisions, scope and requirements written down | 🟡 In progress |
+| **C. Design** | How will it work? | 7 | Data model, architecture and screens agreed | 🟡 In progress |
+| **D. Get ready** | Are we ready to build? | 8–10 | Tasks planned, workspace ready, reviewer's go-ahead | 🟡 In progress |
+
 ```mermaid
 flowchart LR
-    S1[1. Understand<br/>the problem<br/>DONE] --> S2[2. Clarify with<br/>the client<br/>DONE]
-    S2 --> S3[3. Set measurable<br/>goals]
-    S3 --> S4[4. Compare<br/>solutions]
-    S4 --> S5[5. Prioritise<br/>and set scope]
-    S5 --> S6[6. Write<br/>requirements]
-    S6 --> S7[7. Design]
-    S7 --> S8[8. Plan<br/>the work]
-    S8 --> S9[9. Prepare<br/>to build]
-    S9 --> G{10. Coding gate<br/>sign-off}
-    G --> C[Start coding<br/>features]
+    subgraph A[Stage A: Discover - DONE]
+        S1[1. Understand<br/>the problem] --> S2[2. Clarify with<br/>the client]
+    end
+    subgraph B[Stage B: Define]
+        S3[3. Measurable<br/>goals] --> S4[4. Compare<br/>solutions] --> S5[5. Prioritise<br/>and scope] --> S6[6. Requirements]
+    end
+    subgraph C[Stage C: Design]
+        S7[7. Data model,<br/>architecture,<br/>screens]
+    end
+    subgraph D[Stage D: Get ready]
+        S8[8. Plan<br/>the work] --> S9[9. Prepare<br/>to build] --> G{10. Coding<br/>gate}
+    end
+    A --> B --> C --> D --> CODE[Start coding<br/>features]
 ```
 
 **Status key:** ✅ Done · 🟡 In progress · ⬜ Not started
 
 ---
 
-## Stage 1: Understand the problem ✅
+## Stage A: Discover ✅
+
+*Goal: understand the real problem and confirm it with the client before deciding anything.*
+
+### Step 1: Understand the problem ✅
 
 *Know what's really wrong before thinking about solutions.*
 
@@ -60,7 +76,7 @@ flowchart LR
 
 **Output:** problem summary and daily reports
 
-## Stage 2: Clarify doubts with the client ✅
+### Step 2: Clarify doubts with the client ✅
 
 *Ask before assuming.*
 
@@ -70,7 +86,15 @@ flowchart LR
 
 **Output:** meeting notes and an assumptions list
 
-## Stage 3: Set measurable goals ⬜
+**Stage A is complete when:** the problem, users and client's answers are written down. ✅
+
+---
+
+## Stage B: Define 🟡
+
+*Goal: decide exactly what to build, what not to build, and how to measure success.*
+
+### Step 3: Set measurable goals ⬜
 
 *Turn the problem into numbers, so we can tell if we succeeded.*
 
@@ -85,7 +109,7 @@ flowchart LR
 
 **Output:** goals table (add to the README)
 
-## Stage 4: Compare solutions 🟡
+### Step 4: Compare solutions 🟡
 
 *List options and judge each one on impact, effort, risk and fit.*
 
@@ -102,7 +126,7 @@ Big choices to make, each written in the [decision log](decisions/decision-log.m
 
 **Output:** one decision per choice: the options, what we picked, why, and what would change our mind
 
-## Stage 5: Prioritise and set scope ⬜
+### Step 5: Prioritise and set scope ⬜
 
 *We can't build everything, so decide what comes first.*
 
@@ -123,7 +147,7 @@ Big choices to make, each written in the [decision log](decisions/decision-log.m
 
 **Output:** a written **in-scope / out-of-scope** list, saying *why* each thing was left out (the brief asks for this)
 
-## Stage 6: Write the requirements 🟡
+### Step 6: Write the requirements 🟡
 
 *Say exactly what the system must do.*
 
@@ -137,7 +161,15 @@ Big choices to make, each written in the [decision log](decisions/decision-log.m
 
 **Output:** requirements list with "done when" for each
 
-## Stage 7: Design 🟡
+**Stage B is complete when:** goals have numbers, every big choice is in the decision log, scope says what's in and out (and why), and every requirement has a "done when".
+
+---
+
+## Stage C: Design 🟡
+
+*Goal: decide how the system will work before building it.*
+
+### Step 7: Design 🟡
 
 *Decide how it will work before building it.*
 
@@ -149,7 +181,15 @@ Big choices to make, each written in the [decision log](decisions/decision-log.m
 
 **Output:** data model diagram and rule design notes
 
-## Stage 8: Plan the work ⬜
+**Stage C is complete when:** the data model and the place each rule is enforced are drawn, and the reviewer has seen the screens.
+
+---
+
+## Stage D: Get ready 🟡
+
+*Goal: turn the design into a plan, prepare the workspace, and get the go-ahead.*
+
+### Step 8: Plan the work ⬜
 
 *Break the roadmap into projects, milestones and tasks.*
 
@@ -161,7 +201,7 @@ Big choices to make, each written in the [decision log](decisions/decision-log.m
 
 **Output:** GitHub Issues and milestones, plus a risk list
 
-## Stage 9: Prepare to build 🟡
+### Step 9: Prepare to build 🟡
 
 *Get the workshop ready.*
 
@@ -174,7 +214,7 @@ Big choices to make, each written in the [decision log](decisions/decision-log.m
 
 **Output:** a ready workspace and a test data list
 
-## Stage 10: Coding gate (sign-off) ⬜
+### Step 10: Coding gate (sign-off) ⬜
 
 *Check everything is ready before building features.*
 
@@ -186,6 +226,8 @@ Big choices to make, each written in the [decision log](decisions/decision-log.m
 - [ ] **Reviewer has seen and agreed**
 
 **Output:** a go-ahead. Feature coding starts.
+
+**Stage D is complete when:** every box in the coding gate is ticked.
 
 ---
 
@@ -225,4 +267,4 @@ Big choices to make, each written in the [decision log](decisions/decision-log.m
 
 ## The whole thing in one line
 
-**Understand the problem ✅ → clarify with the client ✅ → set measurable goals → compare solutions → prioritise → write requirements → design → plan the work → prepare → coding gate → build**
+**A. Discover ✅** (understand, clarify) → **B. Define** (goals, solutions, scope, requirements) → **C. Design** (data model, architecture, screens) → **D. Get ready** (plan, prepare, coding gate) → **build**
