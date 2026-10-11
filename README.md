@@ -72,4 +72,4 @@ See [docs/testing.md](docs/testing.md) for what the tests check and what they do
 | `tests/` | Tests, including one file per rule in `tests/rules/` |
 | `docs/` | Roadmap, user workflows, architecture, decisions, daily reports, meeting notes |
 
-Full details: [docs/Architecture.md](docs/Architecture.md). All documents: [docs/README.md](docs/README.md).
+Full details: [docs/Architecture.md](docs/Architecture.md). What every award shares, what changes per award, and where the model breaks: [docs/Abstraction.md](docs/Abstraction.md). All documents: [docs/README.md](docs/README.md).

@@ -7,6 +7,7 @@
 | [Pre-Coding-Roadmap.md](Pre-Coding-Roadmap.md) | The 10 stages before feature coding, from problem to coding gate |
 | [User-Workflows.md](User-Workflows.md) | Journey of each user through an award cycle |
 | [UI-UX.md](UI-UX.md) | Screens, design principles, where each rule shows in the UI |
+| [Abstraction.md](Abstraction.md) | What every award shares, what changes per award, and where the model breaks |
 | [Architecture.md](Architecture.md) | Folder structure, how the parts fit, technical choices |
 | [testing.md](testing.md) | What the tests check, and what they don't |
 | [Git-Workflow.md](Git-Workflow.md) | Branches, commits and pull requests |
