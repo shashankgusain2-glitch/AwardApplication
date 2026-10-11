@@ -1,37 +1,100 @@
 """Programme staff screens (sample data until the awards models are built)."""
-from django.shortcuts import render
+from django.contrib import messages
+from django.http import Http404
+from django.shortcuts import redirect, render
+from django.views.decorators.http import require_http_methods
 
 from apps.core import demo_data as d
 
 ROLE = "staff"
 
 
-def _two_awards():
-    return [d.get_award("business-excellence"), d.get_award("kaizen")]
-
-
 def staff_home(request):
     return render(request, "awards/staff_home.html", {
         "role": ROLE,
-        "awards": _two_awards(),
+        "awards": d.built_awards(request),
         "entries": d.STAFF_ENTRIES,
         "duplicates": d.DUPLICATES,
     })
 
 
+def _clean_settings(post):
+    """Check the submitted settings. Returns (settings, errors)."""
+    errors = []
+    settings = {}
+
+    try:
+        settings["rounds"] = int(post.get("rounds", ""))
+        if settings["rounds"] not in (1, 2):
+            raise ValueError
+    except ValueError:
+        errors.append("Rounds must be 1 or 2.")
+
+    settings["blind"] = post.get("blind") == "on"
+
+    try:
+        settings["judges_per_entry"] = int(post.get("judges_per_entry", ""))
+        if not 1 <= settings["judges_per_entry"] <= 7:
+            raise ValueError
+    except ValueError:
+        errors.append("Judges per entry must be a number from 1 to 7.")
+
+    settings["applicant_type"] = post.get("applicant_type", "")
+    if settings["applicant_type"] not in d.APPLICANT_TYPES:
+        errors.append("Choose who applies from the list.")
+
+    try:
+        settings["fee_amount"] = int(post.get("fee_amount") or 0)
+        if settings["fee_amount"] < 0:
+            raise ValueError
+    except ValueError:
+        errors.append("Entry fee must be 0 or more (0 means no fee).")
+
+    settings["deadline"] = post.get("deadline", "").strip()
+    if not settings["deadline"] or len(settings["deadline"]) > 40:
+        errors.append("Enter a closing date (up to 40 characters).")
+
+    return settings, errors
+
+
+@require_http_methods(["GET", "POST"])
 def settings(request):
+    if request.method == "POST":
+        slug = request.POST.get("slug")
+        award = d.get_award(slug, request)
+        if award is None or slug not in d.BUILT_AWARDS:
+            raise Http404("Award not found")
+
+        overrides = d.award_overrides(request)
+        if "reset" in request.POST:
+            overrides.pop(slug, None)
+            messages.success(request, f"{award['name']} is back to its default settings.")
+        else:
+            new_settings, errors = _clean_settings(request.POST)
+            if errors:
+                for error in errors:
+                    messages.error(request, f"{award['name']}: {error}")
+                return redirect("awards:settings")
+            overrides[slug] = new_settings
+            messages.success(request, f"Saved {award['name']}. Every screen now follows these settings.")
+        request.session[d.SESSION_KEY] = overrides
+        return redirect("awards:settings")
+
     return render(request, "awards/settings.html", {
         "role": ROLE,
-        "awards": _two_awards(),
+        "awards": d.built_awards(request),
+        "applicant_types": d.APPLICANT_TYPES,
     })
 
 
-def form_builder(request):
+def form_builder(request, slug="business-excellence"):
+    award = d.get_award(slug, request)
+    if award is None or slug not in d.BUILT_AWARDS:
+        raise Http404("Award not found")
     return render(request, "awards/form_builder.html", {
         "role": ROLE,
-        "award": d.get_award("business-excellence"),
-        "questions": d.FORM_QUESTIONS,
-        "versions": d.FORM_VERSIONS,
+        "award": award,
+        "awards": d.built_awards(request),
     })
 
 
@@ -50,8 +113,11 @@ def duplicates(request):
 
 
 def assign(request):
+    award = d.get_award("business-excellence", request)
     return render(request, "awards/assign.html", {
         "role": ROLE,
         "entry": d.STAFF_ENTRIES[3],
+        "award": award,
         "judges": d.JUDGE_POOL,
+        "needed": award["judges_per_entry"],
     })

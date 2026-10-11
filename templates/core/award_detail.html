@@ -44,6 +44,18 @@
             </tbody>
           </table>
         </div>
+        {% if details.round2_criteria %}
+          <h3 style="margin-top:1.5rem">Round 2: live presentation</h3>
+          <div class="table-wrap">
+            <table>
+              <tbody>
+                {% for c in details.round2_criteria %}
+                  <tr><td>{{ c.name }}</td><td>{{ c.weight }}%</td><td style="width:40%"><div class="progress"><span style="width:{{ c.weight }}%"></span></div></td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
         {% if award.blind %}
           <div class="callout callout-teal" style="margin-top:1rem"><div><strong>This award uses blind judging</strong>In Round 1, the jury see your answers but not your organisation's name, logo or location.</div></div>
         {% endif %}

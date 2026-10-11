@@ -4,6 +4,10 @@ Sample data for the clickable UI screens.
 Everything here is FAKE and only exists so every page can be clicked
 through before the real database models are built. Each screen will
 switch to real data as its app is built (see docs/Roadmap.md).
+
+Award settings changed on the staff "Award settings" screen are kept in
+the browser session (see award_overrides) and applied on top of AWARDS,
+so every screen follows them. This stands in for the database for now.
 """
 
 ORGANISATION = {
@@ -34,100 +38,229 @@ SECTORS = [
     "Shop-floor",
 ]
 
+APPLICANT_TYPES = ["Organisation", "Team", "Plant / unit"]
+
+# --- The two fully built demo awards ----------------------------------------
+#
+# These two show the brief's main point: one system, two awards that work
+# differently, and the differences are data (settings), not code.
+
+BUSINESS_EXCELLENCE = {
+    "slug": "business-excellence",
+    "name": "Business Excellence Award",
+    "sector": "Business Excellence",
+    "status": "Open",
+    "deadline": "30 Nov 2026",
+    "summary": "Our flagship award for organisations that show excellence across leadership, processes and results.",
+    "icon": "🏆",
+    # Settings staff can change on the Award settings screen
+    "rounds": 2,
+    "blind": True,
+    "judges_per_entry": 3,
+    "applicant_type": "Organisation",
+    "fee_amount": 0,
+    # Content
+    "form_length": "Long form: 12 indicators in 3 areas",
+    "form_version": "v2026.1",
+    "eligibility": [
+        "Operating in India for at least 3 years, with 3 years of performance data",
+        "Whole organisations or business units can apply",
+        "Open to members and non-members equally",
+        "One entry per GSTIN per cycle",
+    ],
+    "criteria": [
+        {"name": "Leadership and strategy", "weight": 30},
+        {"name": "Processes and people", "weight": 30},
+        {"name": "Results and impact", "weight": 40},
+    ],
+    "round2_criteria": [
+        {"name": "Clarity of the story", "weight": 30},
+        {"name": "Evidence behind the claims", "weight": 40},
+        {"name": "Answers to the jury", "weight": 30},
+    ],
+    "extra_faqs": [
+        {"q": "How long is the application?", "a": "12 indicators across 3 areas. Most organisations take 3–4 weeks, working on it in parts."},
+        {"q": "What happens in Round 2?", "a": "Shortlisted organisations present to the jury in person for 30 minutes, followed by questions."},
+    ],
+    "form_sections": [
+        {"name": "Organisation details", "questions": [
+            {"label": "Organisation name", "type": "text", "identifying": True, "key": "org"},
+            {"label": "Headquarters or main plant location", "type": "text", "identifying": True, "sample": "Chakan, Pune"},
+            {"label": "Number of employees", "type": "text", "identifying": False, "sample": "640"},
+        ]},
+        {"name": "Leadership and strategy", "questions": [
+            {"label": "How do leaders set direction and communicate it?", "type": "textarea", "identifying": False,
+             "sample": "Our leadership team runs a yearly strategy workshop with all plant heads, followed by monthly town halls on the shop floor."},
+            {"label": "How do you turn your strategy into yearly plans?", "type": "textarea", "identifying": False,
+             "sample": "Each goal is broken into plant-level targets, reviewed every quarter by the management committee."},
+            {"label": "How do you review progress against your strategy?", "type": "textarea", "identifying": False, "sample": ""},
+            {"label": "Upload your strategy document (PDF)", "type": "file", "identifying": False, "sample": "acme-strategy-2026.pdf"},
+        ]},
+        {"name": "Processes and people", "questions": [
+            {"label": "How do you design and improve your key processes?", "type": "textarea", "identifying": False, "sample": ""},
+            {"label": "How do you develop and engage your people?", "type": "textarea", "identifying": False, "sample": ""},
+            {"label": "How do you listen to your customers?", "type": "textarea", "identifying": False, "sample": ""},
+            {"label": "Supporting evidence (PDF)", "type": "file", "identifying": False, "sample": ""},
+        ]},
+        {"name": "Results and impact", "questions": [
+            {"label": "Customer results over the last 3 years", "type": "textarea", "identifying": False, "sample": ""},
+            {"label": "People results over the last 3 years", "type": "textarea", "identifying": False, "sample": ""},
+            {"label": "Business results over the last 3 years", "type": "textarea", "identifying": False, "sample": ""},
+            {"label": "Society and environment results", "type": "textarea", "identifying": False, "sample": ""},
+        ]},
+    ],
+    "form_versions": [
+        {"version": "v2026.1", "status": "Published (locked)", "date": "1 Sep 2026", "applications": 64},
+        {"version": "v2025.1", "status": "Archived (locked)", "date": "1 Sep 2025", "applications": 128},
+        {"version": "v2024.1", "status": "Archived (locked)", "date": "1 Sep 2024", "applications": 117},
+    ],
+}
+
+KAIZEN = {
+    "slug": "kaizen",
+    "name": "Kaizen Competition",
+    "sector": "Shop-floor",
+    "status": "Open",
+    "deadline": "15 Dec 2026",
+    "summary": "For shop-floor teams that made a small change with a big, measurable result.",
+    "icon": "⚙️",
+    # Settings staff can change on the Award settings screen
+    "rounds": 1,
+    "blind": False,
+    "judges_per_entry": 2,
+    "applicant_type": "Team",
+    "fee_amount": 0,
+    # Content
+    "form_length": "Short team form with before/after evidence",
+    "form_version": "v2026.1",
+    "eligibility": [
+        "Teams of 2 to 8 people who work on the shop floor",
+        "The improvement was finished in the last 12 months",
+        "Results measured for at least 3 months after the change",
+        "Nominated by the plant head; one entry per team per cycle",
+    ],
+    "criteria": [
+        {"name": "Problem clarity", "weight": 25},
+        {"name": "Root cause found", "weight": 25},
+        {"name": "Improvement made", "weight": 25},
+        {"name": "Result and how it is kept going", "weight": 25},
+    ],
+    "round2_criteria": [],
+    "extra_faqs": [
+        {"q": "Our team isn't good with long forms. Is that a problem?", "a": "No. The form is short and photos count as evidence. Before and after pictures often say more than words."},
+        {"q": "Can more than one team from our plant enter?", "a": "Yes. Each team enters separately, with its own improvement."},
+    ],
+    "form_sections": [
+        {"name": "Team details", "questions": [
+            {"label": "Team name", "type": "text", "identifying": True, "sample": "Line 4 Changeover Crew"},
+            {"label": "Company and plant", "type": "text", "identifying": True, "key": "org"},
+            {"label": "Team members", "type": "text", "identifying": True, "sample": "R. Patil, S. Khan, M. Joshi, A. Das"},
+        ]},
+        {"name": "The problem (before)", "questions": [
+            {"label": "What was the problem?", "type": "textarea", "identifying": False,
+             "sample": "Changeover on Line 4 took 48 minutes, and operators walked about 30 metres for each tool."},
+            {"label": "Photo before the change", "type": "file", "identifying": False, "sample": "line4-before.jpg"},
+        ]},
+        {"name": "The change", "questions": [
+            {"label": "What was the root cause?", "type": "textarea", "identifying": False,
+             "sample": "Tools were stored in a shared crib far from the line, and there was no fixed changeover sequence."},
+            {"label": "What did the team change?", "type": "textarea", "identifying": False,
+             "sample": "We built a shadow board at the line and wrote a 12-step changeover card."},
+        ]},
+        {"name": "The result (after)", "questions": [
+            {"label": "What is the result, in numbers?", "type": "textarea", "identifying": False,
+             "sample": "Changeover now takes 19 minutes (60% less), saving about 2 hours of production a week."},
+            {"label": "Photo after the change", "type": "file", "identifying": False, "sample": "line4-after.jpg"},
+            {"label": "How do you keep the improvement going?", "type": "textarea", "identifying": False,
+             "sample": "A daily 2-minute checklist, and the shadow board is audited every Friday."},
+        ]},
+    ],
+    "form_versions": [
+        {"version": "v2026.1", "status": "Published (locked)", "date": "1 Aug 2026", "applications": 41},
+        {"version": "v2025.1", "status": "Archived (locked)", "date": "1 Aug 2025", "applications": 57},
+    ],
+}
+
+# --- Other awards (listed on the website; not fully built) ------------------
+
+_DEFAULTS = {
+    "fee_amount": 0, "form_version": "v2026.1", "form_sections": [], "form_versions": [],
+    "eligibility": [], "criteria": [], "round2_criteria": [], "extra_faqs": [],
+}
+
 AWARDS = [
-    {
-        "slug": "business-excellence",
-        "name": "Business Excellence Award",
-        "sector": "Business Excellence",
-        "status": "Open",
-        "deadline": "30 Nov 2026",
-        "summary": "Our flagship award for organisations that show excellence across leadership, processes and results.",
-        "rounds": 2,
-        "blind": True,
-        "judges_per_entry": 3,
-        "fee": "No entry fee",
-        "form_length": "Long form: 12 indicators in 3 areas",
-        "applicant_type": "Organisation",
-        "form_version": "v2026.1",
-        "icon": "🏆",
-    },
-    {
-        "slug": "kaizen",
-        "name": "Kaizen Competition",
-        "sector": "Shop-floor",
-        "status": "Open",
-        "deadline": "15 Dec 2026",
-        "summary": "For shop-floor teams that made a small change with a big, measurable result.",
-        "rounds": 1,
-        "blind": False,
-        "judges_per_entry": 2,
-        "fee": "No entry fee",
-        "form_length": "Short team form with before/after evidence",
-        "applicant_type": "Team",
-        "form_version": "v2026.1",
-        "icon": "⚙️",
-    },
-    {
-        "slug": "energy-efficiency",
-        "name": "Energy Efficiency Award",
-        "sector": "Energy",
-        "status": "Closing soon",
-        "deadline": "20 Oct 2026",
-        "summary": "Recognises plants and buildings that cut energy use through smart engineering.",
-        "rounds": 2, "blind": False, "judges_per_entry": 3, "fee": "₹15,000 entry fee",
-        "form_length": "Medium form", "applicant_type": "Plant / unit", "form_version": "v2026.1", "icon": "⚡",
-    },
-    {
-        "slug": "safety-excellence",
-        "name": "Safety Excellence Award",
-        "sector": "Safety",
-        "status": "Judging",
-        "deadline": "Closed",
-        "summary": "For workplaces that keep people safe through strong systems and culture.",
-        "rounds": 2, "blind": True, "judges_per_entry": 3, "fee": "No entry fee",
-        "form_length": "Medium form", "applicant_type": "Plant / unit", "form_version": "v2026.1", "icon": "🦺",
-    },
-    {
-        "slug": "industrial-innovation",
-        "name": "Industrial Innovation Award",
-        "sector": "Innovation",
-        "status": "Open",
-        "deadline": "10 Jan 2027",
-        "summary": "Celebrates new products, processes and business models built in India.",
-        "rounds": 2, "blind": True, "judges_per_entry": 3, "fee": "No entry fee",
-        "form_length": "Medium form", "applicant_type": "Organisation", "form_version": "v2026.1", "icon": "💡",
-    },
-    {
-        "slug": "sustainability-leadership",
-        "name": "Sustainability Leadership Award",
-        "sector": "Sustainability",
-        "status": "Results",
-        "deadline": "Closed",
-        "summary": "For organisations leading on environment, community and responsible growth.",
-        "rounds": 2, "blind": False, "judges_per_entry": 3, "fee": "No entry fee",
-        "form_length": "Long form", "applicant_type": "Organisation", "form_version": "v2026.1", "icon": "🌱",
-    },
-    {
-        "slug": "design-excellence",
-        "name": "Design Excellence Award",
-        "sector": "Design",
-        "status": "Upcoming",
-        "deadline": "Opens Jan 2027",
-        "summary": "For products and spaces where good design makes life better.",
-        "rounds": 1, "blind": True, "judges_per_entry": 3, "fee": "No entry fee",
-        "form_length": "Short form with images", "applicant_type": "Organisation", "form_version": "—", "icon": "🎨",
-    },
-    {
-        "slug": "5s-workplace",
-        "name": "5S Workplace Competition",
-        "sector": "Shop-floor",
-        "status": "Upcoming",
-        "deadline": "Opens Feb 2027",
-        "summary": "For shop floors that are sorted, organised, clean and run by habit.",
-        "rounds": 1, "blind": False, "judges_per_entry": 2, "fee": "No entry fee",
-        "form_length": "Short form + on-site visit", "applicant_type": "Team", "form_version": "—", "icon": "🧹",
-    },
+    BUSINESS_EXCELLENCE,
+    KAIZEN,
+    {**_DEFAULTS,
+     "slug": "energy-efficiency", "name": "Energy Efficiency Award", "sector": "Energy",
+     "status": "Closing soon", "deadline": "20 Oct 2026", "icon": "⚡",
+     "summary": "Recognises plants and buildings that cut energy use through smart engineering.",
+     "rounds": 2, "blind": False, "judges_per_entry": 3, "applicant_type": "Plant / unit",
+     "fee_amount": 15000, "form_length": "Medium form"},
+    {**_DEFAULTS,
+     "slug": "safety-excellence", "name": "Safety Excellence Award", "sector": "Safety",
+     "status": "Judging", "deadline": "Closed", "icon": "🦺",
+     "summary": "For workplaces that keep people safe through strong systems and culture.",
+     "rounds": 2, "blind": True, "judges_per_entry": 3, "applicant_type": "Plant / unit",
+     "form_length": "Medium form"},
+    {**_DEFAULTS,
+     "slug": "industrial-innovation", "name": "Industrial Innovation Award", "sector": "Innovation",
+     "status": "Open", "deadline": "10 Jan 2027", "icon": "💡",
+     "summary": "Celebrates new products, processes and business models built in India.",
+     "rounds": 2, "blind": True, "judges_per_entry": 3, "applicant_type": "Organisation",
+     "form_length": "Medium form"},
+    {**_DEFAULTS,
+     "slug": "sustainability-leadership", "name": "Sustainability Leadership Award", "sector": "Sustainability",
+     "status": "Results", "deadline": "Closed", "icon": "🌱",
+     "summary": "For organisations leading on environment, community and responsible growth.",
+     "rounds": 2, "blind": False, "judges_per_entry": 3, "applicant_type": "Organisation",
+     "form_length": "Long form"},
+    {**_DEFAULTS,
+     "slug": "design-excellence", "name": "Design Excellence Award", "sector": "Design",
+     "status": "Upcoming", "deadline": "Opens Jan 2027", "icon": "🎨",
+     "summary": "For products and spaces where good design makes life better.",
+     "rounds": 1, "blind": True, "judges_per_entry": 3, "applicant_type": "Organisation",
+     "form_length": "Short form with images", "form_version": "—"},
+    {**_DEFAULTS,
+     "slug": "5s-workplace", "name": "5S Workplace Competition", "sector": "Shop-floor",
+     "status": "Upcoming", "deadline": "Opens Feb 2027", "icon": "🧹",
+     "summary": "For shop floors that are sorted, organised, clean and run by habit.",
+     "rounds": 1, "blind": False, "judges_per_entry": 2, "applicant_type": "Team",
+     "form_length": "Short form + on-site visit", "form_version": "—"},
 ]
+
+BUILT_AWARDS = ["business-excellence", "kaizen"]
+
+# --- Award settings: defaults + what staff changed -------------------------
+
+SESSION_KEY = "award_settings"
+EDITABLE_SETTINGS = ["rounds", "blind", "judges_per_entry", "applicant_type", "fee_amount", "deadline"]
+
+
+def award_overrides(request):
+    """Settings staff saved on the Award settings screen (kept in the session for now)."""
+    return request.session.get(SESSION_KEY, {}) if request is not None else {}
+
+
+def get_award(slug, request=None):
+    """One award with staff's saved settings applied. Returns None if not found."""
+    base = next((a for a in AWARDS if a["slug"] == slug), None)
+    if base is None:
+        return None
+    award = {**base, **award_overrides(request).get(slug, {})}
+    award["fee"] = f"₹{award['fee_amount']:,} entry fee" if award["fee_amount"] else "No entry fee"
+    return award
+
+
+def all_awards(request=None):
+    return [get_award(a["slug"], request) for a in AWARDS]
+
+
+def built_awards(request=None):
+    return [get_award(slug, request) for slug in BUILT_AWARDS]
+
+
+# --- Website content --------------------------------------------------------
 
 HOW_IT_WORKS = [
     {"title": "Register", "text": "Create your organisation profile once, with your GST number."},
@@ -149,52 +282,105 @@ PAST_WINNERS = [
     {"org": "Deccan Power Systems", "award": "Energy Efficiency Award 2025", "city": "Hyderabad"},
 ]
 
+GENERIC_ELIGIBILITY = [
+    "Operating in India for at least 3 years",
+    "Open to members and non-members equally",
+    "One entry per organisation per cycle",
+]
 
-def get_award(slug):
-    for award in AWARDS:
-        if award["slug"] == slug:
-            return award
-    return None
+GENERIC_CRITERIA = [
+    {"name": "Approach", "weight": 30},
+    {"name": "Implementation", "weight": 30},
+    {"name": "Results", "weight": 40},
+]
 
 
 def award_details(award):
-    """Extra content for an award's detail page."""
+    """Content for an award's public detail page, built from its settings."""
     steps = [
-        {"title": "Check eligibility", "text": "Confirm your organisation fits the award."},
+        {"title": "Check eligibility", "text": f"Confirm you fit the award. Applicant: {award['applicant_type']}."},
         {"title": "Submit your application", "text": f"{award['form_length']}. Save as you go and submit before the deadline."},
-        {"title": "Round 1: independent scoring", "text": f"{award['judges_per_entry']} jury members score your entry on their own."
-         + (" Judging is blind." if award["blind"] else "")},
+        {"title": "Round 1: independent scoring",
+         "text": f"{award['judges_per_entry']} jury members score each entry on their own."
+                 + (" Judging is blind: they don't see who applied." if award["blind"] else "")},
     ]
     if award["rounds"] == 2:
         steps.append({"title": "Round 2: live presentation", "text": "Shortlisted entries present to the jury in person."})
     steps.append({"title": "Results", "text": "Leadership approves the winners, then results are announced."})
+
+    timeline = [
+        {"date": "Sep 2026", "label": "Applications open"},
+        {"date": award["deadline"], "label": "Applications close"},
+        {"date": "Jan 2027", "label": "Round 1 judging"},
+    ]
+    if award["rounds"] == 2:
+        timeline.append({"date": "Feb 2027", "label": "Round 2 presentations"})
+    timeline.append({"date": "Mar 2027", "label": "Winners announced"})
+
+    faqs = [
+        {"q": "Is there an entry fee?", "a": award["fee"] + "."},
+        {"q": "Can I save and finish later?", "a": "Yes. Your form saves automatically and you can come back any time before the deadline."},
+        {"q": "Who are the jury?", "a": "Senior people from industry and academia. Each one declares their links to organisations, so no one judges an entry they are connected to."},
+    ] + award["extra_faqs"]
+
     return {
-        "eligibility": [
-            "Operating in India for at least 3 years",
-            "Open to members and non-members equally",
-            f"Applicant: {award['applicant_type']}",
-            "One entry per organisation per cycle",
-        ],
+        "eligibility": award["eligibility"] or GENERIC_ELIGIBILITY,
         "steps": steps,
-        "timeline": [
-            {"date": "1 Sep 2026", "label": "Applications open"},
-            {"date": award["deadline"], "label": "Applications close"},
-            {"date": "Jan 2027", "label": "Round 1 judging"},
-        ] + ([{"date": "Feb 2027", "label": "Round 2 presentations"}] if award["rounds"] == 2 else []) + [
-            {"date": "Mar 2027", "label": "Winners announced"},
-        ],
-        "criteria": [
-            {"name": "Leadership and strategy", "weight": 30},
-            {"name": "Processes and people", "weight": 30},
-            {"name": "Results and impact", "weight": 40},
-        ],
-        "faqs": [
-            {"q": "Is there an entry fee?", "a": award["fee"] + "."},
-            {"q": "Can I save and finish later?", "a": "Yes. Your form saves automatically and you can come back any time before the deadline."},
-            {"q": "Who are the jury?", "a": "Senior people from industry and academia. Each one declares their links to organisations, so no one judges an entry they are connected to."},
-            {"q": "Will I get feedback?", "a": "Yes. Every applicant receives a short feedback summary after results."},
-        ],
+        "timeline": timeline,
+        "criteria": award["criteria"] or GENERIC_CRITERIA,
+        "round2_criteria": award["round2_criteria"] if award["rounds"] == 2 else [],
+        "faqs": faqs,
     }
+
+
+# --- Entries (applications) ------------------------------------------------
+
+ENTRIES = {
+    "A-0042": {"award": "business-excellence", "org": "Acme Precision Components Pvt Ltd"},
+    "A-0051": {"award": "business-excellence", "org": "Shri Ganesh Polymers Ltd"},
+    "A-0038": {"award": "business-excellence", "org": "Northstar Auto Components"},
+    "K-0007": {"award": "kaizen", "org": "Acme Precision Components, Chakan plant"},
+    "K-0012": {"award": "kaizen", "org": "Ganga Textiles, Unit 3"},
+}
+
+
+def entry_answers(entry_id):
+    """Sample answers for an entry, in form order: list of sections with questions and values."""
+    entry = ENTRIES[entry_id]
+    award = get_award(entry["award"])
+    sections = []
+    for section in award["form_sections"]:
+        questions = []
+        for q in section["questions"]:
+            value = entry["org"] if q.get("key") == "org" else q.get("sample", "")
+            questions.append({**q, "value": value})
+        sections.append({"name": section["name"], "questions": questions})
+    return sections
+
+
+def answers_for_judge(entry_id, award, round_name):
+    """
+    What a judge is allowed to see.                                   [Rule 1]
+
+    In a blind award's Round 1, identifying answers are removed and file
+    names replaced HERE, before anything reaches the page. The template
+    never receives the hidden values, so they can't leak through the HTML.
+    """
+    hide = award["blind"] and round_name == "Round 1"
+    sections = []
+    file_no = 0
+    for section in entry_answers(entry_id):
+        questions = []
+        for q in section["questions"]:
+            value = q["value"]
+            if hide and q["identifying"]:
+                value = None
+            elif hide and q["type"] == "file" and value:
+                file_no += 1
+                value = f"file-{file_no}.{value.rsplit('.', 1)[-1]} (name hidden)"
+            questions.append({"label": q["label"], "type": q["type"], "value": value, "hidden": hide and q["identifying"]})
+        sections.append({"name": section["name"], "questions": questions})
+    return sections, hide
 
 
 # --- Applicant portal -------------------------------------------------------
@@ -217,26 +403,11 @@ APPLICANT_ORG = {
 
 MY_APPLICATIONS = [
     {"id": "A-0042", "award": "Business Excellence Award", "slug": "business-excellence",
-     "status": "Draft", "progress": 58, "deadline": "30 Nov 2026", "form_version": "v2026.1"},
+     "status": "Draft", "progress": 40, "deadline": "30 Nov 2026", "form_version": "v2026.1"},
     {"id": "K-0007", "award": "Kaizen Competition", "slug": "kaizen",
-     "status": "Under review", "progress": 100, "deadline": "15 Dec 2026", "form_version": "v2026.1"},
+     "status": "Submitted", "progress": 100, "deadline": "15 Dec 2026", "form_version": "v2026.1"},
     {"id": "A-0019", "award": "Business Excellence Award 2025", "slug": "business-excellence",
      "status": "Result: Finalist", "progress": 100, "deadline": "Closed", "form_version": "v2025.1"},
-]
-
-FORM_SECTIONS = [
-    {"name": "Organisation details", "done": 4, "total": 4, "questions": [
-        {"label": "Organisation name", "type": "text", "value": "Acme Precision Components Pvt Ltd", "identifying": True},
-        {"label": "Plant location", "type": "text", "value": "Chakan, Pune", "identifying": True},
-    ]},
-    {"name": "Leadership and strategy", "done": 3, "total": 4, "questions": [
-        {"label": "How do leaders set direction and communicate it?", "type": "textarea",
-         "value": "Our leadership team runs a yearly strategy workshop with all plant heads, followed by monthly town halls..."},
-        {"label": "How do you review progress against your strategy?", "type": "textarea", "value": ""},
-        {"label": "Upload your strategy document (PDF)", "type": "file", "value": "strategy-2026.pdf"},
-    ]},
-    {"name": "Processes and people", "done": 0, "total": 4, "questions": []},
-    {"name": "Results and impact", "done": 0, "total": 4, "questions": []},
 ]
 
 APPLICATION_TIMELINE = [
@@ -251,29 +422,18 @@ APPLICATION_TIMELINE = [
 JUDGE = {"name": "Dr. R. Kapoor", "expertise": "Manufacturing, Quality"}
 
 ASSIGNMENTS = [
-    {"entry": "A-0042", "award": "Business Excellence Award", "round": "Round 1", "blind": True,
-     "applicant": None, "status": "In progress", "progress": 60, "due": "15 Jan 2027"},
-    {"entry": "A-0051", "award": "Business Excellence Award", "round": "Round 1", "blind": True,
-     "applicant": None, "status": "Awaiting response", "progress": 0, "due": "15 Jan 2027"},
-    {"entry": "K-0007", "award": "Kaizen Competition", "round": "Round 1", "blind": False,
-     "applicant": "Acme Precision — Line 4 Team", "status": "Not started", "progress": 0, "due": "20 Jan 2027"},
-    {"entry": "A-0038", "award": "Business Excellence Award", "round": "Round 1", "blind": True,
-     "applicant": None, "status": "Submitted", "progress": 100, "due": "15 Jan 2027"},
+    {"entry": "A-0042", "round": "Round 1", "status": "In progress", "progress": 67, "due": "15 Jan 2027"},
+    {"entry": "K-0007", "round": "Round 1", "status": "In progress", "progress": 50, "due": "20 Jan 2027"},
+    {"entry": "A-0051", "round": "Round 1", "status": "Awaiting response", "progress": 0, "due": "15 Jan 2027"},
+    {"entry": "K-0012", "round": "Round 1", "status": "Not started", "progress": 0, "due": "20 Jan 2027"},
+    {"entry": "A-0038", "round": "Round 1", "status": "Submitted", "progress": 100, "due": "15 Jan 2027"},
 ]
 
-SCORECARD = [
-    {"name": "Leadership and strategy", "weight": 30, "score": 8, "comment": "Clear, well-communicated strategy."},
-    {"name": "Processes and people", "weight": 30, "score": 7, "comment": ""},
-    {"name": "Results and impact", "weight": 40, "score": None, "comment": ""},
-]
-
-ENTRY_ANSWERS = [
-    {"label": "Organisation name", "value": None},
-    {"label": "Plant location", "value": None},
-    {"label": "How do leaders set direction and communicate it?",
-     "value": "Our leadership team runs a yearly strategy workshop with all plant heads, followed by monthly town halls..."},
-    {"label": "Strategy document", "value": "document-1.pdf (file name anonymised)"},
-]
+# Sample scores already entered, per entry (criterion name -> score, comment)
+SAMPLE_SCORES = {
+    "A-0042": {"Leadership and strategy": (8, "Clear, well-communicated strategy."), "Processes and people": (7, "")},
+    "K-0007": {"Problem clarity": (9, "Problem measured precisely."), "Root cause found": (8, "")},
+}
 
 # --- Staff portal -----------------------------------------------------------
 
@@ -294,25 +454,11 @@ DUPLICATES = [
      "reason": "Similar name, different GSTIN", "level": "Possible"},
 ]
 
-FORM_VERSIONS = [
-    {"version": "v2026.1", "status": "Published (locked)", "date": "1 Sep 2026", "applications": 64},
-    {"version": "v2025.1", "status": "Archived (locked)", "date": "1 Sep 2025", "applications": 128},
-    {"version": "v2024.1", "status": "Archived (locked)", "date": "1 Sep 2024", "applications": 117},
-]
-
-FORM_QUESTIONS = [
-    {"section": "Organisation details", "label": "Organisation name", "type": "Short text", "required": True, "identifying": True},
-    {"section": "Organisation details", "label": "Plant location", "type": "Short text", "required": True, "identifying": True},
-    {"section": "Leadership and strategy", "label": "How do leaders set direction and communicate it?", "type": "Long text", "required": True, "identifying": False},
-    {"section": "Leadership and strategy", "label": "Upload your strategy document", "type": "File (PDF)", "required": False, "identifying": False},
-    {"section": "Results and impact", "label": "Key results over the last 3 years", "type": "Long text", "required": True, "identifying": False},
-]
-
 JUDGE_POOL = [
-    {"name": "Dr. R. Kapoor", "expertise": "Manufacturing, Quality", "load": "4 / 15", "match": "Strong"},
+    {"name": "Dr. R. Kapoor", "expertise": "Manufacturing, Quality", "load": "5 / 15", "match": "Strong"},
+    {"name": "Prof. N. Rao", "expertise": "Quality, Academia", "load": "3 / 15", "match": "Strong"},
     {"name": "Ms. A. Iyer", "expertise": "Strategy, Finance", "load": "7 / 15", "match": "Good"},
     {"name": "Mr. S. Bose", "expertise": "Operations", "load": "12 / 15", "match": "Good"},
-    {"name": "Prof. N. Rao", "expertise": "Quality, Academia", "load": "3 / 15", "match": "Strong"},
 ]
 
 # --- Leadership portal ------------------------------------------------------
@@ -327,7 +473,7 @@ LEADER_OVERVIEW = [
 
 REVIEW_QUEUE = [
     {"type": "Big score gap", "award": "Safety Excellence Award", "entry": "S-0012",
-     "detail": "Judge scores 4.1, 8.6 and 7.9 — gap of 4.5 points.", "action": "Add an extra judge"},
+     "detail": "Judge scores 4.1, 8.6 and 7.9: a gap of 4.5 points.", "action": "Add an extra judge"},
     {"type": "Tie", "award": "Safety Excellence Award", "entry": "S-0004 / S-0019",
      "detail": "Both entries average 8.20 for 3rd place.", "action": "Decide tie-break"},
     {"type": "Late conflict", "award": "Safety Excellence Award", "entry": "S-0027",

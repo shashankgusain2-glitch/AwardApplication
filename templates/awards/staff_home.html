@@ -20,11 +20,11 @@
         <h2>{{ award.icon }} {{ award.name }}</h2>
         <span class="badge badge-{{ award.status|slugify }}">{{ award.status }}</span>
       </div>
-      <p class="muted small">{{ award.rounds }} round{{ award.rounds|pluralize }} · {% if award.blind %}Blind judging{% else %}Open judging{% endif %} · {{ award.judges_per_entry }} judges per entry · Closes {{ award.deadline }}</p>
+      <p class="muted small">{{ award.rounds }} round{{ award.rounds|pluralize }} · {% if award.blind %}Blind judging{% else %}Open judging{% endif %} · {{ award.judges_per_entry }} judges per entry · {{ award.applicant_type }} · {{ award.fee }} · Closes {{ award.deadline }}</p>
       <div class="row">
         <a class="btn btn-outline btn-sm" href="{% url 'awards:settings' %}">Settings</a>
-        <a class="btn btn-outline btn-sm" href="{% url 'awards:form_builder' %}">Form</a>
-        <a class="btn btn-outline btn-sm" href="{% url 'awards:entries' %}">Entries</a>
+        <a class="btn btn-outline btn-sm" href="{% url 'awards:form_builder' award.slug %}">Form</a>
+        <a class="btn btn-outline btn-sm" href="{% url 'core:award_detail' award.slug %}">Public page</a>
       </div>
     </div>
   {% endfor %}

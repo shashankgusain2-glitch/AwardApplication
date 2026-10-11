@@ -3,22 +3,36 @@
 {% block title %}Score entry {{ assignment.entry }}{% endblock %}
 {% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'judging:assignments' %}">My assignments</a> / {{ assignment.entry }}</p>{% endblock %}
 {% block heading %}Entry {{ assignment.entry }}{% endblock %}
-{% block subheading %}<p class="muted small" style="margin:.25rem 0 0">{{ assignment.award }} · {{ assignment.round }} · ✓ Scores saved automatically</p>{% endblock %}
+{% block subheading %}
+  <p class="muted small" style="margin:.25rem 0 0">{{ award.icon }} {{ award.name }} · {{ assignment.round }} · ✓ Scores saved automatically</p>
+  {% if assignment.applicant %}<p class="small" style="margin:.25rem 0 0">Applicant: <strong>{{ assignment.applicant }}</strong></p>{% endif %}
+{% endblock %}
 {% block user %}{% include "partials/user_chip.html" with initials="RK" name="Dr. R. Kapoor" detail="Judge" %}{% endblock %}
 
 {% block content %}
-<div class="callout callout-teal" style="margin-bottom:1.5rem">
-  <div><strong>🔒 Blind judging is on for this award</strong>Answers that reveal who applied are removed before they reach you. Please score only what you see.</div>
-</div>
+{% if hidden %}
+  <div class="callout callout-teal" style="margin-bottom:1.5rem">
+    <div><strong>🔒 Blind judging is on for this award</strong>Answers that reveal who applied were removed before this page was made, and file names are hidden. Please score only what you see.</div>
+  </div>
+{% else %}
+  <div class="callout callout-info" style="margin-bottom:1.5rem">
+    <div><strong>Open judging</strong>This award doesn't use blind judging, so you can see who applied. If you know them, declare a conflict below.</div>
+  </div>
+{% endif %}
 
 <div class="grid grid-2" style="align-items:start">
   <div class="card">
     <h2 style="font-size:1.1rem">The entry</h2>
-    {% for ans in answers %}
-      <div class="settings-row" style="display:block">
-        <p class="muted small" style="margin:0 0 .25rem">{{ ans.label }}</p>
-        {% if ans.value %}<p style="margin:0">{{ ans.value }}</p>{% else %}<span class="hidden-value">🔒 Hidden for blind judging</span>{% endif %}
-      </div>
+    {% for section in sections %}
+      <p class="eyebrow" style="margin-top:1rem">{{ section.name }}</p>
+      {% for q in section.questions %}
+        <div class="settings-row" style="display:block">
+          <p class="muted small" style="margin:0 0 .25rem">{{ q.label }}</p>
+          {% if q.hidden %}<span class="hidden-value">🔒 Hidden for blind judging</span>
+          {% elif q.value %}<p style="margin:0">{% if q.type == "file" %}📎 {% endif %}{{ q.value }}</p>
+          {% else %}<p class="muted small" style="margin:0"><em>Not answered</em></p>{% endif %}
+        </div>
+      {% endfor %}
     {% endfor %}
   </div>
 
@@ -46,7 +60,7 @@
     <div class="row-between">
       <button class="btn btn-danger" data-demo="Demo screen: conflict declared. This entry leaves your list and staff reassign it.">Declare a conflict</button>
       <div class="row">
-        <button class="btn btn-outline" data-demo="Saved. Come back any time before 15 Jan 2027.">Save and exit</button>
+        <button class="btn btn-outline" data-demo="Saved. Come back any time before {{ assignment.due }}.">Save and exit</button>
         <button class="btn btn-primary" data-demo="Demo screen: scores not submitted yet.">Submit scores</button>
       </div>
     </div>
