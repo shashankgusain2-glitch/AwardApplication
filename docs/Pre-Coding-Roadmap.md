@@ -157,7 +157,7 @@ Big choices to make, each written in the [decision log](decisions/decision-log.m
 - ⬜ **User stories with acceptance criteria**, for example:
   > *As a judge on a blind award, I see entry A-0042 without the company name, so that I judge only the work.*
   > **Done when:** company name, logo and location never appear in the judge's page or data.
-- ⬜ **Shared vs per-award table:** what every award shares, what changes per award, and where the model breaks (the brief's "Abstraction" point)
+- ✅ **Shared vs per-award table:** what every award shares, what changes per award, and where the model breaks ([Abstraction.md](Abstraction.md))
 
 **Output:** requirements list with "done when" for each
 
