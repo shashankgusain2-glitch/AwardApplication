@@ -4,6 +4,7 @@
 |---|---|
 | [Code-Guide.md](Code-Guide.md) | Every file in the codebase: what it does and why it's there |
 | [Roadmap.md](Roadmap.md) | Product roadmap, phases 0–6 |
+| [Pre-Coding-Roadmap.md](Pre-Coding-Roadmap.md) | The 10 stages before feature coding, from problem to coding gate |
 | [User-Workflows.md](User-Workflows.md) | Journey of each user through an award cycle |
 | [UI-UX.md](UI-UX.md) | Screens, design principles, where each rule shows in the UI |
 | [Architecture.md](Architecture.md) | Folder structure, how the parts fit, technical choices |

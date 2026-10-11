@@ -38,6 +38,8 @@ flowchart LR
 
 *Know exactly what to build and how, before writing any code.*
 
+> The full stage-by-stage version, with goals, prioritisation and the coding gate, is in [Pre-Coding-Roadmap.md](Pre-Coding-Roadmap.md).
+
 ### Stage 1: Planning — *What problem are we solving?*
 
 | # | Step | What it produces | Status |
