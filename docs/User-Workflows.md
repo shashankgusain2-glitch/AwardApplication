@@ -7,8 +7,8 @@ We built for two awards that work differently:
 | | Award A: Business Excellence | Award B: Kaizen |
 |---|---|---|
 | Form | Long | Short, with before/after photos |
-| Rounds | 2 (scoring, then live presentation) | 1 |
-| Blind judging | Yes (Round 1 only) | No |
+| Rounds | 2: desk review, then live presentation | 2: desk review, then site visit (assumed, to confirm) |
+| Blind judging | Yes (desk review only) | No: judges meet the team on site |
 
 Staff choose these settings on a screen. No code changes are needed.
 

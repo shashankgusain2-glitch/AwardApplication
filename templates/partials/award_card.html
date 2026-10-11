@@ -8,6 +8,6 @@
   <p>{{ award.summary }}</p>
   <div class="meta">
     <span>Deadline: <strong>{{ award.deadline }}</strong></span>
-    <span>{{ award.rounds }} round{{ award.rounds|pluralize }}{% if award.blind %} · Blind{% endif %}</span>
+    <span>{% for r in award.rounds_info %}{{ r.label }}{% if not forloop.last %} → {% endif %}{% endfor %}{% if award.blind %} · Blind{% endif %}</span>
   </div>
 </a>

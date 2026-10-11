@@ -157,7 +157,7 @@ img { max-width: 100%; }
 .badge { display: inline-block; padding: .2rem .65rem; border-radius: 999px; font-size: .78rem; font-weight: 600; background: var(--bg); color: var(--muted); white-space: nowrap; }
 .badge-open, .badge-applications-open, .badge-eligible, .badge-submitted, .badge-published-locked, .badge-strong, .badge-high-ok { background: var(--success-soft); color: var(--success); }
 .badge-closing-soon, .badge-draft, .badge-info-requested, .badge-awaiting-response, .badge-possible, .badge-possible-duplicate { background: var(--warning-soft); color: var(--warning); }
-.badge-judging, .badge-under-review, .badge-in-progress, .badge-assigned, .badge-good { background: var(--info-soft); color: var(--info); }
+.badge-judging, .badge-under-review, .badge-in-progress, .badge-assigned, .badge-good, .badge-visit-scheduled, .badge-presentation-scheduled { background: var(--info-soft); color: var(--info); }
 .badge-results, .badge-result-finalist { background: var(--gold-soft); color: var(--gold-dark); }
 .badge-high, .badge-conflict { background: var(--danger-soft); color: var(--danger); }
 .badge-sector { background: var(--teal-soft); color: var(--teal); }

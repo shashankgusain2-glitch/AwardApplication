@@ -23,14 +23,20 @@ def _clean_settings(post):
     errors = []
     settings = {}
 
-    try:
-        settings["rounds"] = int(post.get("rounds", ""))
-        if settings["rounds"] not in (1, 2):
-            raise ValueError
-    except ValueError:
-        errors.append("Rounds must be 1 or 2.")
+    round1 = post.get("round1_type", "")
+    round2 = post.get("round2_type", "none")
+    if round1 not in d.ROUND_TYPES:
+        errors.append("Choose how Round 1 is judged.")
+    if round2 != "none" and round2 not in d.ROUND_TYPES:
+        errors.append("Choose how Round 2 is judged, or 'No Round 2'.")
+    settings["round_types"] = [round1] + ([round2] if round2 != "none" else [])
 
     settings["blind"] = post.get("blind") == "on"
+    if settings["blind"] and not d.blind_possible(settings["round_types"]):
+        errors.append(
+            "Blind judging isn't possible: every round is in person (site visit or live presentation), "
+            "so judges meet the applicant. Add a desk review round or turn blind judging off."
+        )
 
     try:
         settings["judges_per_entry"] = int(post.get("judges_per_entry", ""))
@@ -84,6 +90,7 @@ def settings(request):
         "role": ROLE,
         "awards": d.built_awards(request),
         "applicant_types": d.APPLICANT_TYPES,
+        "round_types": d.ROUND_TYPES,
     })
 
 
