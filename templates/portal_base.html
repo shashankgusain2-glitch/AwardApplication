@@ -16,7 +16,7 @@
       <nav aria-label="Portal">
         {% for label, url_name in portal_nav|get_item:role %}
           {% url url_name as href %}
-          <a href="{{ href }}" {% if request.path == href %}class="active" aria-current="page"{% endif %}>{{ label }}</a>
+          <a href="{{ href }}" {% if request.resolver_match.view_name == url_name %}class="active" aria-current="page"{% endif %}>{{ label }}</a>
         {% endfor %}
       </nav>
       <p class="sidebar-label">Demo: view as</p>
@@ -41,6 +41,11 @@
         </div>
         {% block user %}{% endblock %}
       </div>
+      {% for message in messages %}
+        <div class="callout {% if message.tags == 'error' %}callout-warning{% else %}callout-success{% endif %}" role="status" style="margin-bottom:1rem">
+          <div>{{ message }}</div>
+        </div>
+      {% endfor %}
       {% block content %}{% endblock %}
     </div>
   </div>

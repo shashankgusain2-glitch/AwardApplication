@@ -5,7 +5,7 @@ from . import demo_data as d
 
 
 def home(request):
-    featured = [a for a in d.AWARDS if a["status"] in ("Open", "Closing soon")][:3]
+    featured = [a for a in d.all_awards(request) if a["status"] in ("Open", "Closing soon")][:3]
     return render(request, "core/home.html", {
         "stats": d.STATS,
         "featured": featured,
@@ -25,7 +25,7 @@ def about(request):
 
 def award_list(request):
     sector = request.GET.get("sector", "")
-    awards = [a for a in d.AWARDS if not sector or a["sector"] == sector]
+    awards = [a for a in d.all_awards(request) if not sector or a["sector"] == sector]
     return render(request, "core/awards.html", {
         "awards": awards,
         "sectors": d.SECTORS,
@@ -34,7 +34,7 @@ def award_list(request):
 
 
 def award_detail(request, slug):
-    award = d.get_award(slug)
+    award = d.get_award(slug, request)
     if award is None:
         raise Http404("Award not found")
     return render(request, "core/award_detail.html", {

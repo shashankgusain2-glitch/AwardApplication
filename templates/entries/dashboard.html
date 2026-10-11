@@ -7,7 +7,7 @@
 
 {% block content %}
 <div class="callout callout-warning" style="margin-bottom:1.5rem">
-  <div><strong>Your Business Excellence application is 58% done</strong>The deadline is 30 Nov 2026. Your answers are saved automatically.</div>
+  <div><strong>Your Business Excellence application is 40% done</strong>The deadline is 30 Nov 2026. Your answers are saved automatically.</div>
   <a class="btn btn-dark btn-sm" style="margin-left:auto;align-self:center" href="{% url 'entries:form' %}">Continue</a>
 </div>
 
@@ -25,8 +25,8 @@
             <td style="min-width:120px"><div class="progress"><span style="width:{{ app.progress }}%"></span></div><span class="muted small">{{ app.progress }}%</span></td>
             <td><span class="muted small">{{ app.form_version }}</span></td>
             <td>
-              {% if app.status == "Draft" %}<a class="btn btn-primary btn-sm" href="{% url 'entries:form' %}">Continue</a>
-              {% else %}<a class="btn btn-outline btn-sm" href="{% url 'entries:status' %}">View</a>{% endif %}
+              {% if app.status == "Draft" %}<a class="btn btn-primary btn-sm" href="{% url 'entries:form' app.slug %}">Continue</a>
+              {% elif app.form_version == "v2026.1" %}<a class="btn btn-outline btn-sm" href="{% url 'entries:form' app.slug %}">View</a>{% else %}<a class="btn btn-outline btn-sm" href="{% url 'entries:status' %}">View</a>{% endif %}
             </td>
           </tr>
         {% endfor %}
