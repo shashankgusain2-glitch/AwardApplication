@@ -49,7 +49,7 @@
         {% else %}
           <input id="q{{ forloop.counter }}" type="text" value="{{ q.value }}" {% if submitted %}readonly{% endif %}>
         {% endif %}
-        {% if q.identifying and award.blind %}<p class="hint">🔒 Hidden from judges in Round 1 (blind judging).</p>{% endif %}
+        {% if q.identifying and award.blind %}<p class="hint">🔒 Hidden from judges in desk review rounds (blind judging).</p>{% endif %}
       </div>
     {% endfor %}
 

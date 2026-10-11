@@ -45,7 +45,7 @@
           </table>
         </div>
         {% if details.round2_criteria %}
-          <h3 style="margin-top:1.5rem">Round 2: live presentation</h3>
+          <h3 style="margin-top:1.5rem">Round 2: {{ details.round2_label|lower }}</h3>
           <div class="table-wrap">
             <table>
               <tbody>
@@ -57,7 +57,7 @@
           </div>
         {% endif %}
         {% if award.blind %}
-          <div class="callout callout-teal" style="margin-top:1rem"><div><strong>This award uses blind judging</strong>In Round 1, the jury see your answers but not your organisation's name, logo or location.</div></div>
+          <div class="callout callout-teal" style="margin-top:1rem"><div><strong>This award uses blind judging</strong>In desk review rounds, the jury see your answers but not your organisation's name, logo or location. In-person rounds are not blind.</div></div>
         {% endif %}
       </div>
 
@@ -73,8 +73,8 @@
       <div class="card">
         <h3>At a glance</h3>
         <div class="settings-row"><span class="muted">Deadline</span><strong>{{ award.deadline }}</strong></div>
-        <div class="settings-row"><span class="muted">Rounds</span><strong>{{ award.rounds }}</strong></div>
-        <div class="settings-row"><span class="muted">Blind judging</span><strong>{{ award.blind|yesno:"Yes,No" }}</strong></div>
+        {% for r in award.rounds_info %}<div class="settings-row"><span class="muted">Round {{ r.number }}</span><strong>{{ r.label }}</strong></div>{% endfor %}
+        <div class="settings-row"><span class="muted">Blind judging</span><strong>{% if award.blind %}Yes, in desk review{% else %}No{% endif %}</strong></div>
         <div class="settings-row"><span class="muted">Jury per entry</span><strong>{{ award.judges_per_entry }}</strong></div>
         <div class="settings-row"><span class="muted">Fee</span><strong>{{ award.fee }}</strong></div>
         {% if award.status == "Open" or award.status == "Closing soon" %}

@@ -70,3 +70,26 @@ Each decision: the options, the one we picked, why, and what would change our mi
 **Why:** with option 1, the names are still in the page source, so anyone can read them. Rule 1 says a judge *cannot* see who applied, so the data must never reach them. File names are hidden too, because a file like `acme-strategy-2026.pdf` gives the company away.
 
 **What would change our mind:** nothing for blind awards. This is the only safe way.
+
+---
+
+## D5. Each round has a type, and blind judging only works in desk review
+
+**Date:** 12 Oct 2026
+
+**Why this came up:** Kaizen and 5S are judged by visiting the shop floor. A judge standing in the plant with the team can't be "blind", and before/after photos show the factory too. The system let staff switch blind judging on for any award, which made no sense for in-person judging.
+
+**Options**
+1. Keep a simple round count (1 or 2) and trust staff not to switch blind on for site-visit awards
+2. Give each round a type (desk review, site visit, live presentation); allow blind judging only if at least one round is a desk review, and apply it only in those rounds
+3. Remove blind judging for all shop-floor awards by sector
+
+**Picked:** Option 2
+
+**Why:** it matches how the awards really work, and the rule is enforced by the system (switch disabled on screen, rejected on the server, and a safety check in the data), not left to memory. Option 3 ties a rule to a sector name, which breaks as soon as a shop-floor award adds a desk round.
+
+**Assumption to confirm with the client:** Kaizen screens written entries at a desk first, then visits only the shortlisted teams.
+
+**Where the model breaks:** a pure on-site audit (like 5S) doesn't fit "the applicant fills a form, the judge scores the form". Judges fill a checklist on the floor instead. We show the round type, but an on-site checklist screen is out of scope for now.
+
+**What would change our mind:** if the client says every Kaizen entry gets a site visit with no desk screening, Kaizen becomes one site-visit round, and blind judging is simply unavailable for it.

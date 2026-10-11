@@ -23,7 +23,8 @@
             <span class="badge badge-{{ a.status|slugify }}">{{ a.status }}</span>
             {% if a.blind %}<span class="badge badge-sector">🔒 Blind</span>{% endif %}
           </div>
-          <p class="muted small" style="margin:0">{{ a.award.icon }} {{ a.award.name }} · {{ a.round }} · Due {{ a.due }}</p>
+          <p class="muted small" style="margin:0">{{ a.award.icon }} {{ a.award.name }} · {{ a.round }}: {{ a.round_label }} · Due {{ a.due }}</p>
+          {% if a.visit %}<p class="small" style="margin:.35rem 0 0">📍 {{ a.visit }}</p>{% endif %}
           <p class="small" style="margin:.35rem 0 0">Applicant:
             {% if a.applicant %}<strong>{{ a.applicant }}</strong>{% else %}<span class="hidden-value">Hidden for blind judging</span>{% endif %}
           </p>
@@ -36,7 +37,7 @@
           {% elif a.status == "Submitted" %}
             <a class="btn btn-outline btn-sm" href="{% url 'judging:score' a.entry %}">View scores</a>
           {% else %}
-            <a class="btn btn-primary btn-sm" href="{% url 'judging:score' a.entry %}">{% if a.progress %}Continue scoring{% else %}Start scoring{% endif %}</a>
+            <a class="btn btn-primary btn-sm" href="{% url 'judging:score' a.entry %}">{% if a.round_type != "desk" %}Open scorecard{% elif a.progress %}Continue scoring{% else %}Start scoring{% endif %}</a>
           {% endif %}
         </div>
       </div>

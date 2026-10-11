@@ -32,7 +32,7 @@ The four rules are visible in the UI, not only enforced in the background:
 
 **Demo navigation:** the login page and every portal sidebar have a "view as" switch, so you can walk through each user's journey without logging in.
 
-**Key demo screen:** *Programme staff → Award settings* shows the two awards side by side: Business Excellence (2 rounds, blind, 3 judges) and Kaizen (1 round, not blind, 2 judges). The difference is settings, not code.
+**Key demo screen:** *Programme staff → Award settings* shows the two awards side by side: Business Excellence (desk review then live presentation, blind, 3 judges) and Kaizen (desk review then site visit, not blind, 2 judges). Blind judging is disabled for any award judged only in person. The difference is settings, not code.
 
 ## Style
 

@@ -40,6 +40,16 @@ SECTORS = [
 
 APPLICANT_TYPES = ["Organisation", "Team", "Plant / unit"]
 
+# How judges meet an entry in each round. Blind judging is only possible
+# in a desk review: in a site visit or live presentation the judge meets
+# the applicant, so identity can't be hidden.
+ROUND_TYPES = {
+    "desk": "Desk review",
+    "site": "Site visit",
+    "live": "Live presentation",
+}
+BLIND_POSSIBLE = {"desk"}
+
 # --- The two fully built demo awards ----------------------------------------
 #
 # These two show the brief's main point: one system, two awards that work
@@ -54,7 +64,7 @@ BUSINESS_EXCELLENCE = {
     "summary": "Our flagship award for organisations that show excellence across leadership, processes and results.",
     "icon": "🏆",
     # Settings staff can change on the Award settings screen
-    "rounds": 2,
+    "round_types": ["desk", "live"],
     "blind": True,
     "judges_per_entry": 3,
     "applicant_type": "Organisation",
@@ -125,7 +135,9 @@ KAIZEN = {
     "summary": "For shop-floor teams that made a small change with a big, measurable result.",
     "icon": "⚙️",
     # Settings staff can change on the Award settings screen
-    "rounds": 1,
+    # Assumption (to confirm with the client): written entries are screened
+    # at a desk first, then judges visit the shortlisted teams on site.
+    "round_types": ["desk", "site"],
     "blind": False,
     "judges_per_entry": 2,
     "applicant_type": "Team",
@@ -145,9 +157,14 @@ KAIZEN = {
         {"name": "Improvement made", "weight": 25},
         {"name": "Result and how it is kept going", "weight": 25},
     ],
-    "round2_criteria": [],
+    "round2_criteria": [
+        {"name": "Change seen working on the floor", "weight": 40},
+        {"name": "Team can explain it themselves", "weight": 30},
+        {"name": "Kept going (checklists, audits)", "weight": 30},
+    ],
     "extra_faqs": [
         {"q": "Our team isn't good with long forms. Is that a problem?", "a": "No. The form is short and photos count as evidence. Before and after pictures often say more than words."},
+        {"q": "What happens on the site visit?", "a": "Two jury members visit your plant for about an hour. They watch the improvement working and talk to the team that made it."},
         {"q": "Can more than one team from our plant enter?", "a": "Yes. Each team enters separately, with its own improvement."},
     ],
     "form_sections": [
@@ -195,38 +212,38 @@ AWARDS = [
      "slug": "energy-efficiency", "name": "Energy Efficiency Award", "sector": "Energy",
      "status": "Closing soon", "deadline": "20 Oct 2026", "icon": "⚡",
      "summary": "Recognises plants and buildings that cut energy use through smart engineering.",
-     "rounds": 2, "blind": False, "judges_per_entry": 3, "applicant_type": "Plant / unit",
+     "round_types": ["desk", "site"], "blind": False, "judges_per_entry": 3, "applicant_type": "Plant / unit",
      "fee_amount": 15000, "form_length": "Medium form"},
     {**_DEFAULTS,
      "slug": "safety-excellence", "name": "Safety Excellence Award", "sector": "Safety",
      "status": "Judging", "deadline": "Closed", "icon": "🦺",
      "summary": "For workplaces that keep people safe through strong systems and culture.",
-     "rounds": 2, "blind": True, "judges_per_entry": 3, "applicant_type": "Plant / unit",
+     "round_types": ["desk", "site"], "blind": True, "judges_per_entry": 3, "applicant_type": "Plant / unit",
      "form_length": "Medium form"},
     {**_DEFAULTS,
      "slug": "industrial-innovation", "name": "Industrial Innovation Award", "sector": "Innovation",
      "status": "Open", "deadline": "10 Jan 2027", "icon": "💡",
      "summary": "Celebrates new products, processes and business models built in India.",
-     "rounds": 2, "blind": True, "judges_per_entry": 3, "applicant_type": "Organisation",
+     "round_types": ["desk", "live"], "blind": True, "judges_per_entry": 3, "applicant_type": "Organisation",
      "form_length": "Medium form"},
     {**_DEFAULTS,
      "slug": "sustainability-leadership", "name": "Sustainability Leadership Award", "sector": "Sustainability",
      "status": "Results", "deadline": "Closed", "icon": "🌱",
      "summary": "For organisations leading on environment, community and responsible growth.",
-     "rounds": 2, "blind": False, "judges_per_entry": 3, "applicant_type": "Organisation",
+     "round_types": ["desk", "site"], "blind": False, "judges_per_entry": 3, "applicant_type": "Organisation",
      "form_length": "Long form"},
     {**_DEFAULTS,
      "slug": "design-excellence", "name": "Design Excellence Award", "sector": "Design",
      "status": "Upcoming", "deadline": "Opens Jan 2027", "icon": "🎨",
      "summary": "For products and spaces where good design makes life better.",
-     "rounds": 1, "blind": True, "judges_per_entry": 3, "applicant_type": "Organisation",
+     "round_types": ["desk"], "blind": True, "judges_per_entry": 3, "applicant_type": "Organisation",
      "form_length": "Short form with images", "form_version": "—"},
     {**_DEFAULTS,
      "slug": "5s-workplace", "name": "5S Workplace Competition", "sector": "Shop-floor",
      "status": "Upcoming", "deadline": "Opens Feb 2027", "icon": "🧹",
      "summary": "For shop floors that are sorted, organised, clean and run by habit.",
-     "rounds": 1, "blind": False, "judges_per_entry": 2, "applicant_type": "Team",
-     "form_length": "Short form + on-site visit", "form_version": "—"},
+     "round_types": ["site"], "blind": False, "judges_per_entry": 2, "applicant_type": "Team",
+     "form_length": "Short form, then an on-site audit", "form_version": "—"},
 ]
 
 BUILT_AWARDS = ["business-excellence", "kaizen"]
@@ -234,12 +251,17 @@ BUILT_AWARDS = ["business-excellence", "kaizen"]
 # --- Award settings: defaults + what staff changed -------------------------
 
 SESSION_KEY = "award_settings"
-EDITABLE_SETTINGS = ["rounds", "blind", "judges_per_entry", "applicant_type", "fee_amount", "deadline"]
+EDITABLE_SETTINGS = ["round_types", "blind", "judges_per_entry", "applicant_type", "fee_amount", "deadline"]
 
 
 def award_overrides(request):
     """Settings staff saved on the Award settings screen (kept in the session for now)."""
     return request.session.get(SESSION_KEY, {}) if request is not None else {}
+
+
+def blind_possible(round_types):
+    """Blind judging needs at least one round where judges don't meet the applicant."""
+    return any(t in BLIND_POSSIBLE for t in round_types)
 
 
 def get_award(slug, request=None):
@@ -249,7 +271,33 @@ def get_award(slug, request=None):
         return None
     award = {**base, **award_overrides(request).get(slug, {})}
     award["fee"] = f"₹{award['fee_amount']:,} entry fee" if award["fee_amount"] else "No entry fee"
+    award["rounds"] = len(award["round_types"])
+    award["blind_possible"] = blind_possible(award["round_types"])
+    # Safety net: blind can never be on for an award judged only in person.
+    award["blind"] = award["blind"] and award["blind_possible"]
+    award["rounds_info"] = [
+        {
+            "number": n,
+            "type": t,
+            "label": ROUND_TYPES[t],
+            "is_blind": award["blind"] and t in BLIND_POSSIBLE,
+        }
+        for n, t in enumerate(award["round_types"], start=1)
+    ]
     return award
+
+
+def round_type(award, round_name):
+    """'Round 2' -> the type of that round for this award, e.g. 'site'. None if the award has no such round."""
+    number = int(round_name.split()[-1])
+    if not 1 <= number <= len(award["round_types"]):
+        return None
+    return award["round_types"][number - 1]
+
+
+def is_blind_round(award, round_name):
+    """Rule 1 applies only in blind awards, and only in rounds judged at a desk."""
+    return award["blind"] and round_type(award, round_name) in BLIND_POSSIBLE
 
 
 def all_awards(request=None):
@@ -300,22 +348,29 @@ def award_details(award):
     steps = [
         {"title": "Check eligibility", "text": f"Confirm you fit the award. Applicant: {award['applicant_type']}."},
         {"title": "Submit your application", "text": f"{award['form_length']}. Save as you go and submit before the deadline."},
-        {"title": "Round 1: independent scoring",
-         "text": f"{award['judges_per_entry']} jury members score each entry on their own."
-                 + (" Judging is blind: they don't see who applied." if award["blind"] else "")},
     ]
-    if award["rounds"] == 2:
-        steps.append({"title": "Round 2: live presentation", "text": "Shortlisted entries present to the jury in person."})
+    judges = award["judges_per_entry"]
+    for r in award["rounds_info"]:
+        who = "shortlisted entries" if r["number"] > 1 else "every entry"
+        if r["type"] == "desk":
+            text = f"{judges} jury members read and score {who} online, each on their own."
+            if r["is_blind"]:
+                text += " Judging is blind: they don't see who applied."
+        elif r["type"] == "site":
+            text = f"{judges} jury members visit the site of {who} to see the work in action and talk to the people behind it."
+        else:
+            text = f"{who.capitalize()} present to {judges} jury members in person, followed by questions."
+        steps.append({"title": f"Round {r['number']}: {r['label'].lower()}", "text": text})
     steps.append({"title": "Results", "text": "Leadership approves the winners, then results are announced."})
 
+    round_months = ["Jan 2027", "Feb 2027"]
     timeline = [
         {"date": "Sep 2026", "label": "Applications open"},
         {"date": award["deadline"], "label": "Applications close"},
-        {"date": "Jan 2027", "label": "Round 1 judging"},
-    ]
-    if award["rounds"] == 2:
-        timeline.append({"date": "Feb 2027", "label": "Round 2 presentations"})
-    timeline.append({"date": "Mar 2027", "label": "Winners announced"})
+    ] + [
+        {"date": round_months[i], "label": f"Round {r['number']}: {r['label'].lower()}"}
+        for i, r in enumerate(award["rounds_info"][:2])
+    ] + [{"date": "Mar 2027", "label": "Winners announced"}]
 
     faqs = [
         {"q": "Is there an entry fee?", "a": award["fee"] + "."},
@@ -329,6 +384,7 @@ def award_details(award):
         "timeline": timeline,
         "criteria": award["criteria"] or GENERIC_CRITERIA,
         "round2_criteria": award["round2_criteria"] if award["rounds"] == 2 else [],
+        "round2_label": award["rounds_info"][1]["label"] if award["rounds"] == 2 else "",
         "faqs": faqs,
     }
 
@@ -341,6 +397,8 @@ ENTRIES = {
     "A-0038": {"award": "business-excellence", "org": "Northstar Auto Components"},
     "K-0007": {"award": "kaizen", "org": "Acme Precision Components, Chakan plant"},
     "K-0012": {"award": "kaizen", "org": "Ganga Textiles, Unit 3"},
+    "K-0003": {"award": "kaizen", "org": "Deccan Forge, Plant 2"},           # shortlisted for site visit
+    "A-0029": {"award": "business-excellence", "org": "Vertex Pharma Labs"},  # shortlisted for live round
 }
 
 
@@ -362,11 +420,13 @@ def answers_for_judge(entry_id, award, round_name):
     """
     What a judge is allowed to see.                                   [Rule 1]
 
-    In a blind award's Round 1, identifying answers are removed and file
-    names replaced HERE, before anything reaches the page. The template
-    never receives the hidden values, so they can't leak through the HTML.
+    In a blind award's desk-review rounds, identifying answers are removed
+    and file names replaced HERE, before anything reaches the page. The
+    template never receives the hidden values, so they can't leak through
+    the HTML. Site visits and live presentations are never blind: the judge
+    meets the applicant there.
     """
-    hide = award["blind"] and round_name == "Round 1"
+    hide = is_blind_round(award, round_name)
     sections = []
     file_no = 0
     for section in entry_answers(entry_id):
@@ -427,6 +487,10 @@ ASSIGNMENTS = [
     {"entry": "A-0051", "round": "Round 1", "status": "Awaiting response", "progress": 0, "due": "15 Jan 2027"},
     {"entry": "K-0012", "round": "Round 1", "status": "Not started", "progress": 0, "due": "20 Jan 2027"},
     {"entry": "A-0038", "round": "Round 1", "status": "Submitted", "progress": 100, "due": "15 Jan 2027"},
+    {"entry": "K-0003", "round": "Round 2", "status": "Visit scheduled", "progress": 0, "due": "5 Feb 2027",
+     "visit": "5 Feb 2027, 10:00 · Deccan Forge, Plant 2, Hosur"},
+    {"entry": "A-0029", "round": "Round 2", "status": "Presentation scheduled", "progress": 0, "due": "12 Feb 2027",
+     "visit": "12 Feb 2027, 14:30 · UEC Excellence House, New Delhi"},
 ]
 
 # Sample scores already entered, per entry (criterion name -> score, comment)

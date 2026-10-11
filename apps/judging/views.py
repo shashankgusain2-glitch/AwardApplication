@@ -11,12 +11,17 @@ def _with_award(assignment, request):
     """Attach the award (with staff's current settings) and what the judge may see."""
     entry = d.ENTRIES[assignment["entry"]]
     award = d.get_award(entry["award"], request)
-    blind = award["blind"] and assignment["round"] == "Round 1"
+    kind = d.round_type(award, assignment["round"])
+    if kind is None:
+        return None  # staff removed this round from the award
+    blind = d.is_blind_round(award, assignment["round"])
     return {
         **assignment,
         "award": award,
+        "round_type": kind,
+        "round_label": d.ROUND_TYPES[kind],
         "blind": blind,
-        # Rule 1: the organisation's name is only passed on when judging is not blind.
+        # Rule 1: the organisation's name is only passed on when the round is not blind.
         "applicant": None if blind else entry["org"],
     }
 
@@ -25,7 +30,7 @@ def assignments(request):
     return render(request, "judging/assignments.html", {
         "role": ROLE,
         "judge": d.JUDGE,
-        "assignments": [_with_award(a, request) for a in d.ASSIGNMENTS],
+        "assignments": [a for a in (_with_award(a, request) for a in d.ASSIGNMENTS) if a],
     })
 
 
@@ -34,14 +39,17 @@ def score(request, entry_id="A-0042"):
     if assignment is None:
         raise Http404("Not assigned to you")
     assignment = _with_award(assignment, request)
+    if assignment is None:
+        raise Http404("This round is no longer part of the award")
     award = assignment["award"]
 
     sections, hidden = d.answers_for_judge(entry_id, award, assignment["round"])
 
+    criteria = award["criteria"] if assignment["round"] == "Round 1" else award["round2_criteria"]
     saved = d.SAMPLE_SCORES.get(entry_id, {})
     scorecard = [
         {**c, "score": saved.get(c["name"], (None, ""))[0], "comment": saved.get(c["name"], (None, ""))[1]}
-        for c in award["criteria"]
+        for c in criteria
     ]
     scored = sum(1 for c in scorecard if c["score"] is not None)
 

@@ -8,22 +8,33 @@
 {% block content %}
 <div class="grid grid-2" style="align-items:start">
   {% for award in awards %}
-    <form class="card" method="post" action="{% url 'awards:settings' %}">
+    <form class="card" method="post" action="{% url 'awards:settings' %}" data-award-settings>
       {% csrf_token %}
       <input type="hidden" name="slug" value="{{ award.slug }}">
       <div class="card-head"><h2>{{ award.icon }} {{ award.name }}</h2><span class="badge badge-sector">{{ award.sector }}</span></div>
 
       <div class="settings-row">
-        <div><strong>Judging rounds</strong><p class="muted small" style="margin:0">Round 2 is a live presentation for the shortlist.</p></div>
-        <div class="segmented">
-          <label><input type="radio" name="rounds" value="1" {% if award.rounds == 1 %}checked{% endif %}><span>1 round</span></label>
-          <label><input type="radio" name="rounds" value="2" {% if award.rounds == 2 %}checked{% endif %}><span>2 rounds</span></label>
-        </div>
+        <div><label for="r1-{{ award.slug }}"><strong>Round 1</strong></label><p class="muted small" style="margin:0">How judges see every entry.</p></div>
+        <select id="r1-{{ award.slug }}" name="round1_type" data-round-type style="width:180px">
+          {% for key, label in round_types.items %}<option value="{{ key }}" {% if award.round_types.0 == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
       </div>
 
       <div class="settings-row">
-        <div><strong>Blind judging</strong><p class="muted small" style="margin:0">Judges don't see who applied (Round 1).</p></div>
-        <label class="switch"><input type="checkbox" name="blind" {% if award.blind %}checked{% endif %}><span class="track"></span><span class="sr-only">Blind judging</span></label>
+        <div><label for="r2-{{ award.slug }}"><strong>Round 2</strong></label><p class="muted small" style="margin:0">For the shortlist only.</p></div>
+        <select id="r2-{{ award.slug }}" name="round2_type" data-round-type style="width:180px">
+          <option value="none" {% if award.rounds == 1 %}selected{% endif %}>No Round 2</option>
+          {% for key, label in round_types.items %}<option value="{{ key }}" {% if award.rounds == 2 and award.round_types.1 == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <div class="settings-row">
+        <div>
+          <strong>Blind judging</strong>
+          <p class="muted small" style="margin:0">Judges don't see who applied, in desk review rounds only.</p>
+          <p class="small" data-blind-note style="margin:.25rem 0 0;color:var(--warning)" {% if award.blind_possible %}hidden{% endif %}>Not available: every round is in person, so judges meet the applicant.</p>
+        </div>
+        <label class="switch"><input type="checkbox" name="blind" {% if award.blind %}checked{% endif %} {% if not award.blind_possible %}disabled{% endif %}><span class="track"></span><span class="sr-only">Blind judging</span></label>
       </div>
 
       <div class="settings-row">
@@ -58,6 +69,10 @@
 </div>
 
 <div class="callout callout-info" style="margin-top:1.5rem">
-  <div><strong>Try it</strong>Turn blind judging on for Kaizen and save. Then open <a href="{% url 'judging:score' 'K-0007' %}">the judge's Kaizen scoring page</a>: the team and company are now hidden. Change judges per entry and the <a href="{% url 'core:award_detail' 'kaizen' %}">public award page</a> updates too. <span class="muted">(Demo: settings are kept in your browser session until the database is built.)</span></div>
+  <div><strong>Try it</strong>
+    Turn blind judging <strong>off</strong> for Business Excellence and save, then open <a href="{% url 'judging:score' 'A-0042' %}">the judge's scoring page for A-0042</a>: the company name now shows.
+    Set Kaizen's Round 1 to <em>Site visit</em> and remove Round 2: the blind switch is disabled, because judges meet the team on site.
+    Every change also shows on the <a href="{% url 'core:award_detail' 'kaizen' %}">public award page</a>.
+    <span class="muted">(Demo: settings are kept in your browser session until the database is built.)</span></div>
 </div>
 {% endblock %}

@@ -19,7 +19,7 @@ def _score_page(client, entry):
 
 def _save_settings(client, slug, **changes):
     settings = {
-        "slug": slug, "rounds": "1", "judges_per_entry": "2",
+        "slug": slug, "round1_type": "desk", "round2_type": "site", "judges_per_entry": "2",
         "applicant_type": "Team", "fee_amount": "0", "deadline": "15 Dec 2026",
     }
     settings.update(changes)
@@ -67,7 +67,7 @@ def test_staff_turning_blind_on_hides_names_without_code_change(client):
 
 @pytest.mark.django_db
 def test_staff_turning_blind_off_shows_names(client):
-    _save_settings(client, "business-excellence", rounds="2", judges_per_entry="3",
+    _save_settings(client, "business-excellence", round2_type="live", judges_per_entry="3",
                    applicant_type="Organisation", deadline="30 Nov 2026")  # no "blind" = off
     response = _score_page(client, BLIND_ENTRY)
     assert ORG_NAME in response.content
@@ -78,6 +78,16 @@ def test_blind_award_hides_organisation_in_judge_api_response():
     ...
 
 
-@pytest.mark.skip(reason="Planned: needs Round 2 assignments")
-def test_live_round_two_is_not_blind():
-    ...
+@pytest.mark.django_db
+def test_live_round_two_is_not_blind(client):
+    # Business Excellence is blind, but Round 2 is a live presentation.
+    response = _score_page(client, "A-0029")
+    assert b"Vertex Pharma Labs" in response.content
+    assert b"Live presentation: not blind" in response.content
+
+
+@pytest.mark.django_db
+def test_site_visit_round_is_not_blind_even_if_award_is_blind(client):
+    _save_settings(client, "kaizen", blind="on")  # blind applies to Round 1 desk review only
+    assert ORG_NAME not in _score_page(client, OPEN_ENTRY).content          # Round 1: hidden
+    assert b"Deccan Forge" in _score_page(client, "K-0003").content          # Round 2 site visit: shown

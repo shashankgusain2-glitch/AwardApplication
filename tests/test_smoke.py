@@ -49,6 +49,8 @@ PAGES_WITH_ARGS = [
     ("judging:score", ["A-0051"]),
     ("judging:score", ["K-0012"]),
     ("judging:score", ["A-0038"]),
+    ("judging:score", ["K-0003"]),
+    ("judging:score", ["A-0029"]),
     ("awards:form_builder", ["business-excellence"]),
     ("awards:form_builder", ["kaizen"]),
 ]

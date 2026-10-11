@@ -4,7 +4,8 @@
 {% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'judging:assignments' %}">My assignments</a> / {{ assignment.entry }}</p>{% endblock %}
 {% block heading %}Entry {{ assignment.entry }}{% endblock %}
 {% block subheading %}
-  <p class="muted small" style="margin:.25rem 0 0">{{ award.icon }} {{ award.name }} · {{ assignment.round }} · ✓ Scores saved automatically</p>
+  <p class="muted small" style="margin:.25rem 0 0">{{ award.icon }} {{ award.name }} · {{ assignment.round }}: {{ assignment.round_label }} · ✓ Scores saved automatically</p>
+  {% if assignment.visit %}<p class="small" style="margin:.25rem 0 0">📍 {{ assignment.visit }}</p>{% endif %}
   {% if assignment.applicant %}<p class="small" style="margin:.25rem 0 0">Applicant: <strong>{{ assignment.applicant }}</strong></p>{% endif %}
 {% endblock %}
 {% block user %}{% include "partials/user_chip.html" with initials="RK" name="Dr. R. Kapoor" detail="Judge" %}{% endblock %}
@@ -13,6 +14,14 @@
 {% if hidden %}
   <div class="callout callout-teal" style="margin-bottom:1.5rem">
     <div><strong>🔒 Blind judging is on for this award</strong>Answers that reveal who applied were removed before this page was made, and file names are hidden. Please score only what you see.</div>
+  </div>
+{% elif assignment.round_type == "site" %}
+  <div class="callout callout-info" style="margin-bottom:1.5rem">
+    <div><strong>📍 Site visit: not blind</strong>You'll see the work in place and meet the team, so names are shown. Use the written entry below to prepare, then score what you see on the day. If you know the team or company, declare a conflict before the visit.</div>
+  </div>
+{% elif assignment.round_type == "live" %}
+  <div class="callout callout-info" style="margin-bottom:1.5rem">
+    <div><strong>🎤 Live presentation: not blind</strong>The organisation presents to the jury in person, so names are shown. If you know them, declare a conflict before the session.</div>
   </div>
 {% else %}
   <div class="callout callout-info" style="margin-bottom:1.5rem">
