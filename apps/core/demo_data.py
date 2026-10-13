@@ -584,3 +584,84 @@ ROLE_LABELS = {
     "staff": "Programme staff",
     "leader": "Leadership",
 }
+
+# --- User journeys (one award cycle, per user) ------------------------------
+#
+# Each step: what the user does, and the screen it happens on
+# (url name + optional argument). "rule" tags which of the 4 rules applies.
+
+CYCLE = [
+    {"stage": "Set up", "who": "Staff"},
+    {"stage": "Apply", "who": "Applicant"},
+    {"stage": "Check entries", "who": "Staff"},
+    {"stage": "Round 1", "who": "Judge"},
+    {"stage": "Shortlist", "who": "Staff"},
+    {"stage": "Round 2", "who": "Judge"},
+    {"stage": "Approve", "who": "Leader"},
+    {"stage": "Results", "who": "Everyone"},
+]
+
+JOURNEYS = [
+    {
+        "role": "Applicant",
+        "who": "Priya, Head of Quality at a mid-size manufacturer",
+        "icon": "📝",
+        "steps": [
+            {"do": "Finds an award that fits", "url": "core:awards"},
+            {"do": "Reads who can apply, the steps and the dates", "url": "core:award_detail", "arg": "business-excellence"},
+            {"do": "Logs in with a link sent to her work email", "url": "core:login"},
+            {"do": "Fills the organisation profile once (GSTIN, sector, size)", "url": "entries:organisation"},
+            {"do": "Fills the form over several days; it saves as she goes", "url": "entries:form", "arg": "business-excellence", "rule": "R4"},
+            {"do": "Submits; the entry is locked", "url": "entries:form", "arg": "kaizen"},
+            {"do": "Tracks the status", "url": "entries:status"},
+            {"do": "If shortlisted: presents live, or hosts a site visit", "url": "entries:status"},
+            {"do": "Sees the result", "url": "entries:dashboard"},
+        ],
+    },
+    {
+        "role": "Programme staff",
+        "who": "Meena, runs the Business Excellence and Kaizen awards",
+        "icon": "🗂️",
+        "steps": [
+            {"do": "Sets how the award works: rounds, blind judging, judges, fee", "url": "awards:settings", "rule": "R1"},
+            {"do": "Builds the form and marks questions that reveal who applied", "url": "awards:form_builder", "arg": "business-excellence", "rule": "R4"},
+            {"do": "Checks each new entry is eligible", "url": "awards:entries"},
+            {"do": "Merges or separates duplicate companies", "url": "awards:duplicates", "rule": "R2"},
+            {"do": "Assigns judges; conflicted judges are never offered", "url": "awards:assign", "rule": "R2"},
+            {"do": "Follows judging and chases late judges", "url": "awards:staff_home"},
+            {"do": "Makes the shortlist and schedules Round 2", "url": "awards:staff_home"},
+            {"do": "Sends the final ranking to leadership", "url": "dashboard:results"},
+        ],
+    },
+    {
+        "role": "Judge",
+        "who": "Dr. Kapoor, retired plant head, scores between meetings",
+        "icon": "⚖️",
+        "steps": [
+            {"do": "Logs in with an email link", "url": "core:login"},
+            {"do": "Sees assigned entries; accepts, declines or declares a conflict", "url": "judging:assignments", "rule": "R2"},
+            {"do": "Round 1 desk review: reads the entry without the company name", "url": "judging:score", "arg": "A-0042", "rule": "R1"},
+            {"do": "Scores each criterion 1–10; it saves as he goes", "url": "judging:score", "arg": "K-0007"},
+            {"do": "Submits; any later change needs a reason", "url": "judging:score", "arg": "A-0038", "rule": "R3"},
+            {"do": "Round 2: visits the site or watches the live presentation", "url": "judging:score", "arg": "K-0003"},
+        ],
+    },
+    {
+        "role": "Leader",
+        "who": "Programme head, wants one view across all awards",
+        "icon": "📊",
+        "steps": [
+            {"do": "Sees every award's stage, entries and problems in one table", "url": "dashboard:overview"},
+            {"do": "Decides ties, big score gaps, late conflicts and appeals", "url": "dashboard:review", "rule": "R3"},
+            {"do": "Approves the winners or sends them back", "url": "dashboard:results"},
+            {"do": "Results are published on the website", "url": "core:awards"},
+        ],
+    },
+]
+
+RULE_NAMES = {
+    "R1": "Blind judging",
+    "R2": "No conflicts",
+    "R3": "Score changes recorded",
+    "R4": "Old forms still open",
+}

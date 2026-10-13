@@ -1,4 +1,6 @@
 """Checks the app starts and every screen loads."""
+import re
+
 import pytest
 from django.urls import reverse
 
@@ -9,6 +11,7 @@ PAGES = [
     "core:about",
     "core:awards",
     "core:login",
+    "core:journeys",
     "entries:dashboard",
     "entries:organisation",
     "entries:form",
@@ -93,3 +96,12 @@ def test_sector_filter_shows_only_that_sector(client):
     response = client.get(reverse("core:awards"), {"sector": "Shop-floor"})
     assert b"Kaizen Competition" in response.content
     assert b"Energy Efficiency Award" not in response.content
+
+
+@pytest.mark.django_db
+def test_every_journey_step_links_to_a_working_page(client):
+    page = client.get(reverse("core:journeys")).content.decode()
+    links = set(re.findall(r'<li>\s*<a href="([^"]+)"', page))
+    assert len(links) >= 15
+    for href in links:
+        assert client.get(href).status_code == 200, href
