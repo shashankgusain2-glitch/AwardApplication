@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Grade {{ app.organisation }}{% endblock %}
+
+{% block content %}
+<p class="muted small" style="margin:0"><a href="{% url 'judging:tab' %}">Judging</a> / Round {{ a.round }}</p>
+<div class="row-between" style="margin-bottom:1rem">
+  <h1 style="font-size:1.6rem;margin:0">{{ app.organisation }}</h1>
+  <span class="badge badge-{{ a.status }}">{{ a.get_status_display }}</span>
+</div>
+<p class="muted">{{ app.award }}</p>
+
+{% if meeting %}
+  <div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>Round 2: online meeting with a group of judges</strong>📅 {{ meeting.scheduled_at|date:"j M Y, H:i" }} · <a href="{{ meeting.meeting_link }}" target="_blank" rel="noopener">Join the meeting</a>. Grade the organisation after the meeting.</div></div>
+{% endif %}
+
+<div class="grid grid-2" style="align-items:start">
+  <div class="card">
+    <h2 style="font-size:1.1rem">The report</h2>
+    {% for q in questions %}
+      <div class="settings-row" style="display:block">
+        <p class="muted small" style="margin:0 0 .25rem">{{ q.label }}</p>
+        <p style="margin:0">{{ q.answer|default:"—" }}</p>
+      </div>
+    {% endfor %}
+  </div>
+
+  <form method="post" class="card">
+    {% csrf_token %}
+    <h2 style="font-size:1.1rem">Your grades <span class="muted small">(1 = poor, 10 = excellent)</span></h2>
+
+    {% for c in rows %}
+      <fieldset class="settings-row" style="display:block;border:0;padding:1rem 0;margin:0">
+        <legend style="font-weight:600">{{ c.label }} <span class="muted small">· weight {{ c.weight }}%</span></legend>
+        <div class="score-scale" style="margin:.5rem 0">
+          {% for n in scale %}
+            <label><input type="radio" name="score_{{ c.key }}" value="{{ n }}" {% if c.score.value == n %}checked{% endif %} {% if locked and not a.change_allowed %}disabled{% endif %}><span>{{ n }}</span></label>
+          {% endfor %}
+        </div>
+        {% if not locked %}<textarea name="comment_{{ c.key }}" style="min-height:60px" placeholder="Short comment">{{ c.score.comment }}</textarea>
+        {% elif c.score.comment %}<p class="small muted" style="margin:0">{{ c.score.comment }}</p>{% endif %}
+      </fieldset>
+    {% endfor %}
+
+    {% if not locked %}
+      <div class="row">
+        <button class="btn btn-outline" name="action" value="save">Save and finish later</button>
+        <button class="btn btn-primary" name="action" value="submit">Submit grades</button>
+      </div>
+    {% elif a.change_allowed %}
+      <div class="callout callout-success" style="margin:1rem 0"><div><strong>Staff allowed you to change your grades</strong>Pick new scores above, give your reason, and save. Every change is recorded.</div></div>
+      <div class="field"><label for="reason">Reason for the change *</label><textarea id="reason" name="reason" style="min-height:70px" required></textarea></div>
+      <button class="btn btn-primary" name="action" value="change">Save changes</button>
+    {% else %}
+      <p class="small" style="margin:1rem 0 0"><strong>Total: {{ a.total }} / 10</strong></p>
+    {% endif %}
+
+  </form>
+</div>
+
+{% if a.status == "completed" and not a.change_allowed %}
+  <div class="card" style="margin-top:1.5rem">
+    <h2 style="font-size:1.1rem">Need to change a grade?</h2>
+    {% if pending_request %}
+      <p class="muted small" style="margin:0">Request sent: "{{ pending_request.reason }}". Staff will contact you and confirm.</p>
+    {% else %}
+      <p class="muted small">Graded reports are locked. Ask staff for permission and say why.</p>
+      <form method="post">
+        {% csrf_token %}
+        <div class="field"><label for="req">Why do you need to change it? *</label><textarea id="req" name="reason" style="min-height:70px" required></textarea></div>
+        <button class="btn btn-outline" name="action" value="request_change">Ask staff for permission</button>
+      </form>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% if changes %}
+  <div class="card" style="margin-top:1.5rem">
+    <h2 style="font-size:1.1rem">Change history</h2>
+    <table><thead><tr><th>When</th><th>Part</th><th>Old → New</th><th>Reason</th></tr></thead><tbody>
+      {% for ch in changes %}<tr><td class="small">{{ ch.changed_at|date:"j M, H:i" }}</td><td>{{ ch.criterion }}</td><td>{{ ch.old_value }} → {{ ch.new_value }}</td><td class="small">{{ ch.reason }}</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+{% endif %}
+{% endblock %}

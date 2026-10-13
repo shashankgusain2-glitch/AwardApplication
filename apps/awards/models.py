@@ -10,12 +10,21 @@ class Award(models.Model):
     summary = models.TextField()
     deadline = models.DateField()
     is_open = models.BooleanField(default=True)
+    # Set by staff: how many judges grade each report.
+    judges_per_report = models.PositiveSmallIntegerField(default=2)
+    # What judges grade, each 1-10 with a weight (weights add up to 100):
+    # [{"key", "label", "weight"}]
+    criteria = models.JSONField(default=list)
+    round2_criteria = models.JSONField(default=list)
 
     class Meta:
         ordering = ["deadline"]
 
     def __str__(self):
         return self.name
+
+    def criteria_for(self, round_no):
+        return self.criteria if round_no == 1 else self.round2_criteria
 
     @property
     def current_form(self):
@@ -45,3 +54,8 @@ class FormVersion(models.Model):
 
     def __str__(self):
         return f"{self.award.name} v{self.number}"
+
+    def publish_new_version(self, questions):
+        """Rule 4: never edit a published form; publish a copy with the changes instead."""
+        latest = self.award.form_versions.order_by("-number").first()
+        return FormVersion.objects.create(award=self.award, number=latest.number + 1, questions=questions)

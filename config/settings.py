@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "apps.entries",
     "apps.judging",
     "apps.dashboard",
+    "apps.staff",
 ]
 
 MIDDLEWARE = [

@@ -1,21 +1,58 @@
-"""Rule 2: a judge is never given an application they have a conflict with.
+"""
+Rule 2: a judge is never given an application they have a conflict with.
 
-From the 12 Oct meeting: judges do NOT declare conflicts themselves
-(they rarely would); staff check for conflicts when assigning.
-Planned: judge assignment is not built yet.
+From the 12 Oct meeting: judges don't declare conflicts (they rarely would);
+STAFF record them, and the system enforces them when assigning.
 """
 import pytest
+from django.urls import reverse
 
-pytestmark = pytest.mark.skip(reason="Planned: judge assignment not built yet")
+from apps.awards.models import Award
+from apps.judging import services
+from apps.judging.models import Conflict
 
-
-def test_staff_flagged_conflict_blocks_assignment():
-    ...
-
-
-def test_conflict_matches_organisation_by_gstin():
-    ...
+from ..conftest import make_report
 
 
-def test_declined_report_returns_to_pool_without_conflicted_judge():
-    ...
+def _conflict(judge, app):
+    return Conflict.objects.create(judge=judge, organisation=app.organisation)
+
+
+@pytest.mark.django_db
+def test_conflicted_judge_is_never_suggested(judges):
+    app = make_report()
+    _conflict(judges[0], app)
+    assert judges[0] not in services.suggested_judges(app)
+
+
+@pytest.mark.django_db
+def test_auto_assign_skips_conflicted_judge(judges):
+    app = make_report(slug="kaizen")
+    _conflict(judges[0], app)
+    picks = services.auto_assign(app, None)
+    assert judges[0] not in picks
+
+
+@pytest.mark.django_db
+def test_staff_cannot_force_assign_a_conflicted_judge(judges, staff_client):
+    app = make_report()
+    _conflict(judges[0], app)
+    staff_client.post(reverse("staff:report_action", args=[app.pk]), {"action": "assign", "judges": [judges[0].pk]})
+    assert not app.assignments.exists()
+
+
+@pytest.mark.django_db
+def test_conflicted_judge_cannot_be_in_round2_meeting(judges):
+    app = make_report(status="shortlisted")
+    _conflict(judges[0], app)
+    with pytest.raises(services.RuleError):
+        services.schedule_round2(app, app.updated_at, "https://meet.example/x", [judges[0]], None)
+
+
+@pytest.mark.django_db
+def test_conflict_applies_to_every_report_of_that_organisation(judges):
+    app = make_report()
+    _conflict(judges[0], app)
+    award = Award.objects.get(slug="kaizen")
+    second = app.organisation.applications.create(award=award, form_version=award.current_form, status="pool")
+    assert judges[0] not in services.suggested_judges(second)
