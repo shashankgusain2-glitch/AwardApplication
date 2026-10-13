@@ -46,14 +46,6 @@ python manage.py createsuperuser
 
 Then open http://localhost:8000/admin
 
-### Demo data
-
-```bash
-python manage.py seed_demo
-```
-
-All demo data is fake.
-
 
 ## Project layout
 
