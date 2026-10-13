@@ -1,5 +1,5 @@
 """
-Login (one page, four role tabs), applicant sign-up, logout and password reset.
+Login (one form for every role), applicant sign-up, logout and password reset.
 """
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -10,10 +10,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .forms import LoginForm, SignUpForm
-from .models import User
 from .permissions import ROLE_HOME, SESSION_ROLE
-
-TABS = [(r.value, r.label) for r in User.Role]
 
 
 def _start_session(request, user):
@@ -33,23 +30,17 @@ def _safe_next(request, user):
 
 @require_http_methods(["GET", "POST"])
 def login_view(request):
-    role = request.POST.get("role") or request.GET.get("role") or User.Role.APPLICANT
-    if role not in ROLE_HOME:
-        role = User.Role.APPLICANT
-
+    """One login for every role; the account's role decides where they land."""
     if request.user.is_authenticated and request.method == "GET" and request.session.get(SESSION_ROLE):
         return redirect(ROLE_HOME[request.user.role])
 
-    form = LoginForm(request.POST or None, role=role, request=request)
+    form = LoginForm(request.POST or None, request=request)
     if request.method == "POST" and form.is_valid():
         _start_session(request, form.user)
         return redirect(_safe_next(request, form.user))
 
     return render(request, "accounts/login.html", {
         "form": form,
-        "role": role,
-        "role_label": User.Role(role).label,
-        "tabs": TABS,
         "next": request.GET.get("next", request.POST.get("next", "")),
     })
 

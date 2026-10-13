@@ -1,7 +1,7 @@
 """
 Shared test helpers: one logged-in client per role.
 
-Clients log in through the real login page (the right tab), so every test
+Clients log in through the real login page, so every test
 also goes through the role check and the session that stores the role.
 """
 import pytest
@@ -33,15 +33,15 @@ def make_user(email, role, password=PASSWORD, **extra):
     return user
 
 
-def login(client, email, role, password=PASSWORD):
-    return client.post(reverse("accounts:login"), {"email": email, "password": password, "role": role})
+def login(client, email, password=PASSWORD):
+    return client.post(reverse("accounts:login"), {"email": email, "password": password})
 
 
 def logged_in(key):
     role = "judge" if key == "judge2" else key
     make_user(ACCOUNTS[key], role)
     c = Client()
-    response = login(c, ACCOUNTS[key], role)
+    response = login(c, ACCOUNTS[key])
     assert response.status_code == 302, "test login failed"
     return c
 

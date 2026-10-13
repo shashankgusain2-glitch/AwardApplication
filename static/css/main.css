@@ -262,11 +262,7 @@ details.faq p { padding: 0 1.25rem 1rem; margin: 0; color: var(--muted); }
   .cta-band { padding: 2rem; }
 }
 
-/* Login tabs and auth forms ------------------------------------------------- */
-.tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: .25rem; background: var(--bg); padding: .25rem; border-radius: var(--radius-sm); margin: 1rem 0 1.5rem; }
-.tab { text-align: center; padding: .55rem .25rem; border-radius: 6px; text-decoration: none; color: var(--muted); font-weight: 600; font-size: .9rem; }
-.tab:hover { color: var(--navy); }
-.tab.active { background: var(--surface); color: var(--navy); box-shadow: var(--shadow); }
+/* Login and auth forms --------------------------------------------------- */
 .password-wrap { display: flex; gap: .5rem; align-items: center; }
 .password-wrap input { flex: 1; }
 .password-toggle { flex: none; }

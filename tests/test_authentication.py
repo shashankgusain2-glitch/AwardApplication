@@ -1,7 +1,7 @@
 """
 Authentication and role-based access control.
 
-Covers: four role tabs (role checked on the server), applicant sign-up,
+Covers: one login form (the account role decides where you go), applicant sign-up,
 hashed passwords, session with user id + role, logout, redirects for
 logged-out users, 403 for the wrong role, applicants and judges seeing
 only their own data, and forgot password.
@@ -39,57 +39,55 @@ def test_passwords_are_hashed_never_plain_text():
     assert user.check_password(PASSWORD)
 
 
-# --- Login tabs: role is checked on the server ------------------------------
+# --- One login form; the account's role decides where you go ----------------
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("role", ROLES)
-def test_each_role_logs_in_on_its_own_tab(client, role):
+def test_one_login_sends_each_role_to_its_own_area(client, role):
     make_user(f"{role}@example.com", role)
-    response = login(client, f"{role}@example.com", role)
+    response = login(client, f"{role}@example.com")
     assert response.status_code == 302
     assert response["Location"] == reverse(HOME[role])
 
 
-WRONG_TABS = [(role, tab) for role in ROLES for tab in ROLES if role != tab]
-
-
 @pytest.mark.django_db
-@pytest.mark.parametrize("role,tab", WRONG_TABS)
-def test_credentials_fail_on_another_roles_tab(client, role, tab):
-    make_user(f"{role}@example.com", role)
-    response = login(client, f"{role}@example.com", tab)     # right password, wrong tab
-    assert response.status_code == 200
-    assert b"Incorrect email or password" in response.content
-    assert "_auth_user_id" not in client.session
+@pytest.mark.parametrize("sent_role", ["staff", "judge", "leader"])
+def test_role_sent_with_the_login_form_is_ignored(client, sent_role):
+    # The role comes from the account, never from the person logging in.
+    make_user("a@example.com", "applicant")
+    response = client.post(reverse("accounts:login"),
+                           {"email": "a@example.com", "password": PASSWORD, "role": sent_role})
+    assert response["Location"] == reverse(HOME["applicant"])
+    assert client.session["role"] == "applicant"
 
 
 @pytest.mark.django_db
 def test_wrong_password_and_unknown_email_give_the_same_message(client):
     make_user("a@example.com", "applicant")
-    wrong = login(client, "a@example.com", "applicant", password="nope-nope-1")
-    unknown = login(client, "nobody@example.com", "applicant")
+    wrong = login(client, "a@example.com", password="nope-nope-1")
+    unknown = login(client, "nobody@example.com")
     for response in (wrong, unknown):
-        assert b"Incorrect email or password for an Applicant account" in response.content
+        assert b"Incorrect email or password." in response.content
     assert "_auth_user_id" not in client.session
 
 
 @pytest.mark.django_db
 def test_email_is_not_case_sensitive(client):
     make_user("Mixed@Example.com", "applicant")
-    assert login(client, "mixed@example.com", "applicant").status_code == 302
+    assert login(client, "mixed@example.com").status_code == 302
 
 
 @pytest.mark.django_db
 def test_inactive_account_cannot_log_in(client):
     make_user("gone@example.com", "staff", is_active=False)
-    assert login(client, "gone@example.com", "staff").status_code == 200
+    assert login(client, "gone@example.com").status_code == 200
     assert "_auth_user_id" not in client.session
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("missing", ["email", "password"])
 def test_empty_fields_are_rejected(client, missing):
-    data = {"email": "a@example.com", "password": PASSWORD, "role": "applicant"}
+    data = {"email": "a@example.com", "password": PASSWORD}
     data[missing] = ""
     response = client.post(reverse("accounts:login"), data)
     assert response.status_code == 200
@@ -99,33 +97,31 @@ def test_empty_fields_are_rejected(client, missing):
 @pytest.mark.django_db
 def test_session_holds_user_id_and_role(client):
     user = make_user("j@example.com", "judge")
-    login(client, "j@example.com", "judge")
+    login(client, "j@example.com")
     assert client.session["_auth_user_id"] == str(user.pk)
     assert client.session["role"] == "judge"
 
 
 @pytest.mark.django_db
-def test_login_page_has_four_tabs_and_signup_only_for_applicants(client):
-    applicant_tab = client.get(reverse("accounts:login"), {"role": "applicant"}).content.decode()
-    for label in ["Applicant", "Staff", "Judge", "Leader"]:
-        assert f">{label}</a>" in applicant_tab
-    assert "Sign up as an applicant" in applicant_tab
-    assert "Forgot password?" in applicant_tab
-    judge_tab = client.get(reverse("accounts:login"), {"role": "judge"}).content.decode()
-    assert "Sign up" not in judge_tab
-    assert "data-toggle-password" in judge_tab           # show/hide password button
-    assert "data-loading-text" in judge_tab              # loading state
+def test_login_page_is_one_form_with_signup_reset_and_password_toggle(client):
+    page = client.get(reverse("accounts:login")).content.decode()
+    assert page.count('name="password"') == 1            # one form, no role tabs
+    assert 'role="tablist"' not in page
+    assert "Sign up to apply" in page
+    assert "Forgot password?" in page
+    assert "data-toggle-password" in page                # show/hide password button
+    assert "data-loading-text" in page                   # loading state
 
 
 @pytest.mark.django_db
 def test_next_page_is_honoured_but_only_on_this_site(client):
     make_user("s@example.com", "staff")
     ok = client.post(reverse("accounts:login"), {"email": "s@example.com", "password": PASSWORD,
-                                                 "role": "staff", "next": "/staff/settings/"})
+                                                 "next": "/staff/settings/"})
     assert ok["Location"] == "/staff/settings/"
     other = Client()
     evil = other.post(reverse("accounts:login"), {"email": "s@example.com", "password": PASSWORD,
-                                                  "role": "staff", "next": "https://evil.example/"})
+                                                  "next": "https://evil.example/"})
     assert evil["Location"] == reverse("awards:staff_home")
 
 
@@ -203,7 +199,7 @@ def test_logged_out_users_are_sent_to_login(client, name, role):
     response = client.get(reverse(name))
     assert response.status_code == 302
     assert response["Location"].startswith(reverse("accounts:login"))
-    assert f"role={role}" in response["Location"]
+    assert "next=" in response["Location"]
 
 
 WRONG_ROLE = [(name, role, as_role) for name, role in PROTECTED for as_role in ROLES if as_role != role]
@@ -214,7 +210,7 @@ WRONG_ROLE = [(name, role, as_role) for name, role in PROTECTED for as_role in R
 def test_other_roles_get_403_access_denied(name, role, as_role):
     c = Client()
     make_user(f"{as_role}@example.com", as_role)
-    login(c, f"{as_role}@example.com", as_role)
+    login(c, f"{as_role}@example.com")
     response = c.get(reverse(name))
     assert response.status_code == 403
     assert b"Access Denied" in response.content

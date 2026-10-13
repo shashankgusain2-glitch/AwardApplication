@@ -117,3 +117,5 @@ Each decision: the options, the one we picked, why, and what would change our mi
 **Not built yet (known gaps):** limiting repeated failed logins (brute force), two-factor login, and **verifying new applicants** before they get access. The 13 Oct meeting flagged that last one as unclear; sign-up currently gives immediate access.
 
 **What would change our mind:** a separate mobile app or API clients would need token auth (e.g. JWT) alongside sessions.
+
+**Update (14 Oct 2026): one login form instead of four tabs.** The user asked for a single login: everyone enters email + password and is sent to their own area based on the **role stored on their account** (applicant → applicant portal, staff → staff portal, and so on). The role is never chosen by the person logging in; a role sent with the form is ignored. Access control is unchanged: every portal page still checks the role on the server and returns 403 Access Denied to other roles. Error messages no longer mention tabs: "Incorrect email or password."
