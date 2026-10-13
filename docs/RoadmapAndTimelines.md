@@ -18,7 +18,7 @@
 |---|---|---|---|
 | 1 | Planning | ✅ Done | Workflows mapped, roadmap drafted |
 | 2 | Skeleton | 🔄 In progress | Skeleton app ready for review |
-| 3 | Core Development | ⏳ Not started | All main features working on real data |
+| 3 | Core Development | 🔄 In progress (3.1–3.3 done) | All main features working on real data |
 | 4 | Testing | ⏳ Ongoing (after each Phase 3 milestone) | All tests pass, no critical bugs |
 | 5 | Deployment | ⏳ Not started | App live in production |
 | 6 | Maintenance and Updates | ⏳ Not started | Steady support and regular updates |
@@ -57,7 +57,7 @@
 
 ## Phase 3 · Core Development
 
-**Status:** ⏳ Not started
+**Status:** 🔄 In progress. Steps 3.1, 3.2 and 3.3 are done.
 
 **Goal:** Build the real features and connect the screens to real logic.
 
@@ -65,9 +65,9 @@
 
 | # | Step | Time | Day | Done when |
 |---|---|---|---|---|
-| 3.1 | Data model and database | 3 hours | Day 1 | Database created with all tables and relationships |
-| 3.2 | Backend foundation | 2 hours | Day 1 | Health-check endpoint shows the server is up and connected to the database |
-| 3.3 | Authentication and roles | 3 hours | Day 1 | Login and logout work, and each role sees only its own pages |
+| 3.1 | ✅ Data model and database | 3 hours | Day 1 | Database created with all tables and relationships |
+| 3.2 | ✅ Backend foundation | 2 hours | Day 1 | Health-check endpoint shows the server is up and connected to the database |
+| 3.3 | ✅ Authentication and roles | 3 hours | Day 1 | Login and logout work, and each role sees only its own pages |
 | 3.4 | Core API | 6 hours | Day 2 | Every endpoint tested on its own in Postman |
 | 3.5 | Frontend and backend integration | 4 hours | Day 2–3 | Skeleton runs on real data |
 | 🔍 | *Quick review* | *1 hour* | *Day 3* | *Problems caught before feature work starts* |
@@ -86,22 +86,24 @@
 
 ### 3.1 Data model and database (3 hours)
 
-- [ ] Decide what information the app keeps (users, tasks, statuses) and how the pieces connect.
-- [ ] Create the database.
+- [x] Decide what information the app keeps (users, tasks, statuses) and how the pieces connect.
+- [x] Create the database.
 
 > **Why first:** changing the data model later breaks everything built on top of it.
 
 ### 3.2 Backend foundation (2 hours)
 
-- [ ] Set up the server: folder structure, settings, error handling, and the database connection.
-- [ ] Add a health-check endpoint that confirms the server is running and can reach the database.
+- [x] Set up the server: folder structure, settings, error handling, and the database connection.
+- [x] Add a health-check endpoint that confirms the server is running and can reach the database.
 
 ### 3.3 Authentication and roles (3 hours)
 
-- [ ] Build login and logout.
-- [ ] Give each user type a role. Roles decide who can see and do what, so a normal user can't open admin pages.
+- [x] Build login and logout.
+- [x] Give each user type a role. Roles decide who can see and do what, so a normal user can't open admin pages.
 
 > **Why before features:** every feature needs to know who is using it.
+
+> **Done (14 Oct 2026):** one login form sends each role to its own home page, and each home shows only that user's real data from the database (applicant: own applications; judge: own assignments, with Accept and Decline; staff: work waiting today; leadership: every award's progress). Other roles' pages give 403, and only admins can open `/admin/`. Tested in `tests/test_role_homes.py`. The remaining screens move to real data in 3.5.
 
 ### 3.4 Core API (6 hours)
 

@@ -2,49 +2,59 @@
 
 {% block title %}Dashboard{% endblock %}
 {% block heading %}Welcome back, {{ user.get_short_name }}{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">{{ organisation.name|default:"Start by completing your organisation profile." }}</p>{% endblock %}
-{% block user %}{% include "partials/user_chip.html" with initials="PK" name="Priya Kulkarni" detail="Applicant" %}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">{{ profile.organisation_name|default:"Start by completing your organisation profile." }}</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-{% if applications %}
-<div class="callout callout-warning" style="margin-bottom:1.5rem">
-  <div><strong>Your Business Excellence application is 40% done</strong>The deadline is 30 Nov 2026. Your answers are saved automatically.</div>
-  <a class="btn btn-dark btn-sm" style="margin-left:auto;align-self:center" href="{% url 'entries:form' %}">Continue</a>
-</div>
+{% if not profile %}
+  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>Add your organisation</strong>Fill your <a href="{% url 'entries:organisation' %}">organisation profile</a> (with GSTIN) so staff can verify it.</div></div>
+{% elif profile.verification_status == "pending" %}
+  <div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>Staff are verifying your organisation</strong>You can fill and submit applications now. They go to judges once {{ profile.organisation_name }} is verified.</div></div>
+{% elif profile.verification_status == "rejected" %}
+  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>Your organisation couldn't be verified</strong>{{ profile.verification_note|default:"Please contact the awards team." }}</div></div>
+{% endif %}
+
+{% for draft in drafts %}
+  <div class="callout callout-warning" style="margin-bottom:1rem">
+    <div><strong>{{ draft.award.name }}: draft not submitted yet</strong>{% if draft.award.closes_on %}Closes {{ draft.award.closes_on|date:"j M Y" }}. {% endif %}Your answers are saved.</div>
+  </div>
+{% endfor %}
 
 <div class="card" style="margin-bottom:1.5rem">
   <div class="card-head"><h2>My applications</h2></div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Entry</th><th>Award</th><th>Status</th><th>Progress</th><th>Form</th><th></th></tr></thead>
-      <tbody>
-        {% for app in applications %}
-          <tr>
-            <td><strong>{{ app.id }}</strong></td>
-            <td>{{ app.award }}<br><span class="muted small">Deadline: {{ app.deadline }}</span></td>
-            <td><span class="badge badge-{{ app.status|slugify }}">{{ app.status }}</span></td>
-            <td style="min-width:120px"><div class="progress"><span style="width:{{ app.progress }}%"></span></div><span class="muted small">{{ app.progress }}%</span></td>
-            <td><span class="muted small">{{ app.form_version }}</span></td>
-            <td>
-              {% if app.status == "Draft" %}<a class="btn btn-primary btn-sm" href="{% url 'entries:form' app.slug %}">Continue</a>
-              {% elif app.form_version == "v2026.1" %}<a class="btn btn-outline btn-sm" href="{% url 'entries:form' app.slug %}">View</a>{% else %}<a class="btn btn-outline btn-sm" href="{% url 'entries:status' %}">View</a>{% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  <p class="muted small" style="margin:1rem 0 0">Last year's entry (A-0019) still opens with the 2025 questions it was sent with.</p>
+  {% if applications %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Reference</th><th>Award</th><th>Status</th><th>Form</th><th>Submitted</th></tr></thead>
+        <tbody>
+          {% for app in applications %}
+            <tr>
+              <td><strong>{{ app.reference }}</strong></td>
+              <td>{{ app.award.name }}<br><span class="muted small">{{ app.title }}</span></td>
+              <td><span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span>{% if app.edit_requested %} <span class="badge badge-draft">Edit requested</span>{% endif %}</td>
+              <td><span class="muted small">v{{ app.form_version.version }}</span></td>
+              <td class="small">{{ app.submitted_at|date:"j M Y"|default:"—" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted small" style="margin:0">You have no applications yet. Choose an award below to start.</p>
+  {% endif %}
 </div>
-{% else %}
-<div class="card" style="margin-bottom:1.5rem">
-  <h2 style="font-size:1.1rem">You have no applications yet</h2>
-  <p class="muted small" style="margin:0">Fill your <a href="{% url 'entries:organisation' %}">organisation profile</a>, then choose an award below to start.</p>
-</div>
-{% endif %}
 
-<div class="row-between" style="margin-bottom:1rem"><h2 style="margin:0;font-size:1.2rem">Awards you can enter</h2><a href="{% url 'core:awards' %}">See all →</a></div>
+<h2 style="font-size:1.2rem">Awards you can enter</h2>
 <div class="grid grid-3">
-  {% for award in open_awards %}{% include "partials/award_card.html" %}{% endfor %}
+  {% for award in open_awards %}
+    <div class="card">
+      <span class="badge badge-sector">{{ award.sector|default:"Award" }}</span>
+      <h3 style="margin-top:.75rem">{{ award.name }}</h3>
+      <p class="muted small">{{ award.summary|truncatechars:140 }}</p>
+      <p class="small" style="margin:0">{% for r in award.rounds.all %}{{ r.get_kind_display }}{% if not forloop.last %} → {% endif %}{% endfor %}{% if award.closes_on %} · Closes {{ award.closes_on|date:"j M Y" }}{% endif %}</p>
+    </div>
+  {% empty %}
+    <p class="muted small">No other awards are open right now.</p>
+  {% endfor %}
 </div>
 {% endblock %}

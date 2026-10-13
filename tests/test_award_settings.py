@@ -135,8 +135,7 @@ def test_blind_never_on_for_in_person_only_award_even_if_data_says_so():
 
 
 @pytest.mark.django_db
-def test_removing_round_two_drops_round_two_assignments(staff_client, judge_client):
+def test_removing_round_two_closes_the_round_two_scoring_page(staff_client, judge_client):
+    assert judge_client.get(reverse("judging:score", args=["K-0003"])).status_code == 200
     _post(staff_client, round2_type="none")
-    page = judge_client.get(reverse("judging:assignments")).content.decode()
-    assert "K-0003" not in page
     assert judge_client.get(reverse("judging:score", args=["K-0003"])).status_code == 404

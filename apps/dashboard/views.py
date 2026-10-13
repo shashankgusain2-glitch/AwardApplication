@@ -3,20 +3,15 @@ from django.shortcuts import render
 
 from apps.accounts.permissions import role_required
 from apps.core import demo_data as d
+from apps.core import overview as summaries
 
 ROLE = "leader"
 
 
 @role_required("leader")
 def overview(request):
-    rows = d.LEADER_OVERVIEW
-    return render(request, "dashboard/overview.html", {
-        "role": ROLE,
-        "rows": rows,
-        "total_entries": sum(r["entries"] for r in rows),
-        "total_flags": sum(r["flags"] for r in rows),
-        "open_count": sum(1 for r in rows if r["stage"] in ("Applications open", "Closing soon")),
-    })
+    """Home page: the whole event at a glance, from the database."""
+    return render(request, "dashboard/overview.html", {"role": ROLE, **summaries.leader_overview()})
 
 
 @role_required("leader")

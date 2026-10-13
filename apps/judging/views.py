@@ -1,10 +1,17 @@
-"""Judge screens (sample data until the judging models are built)."""
+"""
+Judge screens. The home page (assignments) uses the real database; the
+scoring screen still uses sample data until step 3.5.
+"""
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from apps.accounts.permissions import role_required
+from apps.assignments import services as assignment_services
 from apps.core import demo_data as d
+from apps.core.services import BusinessRuleError
 
 ROLE = "judge"
 
@@ -30,12 +37,25 @@ def _with_award(assignment, request):
 
 @role_required("judge")
 def assignments(request):
-    mine = d.assignments_for(request.user)   # only this judge's assignments
-    return render(request, "judging/assignments.html", {
-        "role": ROLE,
-        "judge": d.JUDGES.get(request.user.email.lower(), {"name": request.user.display_name, "expertise": ""}),
-        "assignments": [a for a in (_with_award(a, request) for a in mine) if a],
-    })
+    """Home page: this judge's own assignments from the database (blind judging applied)."""
+    return render(request, "judging/assignments.html", {"role": ROLE, **assignment_services.judge_home(request.user)})
+
+
+@role_required("judge")
+@require_POST
+def respond(request, pk):
+    """Accept or decline an assignment. Only the judge's own: anyone else's gives 404."""
+    assignment = get_object_or_404(assignment_services.visible_to(request.user), pk=pk)
+    try:
+        if request.POST.get("answer") == "accept":
+            assignment_services.start_review(assignment, judge=request.user)
+            messages.success(request, f"Accepted {assignment.report.reference}.")
+        else:
+            assignment_services.decline(assignment, judge=request.user)
+            messages.success(request, f"Declined {assignment.report.reference}. It goes back to the pool.")
+    except BusinessRuleError as error:
+        messages.error(request, str(error))
+    return redirect("judging:assignments")
 
 
 @role_required("judge")

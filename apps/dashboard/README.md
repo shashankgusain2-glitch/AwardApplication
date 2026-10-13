@@ -6,7 +6,7 @@
 
 | Page | Address | What leadership does |
 |---|---|---|
-| Overview | `/leadership/` | Every award's stage, entries, judging progress and flags in one table |
+| Overview | `/leadership/` | **Real counts** from the database: every award's stage, entries, judging progress and open requests in one table |
 | Review queue | `/leadership/review/` | Decide ties, big score gaps and appeals |
 | Approve results | `/leadership/results/` | Approve the winners or send them back |
 

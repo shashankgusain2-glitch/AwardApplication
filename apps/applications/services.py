@@ -165,3 +165,19 @@ def change_status(application, *, by, new_status, note=""):
     if by.role not in allowed_roles:
         raise BusinessRuleError("Your role can't make this change.")
     return set_status(application, new_status, by=by, note=note)
+
+
+def applicant_home(user):
+    """Everything the applicant's home page shows: only this applicant's own data."""
+    from apps.accounts.models import ApplicantProfile
+    from apps.awards.models import Award
+
+    applications = list(visible_to(user).order_by("-updated_at"))
+    entered = {a.award_id for a in applications}
+    return {
+        "applications": applications,
+        "profile": ApplicantProfile.objects.filter(user=user).first(),
+        "open_awards": Award.objects.filter(status=Award.Status.OPEN).exclude(id__in=entered)
+                                    .prefetch_related("rounds"),
+        "drafts": [a for a in applications if a.status == S.DRAFT],
+    }

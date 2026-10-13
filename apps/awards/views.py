@@ -7,6 +7,7 @@ from django.views.decorators.http import require_http_methods
 from apps.accounts.permissions import role_required
 from apps.awards import services as award_services
 from apps.core import demo_data as d
+from apps.core import overview
 from apps.core.services import BusinessRuleError
 
 ROLE = "staff"
@@ -14,12 +15,8 @@ ROLE = "staff"
 
 @role_required("staff")
 def staff_home(request):
-    return render(request, "awards/staff_home.html", {
-        "role": ROLE,
-        "awards": d.built_awards(request),
-        "entries": d.STAFF_ENTRIES,
-        "duplicates": d.DUPLICATES,
-    })
+    """Home page: what needs staff today, from the database."""
+    return render(request, "awards/staff_home.html", {"role": ROLE, **overview.staff_home()})
 
 
 def _clean_settings(post):

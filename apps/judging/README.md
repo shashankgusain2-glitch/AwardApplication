@@ -6,8 +6,9 @@
 
 | Page | Address | What the judge does |
 |---|---|---|
-| My assignments | `/judge/` | See assigned entries with their round type (desk review, site visit, live presentation); accept or decline |
-| Score an entry | `/judge/score/<entry>/` | Read the entry and score each criterion 1–10 |
+| My assignments | `/judge/` | See **their own real assignments** from the database, with the round type; Accept or Decline (declined reports go back to the pool) |
+| Answer an assignment | `/judge/assignments/<id>/respond/` | The Accept / Decline button. A judge can only answer their own assignments (others give 404) |
+| Score an entry | `/judge/score/<entry>/` | Read the entry and score each criterion 1–10 (still sample data until step 3.5) |
 
 **Blind judging (Rule 1) happens here.** In a blind award's desk-review round, the company name, location and file names are **removed on the server before the page is built**, so they can't leak. Site visits and live presentations are never blind.
 

@@ -4,6 +4,6 @@
 
 | File | Page |
 |---|---|
-| `overview.html` | Every award's stage, entries, judging progress and flags |
+| `overview.html` | Real counts for the whole event: reports submitted, being judged, waiting for approval, score-change requests, and each award's progress |
 | `review.html` | Cases for a decision: ties, big score gaps, appeals |
 | `results.html` | Proposed winners, with Approve or Send back |
