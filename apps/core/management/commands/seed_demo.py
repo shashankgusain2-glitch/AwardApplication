@@ -1,23 +1,44 @@
 """
-Create the demo staff account so the staff side of the workflow can be tried.
+Create the demo people so every workflow can be tried. Safe to run again.
 
 Run with:  python manage.py seed_demo
-Log in as staff by verifying the email below on the website.
+Log in as any of them by verifying their email on the website.
+All names and emails are fake.
 """
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
+from apps.awards.models import Award
+
 STAFF_EMAIL = "staff@uec.example"
+LEADER_EMAIL = "leader@uec.example"
+JUDGES = [
+    # email, name, expertise, priority, max load
+    ("kapoor@judges.example", "Dr. R. Kapoor", "Manufacturing, quality", 1, 10),
+    ("rao@judges.example", "Prof. N. Rao", "Operations, academia", 2, 10),
+    ("iyer@judges.example", "Ms. A. Iyer", "Strategy, finance", 3, 8),
+]
 
 
 class Command(BaseCommand):
-    help = "Create the demo staff account (safe to run more than once)."
+    help = "Create demo staff, leader and judges (safe to run more than once)."
 
     def handle(self, *args, **options):
+        from apps.judging.services import get_or_create_judge
+
         User = get_user_model()
-        user, created = User.objects.get_or_create(email=STAFF_EMAIL, defaults={"username": STAFF_EMAIL})
-        if not user.is_staff:
-            user.is_staff = True
-            user.save()
+        staff, _ = User.objects.get_or_create(email=STAFF_EMAIL, defaults={"username": STAFF_EMAIL})
+        staff.is_staff = True
+        staff.save()
+
+        leader, _ = User.objects.get_or_create(email=LEADER_EMAIL, defaults={"username": LEADER_EMAIL})
+        leader.is_leader = True
+        leader.save()
+
+        events = list(Award.objects.all())
+        for email, name, expertise, priority, max_load in JUDGES:
+            get_or_create_judge(email, name, expertise, priority, max_load, events)
+
         self.stdout.write(self.style.SUCCESS(
-            f"Staff account {'created' if created else 'ready'}: verify {STAFF_EMAIL} on the website to log in as staff."))
+            f"Ready. Log in by verifying: staff {STAFF_EMAIL}, leader {LEADER_EMAIL}, "
+            f"judges {', '.join(j[0] for j in JUDGES)}"))

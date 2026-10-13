@@ -16,7 +16,7 @@ def test_verify_email_page_loads(client):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("name", ["entries:events", "entries:register", "entries:staff"])
+@pytest.mark.parametrize("name", ["entries:events", "entries:register", "staff:home", "judging:tab", "dashboard:overview"])
 def test_private_pages_need_verification(client, name):
     response = client.get(reverse(name))
     assert response.status_code == 302

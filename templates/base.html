@@ -19,7 +19,16 @@
         <a href="{% url 'core:home' %}">Home</a>
         {% if user.is_authenticated %}
           {% if user.is_staff %}
-            <a href="{% url 'entries:staff' %}">Staff</a>
+            <a href="{% url 'staff:home' %}">Staff</a>
+            <a href="{% url 'staff:reports' %}">Reports</a>
+            <a href="{% url 'staff:judges' %}">Judges</a>
+            <a href="{% url 'staff:requests' %}">Requests</a>
+            <a href="{% url 'staff:events' %}">Events</a>
+            <a href="{% url 'staff:activity' %}">Activity</a>
+          {% elif user.is_leader %}
+            <a href="{% url 'dashboard:overview' %}">Dashboard</a>
+          {% elif user.judge %}
+            <a href="{% url 'judging:tab' %}">Judging</a>
           {% else %}
             <a href="{% url 'entries:events' %}">Events</a>
           {% endif %}

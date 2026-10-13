@@ -2,7 +2,7 @@
 
 One award cycle, through the eyes of each user.
 
-> **Built now (13 Oct 2026):** the Applicant journey, plus the staff step that approves edits. The Judge and Leader journeys below are planned.
+> **Built now (13 Oct 2026):** all four journeys work in the app (applicant, judge with Rounds 1 and 2, staff, leadership). The 12 Oct meeting changed one thing below: judges no longer declare conflicts; staff record them.
 
 Rules: **R1** Blind judging · **R2** No conflicts · **R3** Score changes recorded · **R4** Old forms still open
 

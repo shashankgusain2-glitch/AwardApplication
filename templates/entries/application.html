@@ -21,6 +21,10 @@
   </div>
 {% endif %}
 
+{% if app.status == "rejected" %}
+  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>Your report was not accepted</strong>It did not pass the staff check. Please contact {{ org.email }} if you think this is a mistake.</div></div>
+{% endif %}
+
 {% if app.edit_request == "requested" %}
   <div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>Edit requested</strong>Waiting for staff to confirm. Your reason: "{{ app.edit_reason }}"</div></div>
 {% elif app.edit_request == "approved" %}

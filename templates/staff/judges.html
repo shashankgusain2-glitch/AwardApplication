@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Judges{% endblock %}
+{% block content %}
+<h1 style="font-size:1.6rem">Judges</h1>
+
+<div class="card table-wrap" style="margin-bottom:1.5rem">
+  <h2 style="font-size:1.1rem">Priority list and workload</h2>
+  <table>
+    <thead><tr><th>Priority</th><th>Judge</th><th>Expertise</th><th>Events</th><th>Open now</th><th>Graded</th><th></th></tr></thead>
+    <tbody>
+      {% for j in judges %}
+        <tr>
+          <td>{{ j.priority }}</td>
+          <td><strong>{{ j }}</strong><br><span class="muted small">{{ j.user.email }}</span></td>
+          <td class="small">{{ j.expertise|default:"—" }}</td>
+          <td class="small">{% for p in j.panels.all %}{{ p }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
+          <td>{{ j.open_load }} / {{ j.max_load }}{% if j.open_load >= j.max_load %} <span class="badge badge-high">Full</span>{% endif %}</td>
+          <td>{{ j.graded }}</td>
+          <td><form method="post" action="{% url 'staff:judge_link' j.pk %}">{% csrf_token %}<button class="btn btn-outline btn-sm">Send login link</button></form></td>
+        </tr>
+      {% empty %}<tr><td colspan="7" class="muted small">No judges yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="grid grid-2" style="align-items:start">
+  <form method="post" class="card">
+    {% csrf_token %}
+    <h2 style="font-size:1.1rem">Select a judge</h2>
+    {% for field in judge_form %}{% include "partials/field.html" %}{% endfor %}
+    <button class="btn btn-primary" name="add_judge" value="1">Add and email login link</button>
+  </form>
+
+  <div class="card">
+    <h2 style="font-size:1.1rem">Conflicts (checked by staff)</h2>
+    <p class="muted small">A judge is never given reports from an organisation they have a conflict with.</p>
+    {% for c in conflicts %}<p class="small" style="margin:.3rem 0">🛡️ <strong>{{ c.judge }}</strong> × {{ c.organisation }}{% if c.note %} <span class="muted">({{ c.note }})</span>{% endif %}</p>
+    {% empty %}<p class="muted small">None recorded.</p>{% endfor %}
+    <form method="post" style="margin-top:1rem">
+      {% csrf_token %}
+      {% for field in conflict_form %}{% include "partials/field.html" %}{% endfor %}
+      <button class="btn btn-outline" name="add_conflict" value="1">Record conflict</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

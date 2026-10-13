@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<h1 style="font-size:1.6rem">Reports</h1>
+<nav class="chips" aria-label="Filter by status">
+  <a class="chip {% if not status %}active{% endif %}" href="{% url 'staff:reports' %}">All</a>
+  {% for s in statuses %}<a class="chip {% if status == s.value %}active{% endif %}" href="?status={{ s.value }}">{{ s.label }}</a>{% endfor %}
+</nav>
+<div class="card table-wrap">
+  <table>
+    <thead><tr><th>Organisation</th><th>Event</th><th>Status</th><th>Average</th><th></th></tr></thead>
+    <tbody>
+      {% for app in apps %}
+        <tr>
+          <td><strong>{{ app.organisation }}</strong><br><span class="muted small">{{ app.organisation.gstin }}</span></td>
+          <td>{{ app.award }}</td>
+          <td><span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span>{% if app.edit_request == "requested" %} <span class="badge badge-draft">Edit request</span>{% endif %}</td>
+          <td>{{ app.round1_average|default:"—" }}</td>
+          <td><a class="btn btn-outline btn-sm" href="{% url 'staff:report' app.pk %}">Open</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="muted small">No reports.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

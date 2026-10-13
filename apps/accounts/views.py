@@ -67,7 +67,11 @@ def verify_code(request):
             del request.session[SESSION_KEY]
             login(request, user, backend="django.contrib.auth.backends.ModelBackend")
             if user.is_staff:
-                return redirect("entries:staff")
+                return redirect("staff:home")
+            if user.is_leader:
+                return redirect("dashboard:overview")
+            if hasattr(user, "judge"):
+                return redirect("judging:tab")
             if not hasattr(user, "organisation"):
                 return redirect("entries:register")
             return redirect("entries:events")

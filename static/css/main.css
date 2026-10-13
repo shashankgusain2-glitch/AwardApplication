@@ -155,11 +155,11 @@ img { max-width: 100%; }
 .award-card .meta { display: flex; justify-content: space-between; align-items: center; font-size: .85rem; color: var(--muted); border-top: 1px solid var(--border); padding-top: .9rem; margin-top: .5rem; }
 
 .badge { display: inline-block; padding: .2rem .65rem; border-radius: 999px; font-size: .78rem; font-weight: 600; background: var(--bg); color: var(--muted); white-space: nowrap; }
-.badge-open, .badge-applications-open, .badge-eligible, .badge-submitted, .badge-judged, .badge-published-locked, .badge-strong, .badge-high-ok { background: var(--success-soft); color: var(--success); }
+.badge-open, .badge-applications-open, .badge-eligible, .badge-submitted, .badge-judged, .badge-completed, .badge-round2_done, .badge-pool, .badge-published-locked, .badge-strong, .badge-high-ok { background: var(--success-soft); color: var(--success); }
 .badge-closing-soon, .badge-draft, .badge-info-requested, .badge-awaiting-response, .badge-possible, .badge-possible-duplicate { background: var(--warning-soft); color: var(--warning); }
-.badge-judging, .badge-under-review, .badge-in-progress, .badge-assigned, .badge-good, .badge-visit-scheduled, .badge-presentation-scheduled { background: var(--info-soft); color: var(--info); }
-.badge-results, .badge-result-finalist { background: var(--gold-soft); color: var(--gold-dark); }
-.badge-high, .badge-conflict { background: var(--danger-soft); color: var(--danger); }
+.badge-judging, .badge-under-review, .badge-in-progress, .badge-assigned, .badge-good, .badge-accepted, .badge-offered, .badge-visit-scheduled, .badge-presentation-scheduled { background: var(--info-soft); color: var(--info); }
+.badge-results, .badge-result-finalist, .badge-shortlisted { background: var(--gold-soft); color: var(--gold-dark); }
+.badge-high, .badge-conflict, .badge-rejected, .badge-declined { background: var(--danger-soft); color: var(--danger); }
 .badge-sector { background: var(--teal-soft); color: var(--teal); }
 
 .chips { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 2rem; }

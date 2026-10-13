@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Activity{% endblock %}
+{% block content %}
+<h1 style="font-size:1.6rem">Activity</h1>
+<p class="muted">Everything that happened, newest first. Nothing here can be edited.</p>
+<div class="card table-wrap">
+  <table>
+    <thead><tr><th>When</th><th>Who</th><th>Report</th><th>What</th></tr></thead>
+    <tbody>
+      {% for e in entries %}
+        <tr><td class="small">{{ e.created_at|date:"j M, H:i" }}</td><td class="small">{{ e.actor|default:"System" }}</td>
+          <td class="small">{% if e.application %}<a href="{% url 'staff:report' e.application.pk %}">{{ e.application.organisation }}</a>{% else %}—{% endif %}</td><td>{{ e.action }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="muted small">Nothing yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
