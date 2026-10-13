@@ -8,6 +8,6 @@ When `models.py` changes, `python manage.py makemigrations` writes a numbered fi
 
 ## In this app
 
-Has `0001_initial.py`, which creates the **User** table. This is the only real database table so far.
+`0001_initial.py` creates the **User** table; `0002_user_role.py` adds each user's **role** (applicant, staff, judge, leader) and replaces the old `is_leader` flag.
 
 **Rule:** never edit or delete a migration that has already been applied. Make a new one instead.

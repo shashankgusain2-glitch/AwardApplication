@@ -1,12 +1,18 @@
 {% extends "portal_base.html" %}
 
 {% block title %}Application status{% endblock %}
-{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem">Entry {{ application.id }}</p>{% endblock %}
-{% block heading %}{{ application.award }}{% endblock %}
-{% block subheading %}<p style="margin:.5rem 0 0"><span class="badge badge-{{ application.status|slugify }}">{{ application.status }}</span></p>{% endblock %}
+{% block breadcrumb %}{% if application %}<p class="muted small" style="margin:0 0 .25rem">Entry {{ application.id }}</p>{% endif %}{% endblock %}
+{% block heading %}{% if application %}{{ application.award }}{% else %}Application status{% endif %}{% endblock %}
+{% block subheading %}{% if application %}<p style="margin:.5rem 0 0"><span class="badge badge-{{ application.status|slugify }}">{{ application.status }}</span></p>{% endif %}{% endblock %}
 {% block user %}{% include "partials/user_chip.html" with initials="PK" name="Priya Kulkarni" detail="Applicant" %}{% endblock %}
 
 {% block content %}
+{% if not application %}
+<div class="card">
+  <h2 style="font-size:1.1rem">Nothing submitted yet</h2>
+  <p class="muted small" style="margin:0">When you submit an application, you'll follow its progress here. <a href="{% url 'entries:dashboard' %}">Go to your dashboard</a>.</p>
+</div>
+{% else %}
 <div class="grid grid-2" style="align-items:start">
   <div class="card">
     <h2 style="font-size:1.1rem">Where your entry is</h2>
@@ -29,4 +35,5 @@
     </div>
   </div>
 </div>
+{% endif %}
 {% endblock %}

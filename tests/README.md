@@ -7,6 +7,8 @@
 | File / folder | What it checks |
 |---|---|
 | `test_smoke.py` | Every page opens for both awards; wrong addresses give "not found"; the sector filter works |
+| `test_authentication.py` | Login per role tab, sign-up, hashed passwords, logout, forgot password, 403 for the wrong role, and each user seeing only their own data |
+| `conftest.py` | Shared helpers: one logged-in test client per role (logged in through the real login page) |
 | `test_award_settings.py` | The two awards really work differently; saving settings changes the screens; one award doesn't affect the other; bad values are rejected; blind judging is refused when every round is in person |
 | [rules/](rules/) | One file per rule from the brief |
 | `__init__.py` | Empty. Marks the folder as a Python package |

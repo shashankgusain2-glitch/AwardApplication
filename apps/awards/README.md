@@ -24,4 +24,4 @@ Staff run each award from here, with no code changes:
 | `models.py` | **Planned** tables: Award, AwardCycle, FormVersion, Criterion, AwardStaff (described in comments) |
 | [migrations/](migrations/) | Database changes for this app (none yet) |
 
-Settings are saved in the browser session for now (decision D3); they move to the database when the tables are built.
+Settings staff save are stored in the database (`AwardSetting` in `models.py`), so judges and the public site see them too. Every page here needs a **Staff** login.

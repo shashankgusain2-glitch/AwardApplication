@@ -24,13 +24,28 @@
         <a href="{% url 'core:about' %}" {% if name == 'about' %}class="active"{% endif %}>About us</a>
         <a href="{% url 'core:home' %}#how-it-works">How it works</a>
         <a href="{% url 'core:about' %}#contact">Contact</a>
-        <a class="btn btn-primary btn-sm" href="{% url 'core:login' %}">Log in</a>
+        {% if user.is_authenticated %}
+          <a class="btn btn-primary btn-sm" href="{% url 'accounts:login' %}">My portal</a>
+          <form method="post" action="{% url 'accounts:logout' %}" style="margin:0">
+            {% csrf_token %}
+            <button class="btn btn-outline-light btn-sm" type="submit">Log out</button>
+          </form>
+        {% else %}
+          <a class="btn btn-primary btn-sm" href="{% url 'accounts:login' %}">Log in</a>
+        {% endif %}
       </nav>
       {% endwith %}
     </div>
   </header>
 
   <main>
+    {% if messages %}
+      <div class="container" style="padding-top:1rem">
+        {% for message in messages %}
+          <div class="callout {% if message.tags == 'error' %}callout-warning{% else %}callout-success{% endif %}" role="status" style="margin-bottom:.5rem"><div>{{ message }}</div></div>
+        {% endfor %}
+      </div>
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
 

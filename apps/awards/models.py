@@ -12,3 +12,23 @@ Planned models:
 - Criterion: a scoring question with weight and max score, per round.
 - AwardStaff: links a user to an award as Member or Working staff.
 """
+from django.db import models
+
+
+class AwardSetting(models.Model):
+    """
+    The settings staff saved for one award on the Award settings screen
+    (round types, blind judging, judges per entry, ...).
+
+    Stored in the database so every user sees the same settings: a judge
+    sees the blind-judging setting that staff saved. The award's default
+    settings and content still come from apps/core/demo_data.py until the
+    full Award tables above are built.
+    """
+    slug = models.SlugField(unique=True)
+    data = models.JSONField(default=dict)
+    updated_by = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Settings for {self.slug}"

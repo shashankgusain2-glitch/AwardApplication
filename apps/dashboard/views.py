@@ -1,11 +1,13 @@
 """Leadership screens (sample data until the other apps' models are built)."""
 from django.shortcuts import render
 
+from apps.accounts.permissions import role_required
 from apps.core import demo_data as d
 
 ROLE = "leader"
 
 
+@role_required("leader")
 def overview(request):
     rows = d.LEADER_OVERVIEW
     return render(request, "dashboard/overview.html", {
@@ -17,6 +19,7 @@ def overview(request):
     })
 
 
+@role_required("leader")
 def review(request):
     return render(request, "dashboard/review.html", {
         "role": ROLE,
@@ -24,6 +27,7 @@ def review(request):
     })
 
 
+@role_required("leader")
 def results(request):
     return render(request, "dashboard/results.html", {
         "role": ROLE,

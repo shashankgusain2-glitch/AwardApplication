@@ -1,0 +1,14 @@
+{# One form field with label, hint and errors. Password fields get a show/hide button. #}
+<div class="field">
+  <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+  {% if field.field.widget.input_type == "password" %}
+    <div class="password-wrap">
+      {{ field }}
+      <button type="button" class="btn btn-outline btn-sm password-toggle" data-toggle-password="{{ field.id_for_label }}" aria-label="Show password" aria-pressed="false">Show</button>
+    </div>
+  {% else %}
+    {{ field }}
+  {% endif %}
+  {% if field.help_text %}<p class="hint">{{ field.help_text }}</p>{% endif %}
+  {% for error in field.errors %}<p class="hint field-error" role="alert">{{ error }}</p>{% endfor %}
+</div>

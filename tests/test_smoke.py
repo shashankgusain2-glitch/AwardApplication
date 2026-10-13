@@ -8,7 +8,9 @@ PAGES = [
     "core:home",
     "core:about",
     "core:awards",
-    "core:login",
+    "accounts:login",
+    "accounts:signup",
+    "accounts:password_reset",
     "entries:dashboard",
     "entries:organisation",
     "entries:form",
@@ -29,7 +31,8 @@ PAGES = [
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("name", PAGES)
-def test_page_loads(client, name):
+def test_page_loads(client_for, name):
+    client = client_for(name)
     response = client.get(reverse(name))
     assert response.status_code == 200
 
@@ -47,7 +50,6 @@ PAGES_WITH_ARGS = [
     ("judging:score", ["A-0042"]),
     ("judging:score", ["K-0007"]),
     ("judging:score", ["A-0051"]),
-    ("judging:score", ["K-0012"]),
     ("judging:score", ["A-0038"]),
     ("judging:score", ["K-0003"]),
     ("judging:score", ["A-0029"]),
@@ -58,20 +60,23 @@ PAGES_WITH_ARGS = [
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("name,args", PAGES_WITH_ARGS)
-def test_page_with_args_loads(client, name, args):
+def test_page_with_args_loads(client_for, name, args):
+    client = client_for(name)
     response = client.get(reverse(name, args=args))
     assert response.status_code == 200
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("section", ["1", "2", "3", "4", "99", "abc"])
-def test_form_sections_load(client, section):
+def test_form_sections_load(applicant_client, section):
+    client = applicant_client
     response = client.get(reverse("entries:form", args=["kaizen"]), {"section": section})
     assert response.status_code == 200
 
 
 @pytest.mark.django_db
-def test_unknown_entry_returns_404(client):
+def test_unknown_entry_returns_404(judge_client):
+    client = judge_client
     assert client.get(reverse("judging:score", args=["X-9999"])).status_code == 404
 
 

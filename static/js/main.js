@@ -42,3 +42,30 @@
     timer = setTimeout(function () { toast.classList.remove("show"); }, 3000);
   });
 })();
+
+// Login, sign-up and password pages ------------------------------------------
+(function () {
+  // Show / hide password
+  document.querySelectorAll("[data-toggle-password]").forEach(function (button) {
+    var input = document.getElementById(button.getAttribute("data-toggle-password"));
+    if (!input) return;
+    button.addEventListener("click", function () {
+      var showing = input.type === "text";
+      input.type = showing ? "password" : "text";
+      button.textContent = showing ? "Show" : "Hide";
+      button.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+      button.setAttribute("aria-pressed", showing ? "false" : "true");
+    });
+  });
+
+  // Loading state: disable the button and change its text while the form is sent
+  document.querySelectorAll("form[data-loading-form]").forEach(function (form) {
+    form.addEventListener("submit", function () {
+      var button = form.querySelector("button[type=submit]");
+      if (!button) return;
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+      button.textContent = button.getAttribute("data-loading-text") || "Please wait…";
+    });
+  });
+})();

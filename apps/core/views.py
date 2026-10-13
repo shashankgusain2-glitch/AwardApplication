@@ -42,6 +42,3 @@ def award_detail(request, slug):
         "details": d.award_details(award),
     })
 
-
-def login(request):
-    return render(request, "core/login.html", {"roles": d.ROLE_LABELS})

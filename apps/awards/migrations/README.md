@@ -8,6 +8,6 @@ When `models.py` changes, `python manage.py makemigrations` writes a numbered fi
 
 ## In this app
 
-Empty for now. Files appear here when this app's planned tables (see `../models.py`) are built.
+`0001_initial.py` creates the **AwardSetting** table, where the settings staff save on the Award settings screen are stored. The other planned tables (see `../models.py`) will add more files here.
 
 **Rule:** never edit or delete a migration that has already been applied. Make a new one instead.

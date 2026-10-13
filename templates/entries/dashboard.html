@@ -1,11 +1,12 @@
 {% extends "portal_base.html" %}
 
 {% block title %}Dashboard{% endblock %}
-{% block heading %}Welcome back, Priya{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">{{ organisation.name }}</p>{% endblock %}
+{% block heading %}Welcome back, {{ user.first_name|default:user.display_name }}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">{{ organisation.name|default:"Start by completing your organisation profile." }}</p>{% endblock %}
 {% block user %}{% include "partials/user_chip.html" with initials="PK" name="Priya Kulkarni" detail="Applicant" %}{% endblock %}
 
 {% block content %}
+{% if applications %}
 <div class="callout callout-warning" style="margin-bottom:1.5rem">
   <div><strong>Your Business Excellence application is 40% done</strong>The deadline is 30 Nov 2026. Your answers are saved automatically.</div>
   <a class="btn btn-dark btn-sm" style="margin-left:auto;align-self:center" href="{% url 'entries:form' %}">Continue</a>
@@ -35,6 +36,12 @@
   </div>
   <p class="muted small" style="margin:1rem 0 0">Last year's entry (A-0019) still opens with the 2025 questions it was sent with.</p>
 </div>
+{% else %}
+<div class="card" style="margin-bottom:1.5rem">
+  <h2 style="font-size:1.1rem">You have no applications yet</h2>
+  <p class="muted small" style="margin:0">Fill your <a href="{% url 'entries:organisation' %}">organisation profile</a>, then choose an award below to start.</p>
+</div>
+{% endif %}
 
 <div class="row-between" style="margin-bottom:1rem"><h2 style="margin:0;font-size:1.2rem">Awards you can enter</h2><a href="{% url 'core:awards' %}">See all →</a></div>
 <div class="grid grid-3">

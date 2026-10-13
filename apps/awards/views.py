@@ -4,11 +4,14 @@ from django.http import Http404
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
+from apps.accounts.permissions import role_required
+from apps.awards.models import AwardSetting
 from apps.core import demo_data as d
 
 ROLE = "staff"
 
 
+@role_required("staff")
 def staff_home(request):
     return render(request, "awards/staff_home.html", {
         "role": ROLE,
@@ -63,6 +66,7 @@ def _clean_settings(post):
     return settings, errors
 
 
+@role_required("staff")
 @require_http_methods(["GET", "POST"])
 def settings(request):
     if request.method == "POST":
@@ -71,9 +75,8 @@ def settings(request):
         if award is None or slug not in d.BUILT_AWARDS:
             raise Http404("Award not found")
 
-        overrides = d.award_overrides(request)
         if "reset" in request.POST:
-            overrides.pop(slug, None)
+            AwardSetting.objects.filter(slug=slug).delete()
             messages.success(request, f"{award['name']} is back to its default settings.")
         else:
             new_settings, errors = _clean_settings(request.POST)
@@ -81,9 +84,8 @@ def settings(request):
                 for error in errors:
                     messages.error(request, f"{award['name']}: {error}")
                 return redirect("awards:settings")
-            overrides[slug] = new_settings
+            AwardSetting.objects.update_or_create(slug=slug, defaults={"data": new_settings, "updated_by": request.user})
             messages.success(request, f"Saved {award['name']}. Every screen now follows these settings.")
-        request.session[d.SESSION_KEY] = overrides
         return redirect("awards:settings")
 
     return render(request, "awards/settings.html", {
@@ -94,6 +96,7 @@ def settings(request):
     })
 
 
+@role_required("staff")
 def form_builder(request, slug="business-excellence"):
     award = d.get_award(slug, request)
     if award is None or slug not in d.BUILT_AWARDS:
@@ -105,6 +108,7 @@ def form_builder(request, slug="business-excellence"):
     })
 
 
+@role_required("staff")
 def entries(request):
     return render(request, "awards/entries.html", {
         "role": ROLE,
@@ -112,6 +116,7 @@ def entries(request):
     })
 
 
+@role_required("staff")
 def duplicates(request):
     return render(request, "awards/duplicates.html", {
         "role": ROLE,
@@ -119,6 +124,7 @@ def duplicates(request):
     })
 
 
+@role_required("staff")
 def assign(request):
     award = d.get_award("business-excellence", request)
     return render(request, "awards/assign.html", {
