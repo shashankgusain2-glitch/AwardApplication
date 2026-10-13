@@ -67,6 +67,38 @@ Needs Python 3.11+ (3.12 recommended). Uses SQLite unless you set a PostgreSQL `
    ruff check .
    ```
 
+## Demo accounts
+
+`seed_data` creates these accounts. **They all share one password: the `DEMO_PASSWORD` value in `.env`** (copied from `.env.example`). Running `seed_data` again resets every account to that password. These are test accounts for your own machine only. Never create them in production.
+
+Log in at http://localhost:8000/login/. There is one login form for everybody, and it sends each person to their own home page.
+
+| Role | Email | Name | Home page after login | What you can try |
+|---|---|---|---|---|
+| Leadership | `leader@awards.example` | A. Verma | `/leadership/` | Counts for the whole event and each award's progress |
+| Staff | `staff@awards.example` | Meena Shah | `/staff/` | Organisations to verify, reports with no judges, award settings |
+| Staff | `staff2@awards.example` | Arjun Mehta | `/staff/` | Same as above (a second staff member) |
+| Judge | `kapoor@judges.example` | Dr. R. Kapoor | `/judge/` | Only his own assignments; Accept or Decline |
+| Judge | `rao@judges.example` | Prof. N. Rao | `/judge/` | A different set of assignments from Kapoor |
+| Judge | `iyer@judges.example` | Ms. A. Iyer | `/judge/` | A different set of assignments again |
+| Applicant | `priya@acme.example` | Priya Kulkarni | `/applicant/` | Her own applications (Acme Precision Components, verified) |
+| Applicant | `ganesh@shriganesh.example` | Ravi Ganesh | `/applicant/` | Shri Ganesh Polymers (verified) |
+| Applicant | `anita@coastalfoods.example` | Anita D'Souza | `/applicant/` | Coastal Marine Foods (verified) |
+| Applicant | `vikram@vertexpharma.example` | Vikram Rao | `/applicant/` | Vertex Pharma Labs (verified) |
+| Applicant | `meera@northstar.example` | Meera Iyer | `/applicant/` | Northstar Auto Components, **not verified yet**, so she sees the "Staff are verifying" message |
+
+Quick checks:
+
+- Log in as one role and open another role's address (for example `/staff/` as a judge). You get the "403 not allowed" page.
+- Open `/admin/` with any account above. You are sent to the admin login, because only admin accounts (made with `createsuperuser`) can open it.
+- Log out before switching accounts.
+
+To see the password in your own terminal:
+
+```bash
+grep DEMO_PASSWORD .env
+```
+
 ## Production notes
 
 Use `DJANGO_SETTINGS_MODULE=config.settings.prod`. It **requires** `SECRET_KEY` and `ALLOWED_HOSTS` from the environment, forces HTTPS, secure cookies and HSTS. Set `JWT_SIGNING_KEY` (32+ characters), `CORS_ALLOWED_ORIGINS` for the frontend, and a real `EMAIL_BACKEND`. Never run `seed_data` in production.
