@@ -1,3 +1,11 @@
-from django.contrib import admin  # noqa: F401
+from django.contrib import admin
 
-# Register this app's models here as they are built.
+from .models import Application, Organisation
+
+admin.site.register(Organisation)
+
+
+@admin.register(Application)
+class ApplicationAdmin(admin.ModelAdmin):
+    list_display = ["organisation", "award", "status", "edit_request", "updated_at"]
+    list_filter = ["award", "status", "edit_request"]

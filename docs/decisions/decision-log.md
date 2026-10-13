@@ -93,3 +93,24 @@ Each decision: the options, the one we picked, why, and what would change our mi
 **Where the model breaks:** a pure on-site audit (like 5S) doesn't fit "the applicant fills a form, the judge scores the form". Judges fill a checklist on the floor instead. We show the round type, but an on-site checklist screen is out of scope for now.
 
 **What would change our mind:** if the client says every Kaizen entry gets a site visit with no desk screening, Kaizen becomes one site-visit round, and blind judging is simply unavailable for it.
+
+---
+
+## D6. Focus the build on the applicant workflow, with real data
+
+**Date:** 13 Oct 2026
+
+**Context:** after the 12 Oct meeting, the plan was to make a skeleton of each user's workflow. The many mock screens (judges, staff, leadership, 8 awards) with sample data were more than needed and hid the real flow.
+
+**Options**
+1. Keep all mock screens and keep adding sample data
+2. Remove the mock screens and build one workflow for real (database, verification, rules), starting with the applicant
+3. Build all four workflows for real at once
+
+**Picked:** Option 2
+
+**Why:** one real, tested workflow is worth more than many pictures. The applicant workflow comes first because every other user depends on applications existing. Rule 4 (form versions) is now real and tested. The old screens are kept in git (tag `v0.2-skeleton-ui`).
+
+**Also decided in the 12 Oct meeting and built:** email verification first; organisation verified by GSTIN plus the holder's PAN; one report per organisation; forms saved midway; changes after submit only with staff confirmation. **Judges no longer declare conflicts**; staff check them (changes the earlier plan).
+
+**What would change our mind:** if the reviewer needs to see the judge or leadership side in the next demo, build the judge workflow next on the same pattern.

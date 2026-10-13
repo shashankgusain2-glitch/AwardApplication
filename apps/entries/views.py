@@ -1,68 +1,142 @@
-"""Applicant screens (sample data until the entries models are built)."""
-from django.http import Http404
-from django.shortcuts import render
+"""
+Applicant workflow (and the one staff page it needs):
 
-from apps.core import demo_data as d
+  register organisation → events → form (save midway) → submit
+  → status → request edit → staff confirms → edit and resubmit
+"""
+from functools import wraps
 
-ROLE = "applicant"
+from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_http_methods, require_POST
 
-# The applicant's entry for each award (sample)
-MY_ENTRY = {"business-excellence": "A-0042", "kaizen": "K-0007"}
+from apps.awards.models import Award
+
+from .forms import EditRequestForm, OrganisationForm, application_form
+from .models import Application
 
 
-def dashboard(request):
-    open_awards = [a for a in d.all_awards(request) if a["status"] in ("Open", "Closing soon")]
-    return render(request, "entries/dashboard.html", {
-        "role": ROLE,
-        "applications": d.MY_APPLICATIONS,
-        "open_awards": open_awards,
-        "organisation": d.APPLICANT_ORG,
+def organisation_required(view):
+    """Logged in AND has registered an organisation; otherwise send them to the right step."""
+    @wraps(view)
+    @login_required
+    def wrapper(request, *args, **kwargs):
+        if not hasattr(request.user, "organisation"):
+            return redirect("entries:register")
+        return view(request, *args, **kwargs)
+    return wrapper
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def register(request):
+    if hasattr(request.user, "organisation"):
+        return redirect("entries:events")
+    form = OrganisationForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        organisation = form.save(commit=False)
+        organisation.owner = request.user
+        organisation.save()
+        messages.success(request, f"{organisation.name} is registered. Choose an event to apply.")
+        return redirect("entries:events")
+    return render(request, "entries/register.html", {"form": form})
+
+
+@organisation_required
+def events(request):
+    mine = {a.award_id: a for a in request.user.organisation.applications.all()}
+    awards = [{"award": award, "application": mine.get(award.id)} for award in Award.objects.filter(is_open=True)]
+    return render(request, "entries/events.html", {"events": awards})
+
+
+@organisation_required
+@require_POST
+def start(request, slug):
+    award = get_object_or_404(Award, slug=slug, is_open=True)
+    application, created = Application.objects.get_or_create(
+        organisation=request.user.organisation,
+        award=award,
+        defaults={"form_version": award.current_form},
+    )
+    return redirect("entries:application", pk=application.pk)
+
+
+@organisation_required
+@require_http_methods(["GET", "POST"])
+def application(request, pk):
+    app = get_object_or_404(Application, pk=pk, organisation=request.user.organisation)
+    questions = app.form_version.questions
+
+    if request.method == "POST" and app.can_edit:
+        submitting = request.POST.get("action") == "submit"
+        form = application_form(questions, data=request.POST, require_all=submitting)
+        if form.is_valid():
+            app.answers = {k: v for k, v in form.cleaned_data.items() if v not in (None, "")}
+            if submitting:
+                app.status = Application.Status.SUBMITTED
+                app.submitted_at = timezone.now()
+                app.edit_request = Application.EditRequest.NONE
+                app.edit_reason = ""
+                messages.success(request, "Submitted. Your report is now in the report pool.")
+            else:
+                messages.success(request, "Saved. You can come back and finish later.")
+            app.save()
+            return redirect("entries:application", pk=app.pk)
+    else:
+        form = application_form(questions, initial=app.answers, disabled=not app.can_edit)
+
+    return render(request, "entries/application.html", {
+        "app": app,
+        "form": form,
+        "edit_form": EditRequestForm(),
     })
 
 
-def organisation(request):
-    return render(request, "entries/organisation.html", {
-        "role": ROLE,
-        "organisation": d.APPLICANT_ORG,
+@organisation_required
+@require_POST
+def request_edit(request, pk):
+    app = get_object_or_404(Application, pk=pk, organisation=request.user.organisation)
+    form = EditRequestForm(request.POST)
+    if app.can_request_edit and form.is_valid():
+        app.edit_request = Application.EditRequest.REQUESTED
+        app.edit_reason = form.cleaned_data["reason"]
+        app.save()
+        messages.success(request, "Request sent. Staff will confirm before you can make changes.")
+    return redirect("entries:application", pk=app.pk)
+
+
+# --- Staff -------------------------------------------------------------------
+
+STAFF_ACTIONS = {
+    "approve_edit": ("edit_request", Application.EditRequest.APPROVED, "Edit approved."),
+    "decline_edit": ("edit_request", Application.EditRequest.DECLINED, "Edit declined."),
+    "assign": ("status", Application.Status.ASSIGNED, "Marked as assigned to judges."),
+    "judging": ("status", Application.Status.JUDGING, "Marked as being judged."),
+    "judged": ("status", Application.Status.JUDGED, "Marked as judged."),
+}
+
+
+@staff_member_required(login_url="accounts:verify_email")
+def staff(request):
+    applications = Application.objects.select_related("organisation", "award").exclude(
+        status=Application.Status.DRAFT)
+    return render(request, "entries/staff.html", {
+        "applications": applications,
+        "edit_requests": applications.filter(edit_request=Application.EditRequest.REQUESTED),
     })
 
 
-def application_form(request, slug="business-excellence"):
-    award = d.get_award(slug, request)
-    if award is None or slug not in MY_ENTRY:
-        raise Http404("No application for this award")
-    entry_id = MY_ENTRY[slug]
-    sections = d.entry_answers(entry_id)
-
-    for s in sections:
-        s["done"] = sum(1 for q in s["questions"] if q["value"])
-        s["total"] = len(s["questions"])
-    done = sum(s["done"] for s in sections)
-    total = sum(s["total"] for s in sections)
-
-    try:
-        index = max(0, min(int(request.GET.get("section", 1)) - 1, len(sections) - 1))
-    except ValueError:
-        index = 0
-
-    return render(request, "entries/application_form.html", {
-        "role": ROLE,
-        "award": award,
-        "entry_id": entry_id,
-        "submitted": entry_id == "K-0007",
-        "sections": sections,
-        "current": sections[index],
-        "current_index": index + 1,
-        "has_previous": index > 0,
-        "has_next": index < len(sections) - 1,
-        "progress": round(done * 100 / total),
-        "other_awards": [d.get_award(s, request) for s in MY_ENTRY if s != slug],
-    })
-
-
-def application_status(request):
-    return render(request, "entries/application_status.html", {
-        "role": ROLE,
-        "application": d.MY_APPLICATIONS[1],
-        "timeline": d.APPLICATION_TIMELINE,
-    })
+@staff_member_required(login_url="accounts:verify_email")
+@require_POST
+def staff_action(request, pk):
+    app = get_object_or_404(Application, pk=pk)
+    action = STAFF_ACTIONS.get(request.POST.get("action"))
+    if action:
+        field, value, message = action
+        setattr(app, field, value)
+        app.save()
+        messages.success(request, f"{app.organisation}: {message}")
+    return redirect("entries:staff")

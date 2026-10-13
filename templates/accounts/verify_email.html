@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Verify your email{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:440px;margin:0 auto">
+  <p class="muted small" style="margin:0">Step 1 of 4</p>
+  <h1 style="font-size:1.5rem">Verify your email</h1>
+  <p class="muted">We'll send a 6-digit code to your email. No password needed.</p>
+  <form method="post">
+    {% csrf_token %}
+    {% include "partials/field.html" with field=form.email %}
+    <button class="btn btn-primary btn-block" type="submit">Send me a code</button>
+  </form>
+</div>
+{% endblock %}
