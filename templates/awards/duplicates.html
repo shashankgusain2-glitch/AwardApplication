@@ -1,0 +1,28 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Duplicate review{% endblock %}
+{% block heading %}Possible duplicate organisations{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">The system never merges on its own. You decide, and every merge can be undone.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="MS" name="Meena Shah" detail="Programme staff" %}{% endblock %}
+
+{% block content %}
+<div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>Why this matters</strong>If one company exists twice, a judge's conflict with it could be missed. Merging keeps the conflict check correct.</div></div>
+
+<div class="stack">
+  {% for d in duplicates %}
+    <div class="card">
+      <div class="row-between" style="margin-bottom:1rem">
+        <div class="row"><span class="badge badge-{{ d.level|slugify }}">{{ d.level }} match</span><span class="muted small">Similarity {{ d.score }} · {{ d.reason }}</span></div>
+      </div>
+      <div class="grid grid-2">
+        <div class="card" style="box-shadow:none;border:1px solid var(--border)"><p class="muted small" style="margin:0">Record A</p><strong>{{ d.a }}</strong></div>
+        <div class="card" style="box-shadow:none;border:1px solid var(--border)"><p class="muted small" style="margin:0">Record B</p><strong>{{ d.b }}</strong></div>
+      </div>
+      <div class="row" style="margin-top:1rem">
+        <button class="btn btn-primary btn-sm" data-demo="Demo screen: merged into one profile (can be undone, logged).">Merge into one</button>
+        <button class="btn btn-outline btn-sm" data-demo="Demo screen: kept as separate organisations.">Keep separate</button>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

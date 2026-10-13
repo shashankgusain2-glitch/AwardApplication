@@ -1,0 +1,78 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Score entry {{ assignment.entry }}{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'judging:assignments' %}">My assignments</a> / {{ assignment.entry }}</p>{% endblock %}
+{% block heading %}Entry {{ assignment.entry }}{% endblock %}
+{% block subheading %}
+  <p class="muted small" style="margin:.25rem 0 0">{{ award.icon }} {{ award.name }} · {{ assignment.round }}: {{ assignment.round_label }} · ✓ Scores saved automatically</p>
+  {% if assignment.visit %}<p class="small" style="margin:.25rem 0 0">📍 {{ assignment.visit }}</p>{% endif %}
+  {% if assignment.applicant %}<p class="small" style="margin:.25rem 0 0">Applicant: <strong>{{ assignment.applicant }}</strong></p>{% endif %}
+{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="RK" name="Dr. R. Kapoor" detail="Judge" %}{% endblock %}
+
+{% block content %}
+{% if hidden %}
+  <div class="callout callout-teal" style="margin-bottom:1.5rem">
+    <div><strong>🔒 Blind judging is on for this award</strong>Answers that reveal who applied were removed before this page was made, and file names are hidden. Please score only what you see.</div>
+  </div>
+{% elif assignment.round_type == "site" %}
+  <div class="callout callout-info" style="margin-bottom:1.5rem">
+    <div><strong>📍 Site visit: not blind</strong>You'll see the work in place and meet the team, so names are shown. Use the written entry below to prepare, then score what you see on the day. If you know the team or company, declare a conflict before the visit.</div>
+  </div>
+{% elif assignment.round_type == "live" %}
+  <div class="callout callout-info" style="margin-bottom:1.5rem">
+    <div><strong>🎤 Live presentation: not blind</strong>The organisation presents to the jury in person, so names are shown. If you know them, declare a conflict before the session.</div>
+  </div>
+{% else %}
+  <div class="callout callout-info" style="margin-bottom:1.5rem">
+    <div><strong>Open judging</strong>This award doesn't use blind judging, so you can see who applied. If you know them, declare a conflict below.</div>
+  </div>
+{% endif %}
+
+<div class="grid grid-2" style="align-items:start">
+  <div class="card">
+    <h2 style="font-size:1.1rem">The entry</h2>
+    {% for section in sections %}
+      <p class="eyebrow" style="margin-top:1rem">{{ section.name }}</p>
+      {% for q in section.questions %}
+        <div class="settings-row" style="display:block">
+          <p class="muted small" style="margin:0 0 .25rem">{{ q.label }}</p>
+          {% if q.hidden %}<span class="hidden-value">🔒 Hidden for blind judging</span>
+          {% elif q.value %}<p style="margin:0">{% if q.type == "file" %}📎 {% endif %}{{ q.value }}</p>
+          {% else %}<p class="muted small" style="margin:0"><em>Not answered</em></p>{% endif %}
+        </div>
+      {% endfor %}
+    {% endfor %}
+  </div>
+
+  <form class="stack">
+    <div class="card">
+      <div class="row-between" style="margin-bottom:.5rem"><h2 style="font-size:1.1rem;margin:0">Your scores</h2><span class="muted small">{{ progress }}% done</span></div>
+      <div class="progress" style="margin-bottom:1rem"><span style="width:{{ progress }}%"></span></div>
+      {% for c in scorecard %}
+        {% with cid=forloop.counter %}
+        <fieldset class="settings-row" style="display:block;border:0;padding:1rem 0;margin:0">
+          <legend class="label" style="font-weight:600">{{ c.name }} <span class="muted small">· weight {{ c.weight }}%</span></legend>
+          <div class="score-scale" style="margin:.5rem 0">
+            {% for n in scale %}
+              <label><input type="radio" name="c{{ cid }}" value="{{ n }}" {% if c.score == n %}checked{% endif %}><span>{{ n }}</span></label>
+            {% endfor %}
+          </div>
+          <textarea style="min-height:70px" placeholder="Short comment for this criterion">{{ c.comment }}</textarea>
+        </fieldset>
+        {% endwith %}
+      {% endfor %}
+    </div>
+
+    <div class="callout callout-info"><div><strong>Before you submit</strong>After you submit, any change needs a reason. The change is recorded with your name and the time.</div></div>
+
+    <div class="row-between">
+      <button class="btn btn-danger" data-demo="Demo screen: conflict declared. This entry leaves your list and staff reassign it.">Declare a conflict</button>
+      <div class="row">
+        <button class="btn btn-outline" data-demo="Saved. Come back any time before {{ assignment.due }}.">Save and exit</button>
+        <button class="btn btn-primary" data-demo="Demo screen: scores not submitted yet.">Submit scores</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

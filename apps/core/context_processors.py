@@ -1,16 +1,15 @@
 from django.conf import settings
 
-ORGANISATION = {
-    "name": "Awards Platform",
-    "short_name": "AP",
-    "email": "awards@awards.example",
-}
+from . import demo_data
 
 _ASSETS = ["css/main.css", "js/main.js"]
 
 
 def _asset_version():
-    """Changes when the CSS or JS changes, so browsers don't use an old cached copy."""
+    """
+    Changes whenever the CSS or JS file changes, so browsers fetch the new
+    file instead of an old cached copy (used as ?v=... on the links).
+    """
     mtimes = []
     for path in _ASSETS:
         try:
@@ -21,4 +20,10 @@ def _asset_version():
 
 
 def site(request):
-    return {"org": ORGANISATION, "asset_version": _asset_version()}
+    """Organisation details, portal navigation and asset version, on every page."""
+    return {
+        "org": demo_data.ORGANISATION,
+        "portal_nav": demo_data.PORTAL_NAV,
+        "role_labels": demo_data.ROLE_LABELS,
+        "asset_version": _asset_version(),
+    }

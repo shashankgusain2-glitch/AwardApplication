@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}About us · {{ org.name }}{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+  <div class="container">
+    <div class="breadcrumb"><a href="{% url 'core:home' %}">Home</a> / About us</div>
+    <h1>About {{ org.name }}</h1>
+    <p>An industry body that has recognised excellence in Indian business since {{ org.founded }}.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container grid grid-2" style="align-items:center">
+    <div>
+      <span class="eyebrow">Who we are</span>
+      <h2>Raising the bar for Indian industry</h2>
+      <p>{{ org.name }} works with industry, government and academia to help Indian organisations become world-class. Our awards are one of the ways we do that: they give organisations a clear model of excellence, an independent assessment, and recognition when they get there.</p>
+      <p>Today we run more than 80 awards and competitions, from our flagship Business Excellence Award to regional awards and shop-floor competitions like Kaizen and 5S.</p>
+    </div>
+    <div class="grid grid-2">
+      {% for stat in stats %}
+        <div class="kpi"><strong>{{ stat.value }}</strong><span>{{ stat.label }}</span></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">What we stand for</span>
+      <h2>Our values</h2>
+    </div>
+    <div class="grid grid-3">
+      <div class="card"><h3>⚖️ Fair to everyone</h3><p class="muted small" style="margin:0">Members and non-members are treated exactly the same. Membership never affects entry, scoring or results.</p></div>
+      <div class="card"><h3>🔍 Independent</h3><p class="muted small" style="margin:0">Our jury are senior experts from industry and academia who score on their own, without discussing entries with each other.</p></div>
+      <div class="card"><h3>📖 Transparent</h3><p class="muted small" style="margin:0">Every applicant gets feedback, and every score change is on record with a reason.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how-we-judge">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">How we judge</span>
+      <h2>Four rules every award keeps</h2>
+    </div>
+    <div class="grid grid-2">
+      {% for p in promises %}
+        <div class="promise">
+          <span class="promise-icon">{{ forloop.counter }}</span>
+          <div><h3>{{ p.title }}</h3><p class="small" style="margin:0">{{ p.text }}</p></div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt" id="contact">
+  <div class="container grid grid-2">
+    <div>
+      <span class="eyebrow">Contact</span>
+      <h2>Talk to the awards team</h2>
+      <p class="muted">Questions about eligibility, your application or the jury? Our programme staff reply within two working days.</p>
+      <p><strong>Email:</strong> {{ org.email }}<br><strong>Phone:</strong> {{ org.phone }}<br><strong>Address:</strong> {{ org.address }}</p>
+    </div>
+    <form class="card stack" data-demo="Demo screen: messages are not sent yet.">
+      <div class="field"><label for="c-name">Your name</label><input id="c-name" type="text"></div>
+      <div class="field"><label for="c-email">Email</label><input id="c-email" type="email"></div>
+      <div class="field"><label for="c-msg">Message</label><textarea id="c-msg"></textarea></div>
+      <button class="btn btn-dark" data-demo="Demo screen: messages are not sent yet.">Send message</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

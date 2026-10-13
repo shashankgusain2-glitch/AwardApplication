@@ -59,6 +59,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "apps.core.context_processors.site",
             ],
+            "builtins": ["apps.core.templatetags.ui"],
         },
     },
 ]
@@ -95,11 +96,3 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Emails are printed to the console instead of being sent (demo "outbox").
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = "awards@awards.example"
-
-# Not logged in? Start at email verification.
-LOGIN_URL = "accounts:verify_email"
-
-# Demo only: show the email code on screen, because no real email is sent.
-# Turn off when real email is set up.
-SHOW_DEMO_EMAIL_CODE = env.bool("SHOW_DEMO_EMAIL_CODE", default=True)

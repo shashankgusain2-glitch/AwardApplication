@@ -5,11 +5,9 @@ from . import views
 app_name = "entries"
 
 urlpatterns = [
-    path("register/", views.register, name="register"),
-    path("events/", views.events, name="events"),
-    path("events/<slug:slug>/apply/", views.start, name="start"),
-    path("applications/<int:pk>/", views.application, name="application"),
-    path("applications/<int:pk>/request-edit/", views.request_edit, name="request_edit"),
-    path("staff/", views.staff, name="staff"),
-    path("staff/<int:pk>/", views.staff_action, name="staff_action"),
+    path("", views.dashboard, name="dashboard"),
+    path("organisation/", views.organisation, name="organisation"),
+    path("application/", views.application_form, name="form"),
+    path("application/<slug:slug>/", views.application_form, name="form"),
+    path("status/", views.application_status, name="status"),
 ]
