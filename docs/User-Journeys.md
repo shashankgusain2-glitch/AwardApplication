@@ -1,6 +1,8 @@
 # User Journeys (one page)
 
-One award cycle, through the eyes of each user. Live version with clickable steps: **http://localhost:8000/journeys/**
+One award cycle, through the eyes of each user.
+
+> **Built now (13 Oct 2026):** the Applicant journey, plus the staff step that approves edits. The Judge and Leader journeys below are planned.
 
 Rules: **R1** Blind judging · **R2** No conflicts · **R3** Score changes recorded · **R4** Old forms still open
 

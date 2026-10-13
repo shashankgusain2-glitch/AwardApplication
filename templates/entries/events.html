@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Events{% endblock %}
+
+{% block content %}
+<p class="muted small" style="margin:0">Step 3 of 4 · {{ user.organisation.name }}</p>
+<h1 style="font-size:1.6rem">Choose an event</h1>
+
+<div class="grid grid-2">
+  {% for e in events %}
+    <div class="card">
+      <h2 style="font-size:1.15rem">{{ e.award.name }}</h2>
+      <p class="muted small">{{ e.award.summary }}</p>
+      <p class="small">Closes <strong>{{ e.award.deadline|date:"j M Y" }}</strong></p>
+      {% if e.application %}
+        <p class="small">Your report: <span class="badge badge-{{ e.application.status }}">{{ e.application.get_status_display }}</span></p>
+        <a class="btn btn-outline" href="{% url 'entries:application' e.application.pk %}">{% if e.application.status == "draft" %}Continue the form{% else %}View status{% endif %}</a>
+      {% else %}
+        <form method="post" action="{% url 'entries:start' e.award.slug %}">
+          {% csrf_token %}
+          <button class="btn btn-primary" type="submit">Apply</button>
+        </form>
+      {% endif %}
+    </div>
+  {% empty %}
+    <p class="muted">No events are open right now.</p>
+  {% endfor %}
+</div>
+{% endblock %}
