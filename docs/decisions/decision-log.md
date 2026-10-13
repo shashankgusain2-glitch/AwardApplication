@@ -114,26 +114,3 @@ Each decision: the options, the one we picked, why, and what would change our mi
 **Also decided in the 12 Oct meeting and built:** email verification first; organisation verified by GSTIN plus the holder's PAN; one report per organisation; forms saved midway; changes after submit only with staff confirmation. **Judges no longer declare conflicts**; staff check them (changes the earlier plan).
 
 **What would change our mind:** if the reviewer needs to see the judge or leadership side in the next demo, build the judge workflow next on the same pattern.
-
----
-
-## D7. Build every user's workflow from the 12 Oct meeting, with the rules in one place
-
-**Date:** 13 Oct 2026
-
-**What we built:** judge (email link, accept/decline, partial grading, score changes with staff permission), Round 2 (online meeting with a group of judges), staff (confirm/reject, assign judges, conflicts, workload, judges per report, requests, forms, activity log) and leadership (dashboard of the whole event).
-
-**Key choices**
-
-| Choice | Options | Picked | Why |
-|---|---|---|---|
-| Where the rules live | In each page vs. one module | One module: `apps/judging/services.py` | Every screen goes through the same rules, so a rule can't be skipped by a page that forgot it; easy to test |
-| Judge login | Email code vs. signed link | Both: the link from the email (as the meeting asked) and the email code | The link is the meeting's design; the code is a fallback if the link expires (7 days) |
-| Conflicts | Judge declares vs. staff record | Staff record (meeting decision) | Judges rarely declare; the system refuses conflicted judges everywhere, including Round 2 |
-| Assigning | Manual only vs. suggestions + auto | Suggestions ordered by priority then load, plus "auto-assign" | Matches "priority list" and "balance the workload"; staff can still choose |
-| Score change records | Editable vs. permanent | Permanent (cannot be edited or deleted, even in admin) | Rule 3 must hold even against mistakes |
-| Final score | Many options | Average of judges' weighted totals, per round | Simple and explainable; how Round 1 and 2 combine is still an open question for the client |
-
-**Left out on purpose:** blind judging (not in the meeting; Round 2 is face to face), real email sending, messaging inside the app (staff use email/phone), results publishing and the public leaderboard (next).
-
-**What would change our mind:** if the client wants blind judging for Round 1, hide identifying answers in the judge's grading page (the earlier prototype showed how; tag `v0.2-skeleton-ui`).

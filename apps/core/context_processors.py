@@ -1,9 +1,9 @@
 from django.conf import settings
 
 ORGANISATION = {
-    "name": "Udyog Excellence Council",  # fictional, for the demo
-    "short_name": "UEC",
-    "email": "awards@uec.example",
+    "name": "Awards Platform",
+    "short_name": "AP",
+    "email": "awards@awards.example",
 }
 
 _ASSETS = ["css/main.css", "js/main.js"]

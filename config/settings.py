@@ -33,7 +33,6 @@ INSTALLED_APPS = [
     "apps.entries",
     "apps.judging",
     "apps.dashboard",
-    "apps.staff",
 ]
 
 MIDDLEWARE = [
@@ -96,7 +95,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Emails are printed to the console instead of being sent (demo "outbox").
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = "awards@uec.example"
+DEFAULT_FROM_EMAIL = "awards@awards.example"
 
 # Not logged in? Start at email verification.
 LOGIN_URL = "accounts:verify_email"

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Staff{% endblock %}
+
+{% block content %}
+<h1 style="font-size:1.6rem">Staff</h1>
+
+<div class="card" style="margin-bottom:1.5rem">
+  <h2 style="font-size:1.1rem">Edit requests</h2>
+  {% for app in edit_requests %}
+    <div class="settings-row">
+      <div><strong>{{ app.organisation }}</strong> · {{ app.award }}<br><span class="muted small">Reason: "{{ app.edit_reason }}"</span></div>
+      <div class="row">
+        <form method="post" action="{% url 'entries:staff_action' app.pk %}">{% csrf_token %}<button class="btn btn-success btn-sm" name="action" value="approve_edit">Approve</button></form>
+        <form method="post" action="{% url 'entries:staff_action' app.pk %}">{% csrf_token %}<button class="btn btn-outline btn-sm" name="action" value="decline_edit">Decline</button></form>
+      </div>
+    </div>
+  {% empty %}
+    <p class="muted small" style="margin:0">No requests waiting.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2 style="font-size:1.1rem">Submitted reports</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Organisation</th><th>Event</th><th>Status</th><th>Move to</th></tr></thead>
+      <tbody>
+        {% for app in applications %}
+          <tr>
+            <td><strong>{{ app.organisation }}</strong><br><span class="muted small">{{ app.organisation.gstin }}</span></td>
+            <td>{{ app.award }}</td>
+            <td><span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span></td>
+            <td>
+              <form method="post" action="{% url 'entries:staff_action' app.pk %}" class="row">
+                {% csrf_token %}
+                <button class="btn btn-outline btn-sm" name="action" value="assign">Assigned</button>
+                <button class="btn btn-outline btn-sm" name="action" value="judging">Being judged</button>
+                <button class="btn btn-outline btn-sm" name="action" value="judged">Judged</button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="muted small">No submitted reports yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="hint">Judging isn't built yet, so staff move reports along here to show the applicant's status changing.</p>
+</div>
+{% endblock %}

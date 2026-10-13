@@ -1,19 +1,19 @@
 """
-Applicant workflow (12 Oct meeting):
+Applicant workflow (and the one staff page it needs):
 
   register organisation → events → form (save midway) → submit
-  → staff check → status → request edit → staff confirm → edit and resubmit
+  → status → request edit → staff confirms → edit and resubmit
 """
 from functools import wraps
 
 from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
 from apps.awards.models import Award
-from apps.core.models import log
 
 from .forms import EditRequestForm, OrganisationForm, application_form
 from .models import Application
@@ -76,16 +76,11 @@ def application(request, pk):
         if form.is_valid():
             app.answers = {k: v for k, v in form.cleaned_data.items() if v not in (None, "")}
             if submitting:
-                first_time = app.status == Application.Status.DRAFT
-                if first_time:
-                    # Staff check it before it joins the report pool.
-                    app.status = Application.Status.SUBMITTED
-                    app.submitted_at = timezone.now()
+                app.status = Application.Status.SUBMITTED
+                app.submitted_at = timezone.now()
                 app.edit_request = Application.EditRequest.NONE
                 app.edit_reason = ""
-                log(request.user, "Submitted the report" if first_time else "Resubmitted after an approved edit", app)
-                messages.success(request, "Submitted. Staff will check it, then it joins the report pool."
-                                 if first_time else "Changes submitted. Your report is locked again.")
+                messages.success(request, "Submitted. Your report is now in the report pool.")
             else:
                 messages.success(request, "Saved. You can come back and finish later.")
             app.save()
@@ -109,8 +104,39 @@ def request_edit(request, pk):
         app.edit_request = Application.EditRequest.REQUESTED
         app.edit_reason = form.cleaned_data["reason"]
         app.save()
-        log(request.user, f"Asked staff to allow changes: {app.edit_reason}", app)
         messages.success(request, "Request sent. Staff will confirm before you can make changes.")
     return redirect("entries:application", pk=app.pk)
 
 
+# --- Staff -------------------------------------------------------------------
+
+STAFF_ACTIONS = {
+    "approve_edit": ("edit_request", Application.EditRequest.APPROVED, "Edit approved."),
+    "decline_edit": ("edit_request", Application.EditRequest.DECLINED, "Edit declined."),
+    "assign": ("status", Application.Status.ASSIGNED, "Marked as assigned to judges."),
+    "judging": ("status", Application.Status.JUDGING, "Marked as being judged."),
+    "judged": ("status", Application.Status.JUDGED, "Marked as judged."),
+}
+
+
+@staff_member_required(login_url="accounts:verify_email")
+def staff(request):
+    applications = Application.objects.select_related("organisation", "award").exclude(
+        status=Application.Status.DRAFT)
+    return render(request, "entries/staff.html", {
+        "applications": applications,
+        "edit_requests": applications.filter(edit_request=Application.EditRequest.REQUESTED),
+    })
+
+
+@staff_member_required(login_url="accounts:verify_email")
+@require_POST
+def staff_action(request, pk):
+    app = get_object_or_404(Application, pk=pk)
+    action = STAFF_ACTIONS.get(request.POST.get("action"))
+    if action:
+        field, value, message = action
+        setattr(app, field, value)
+        app.save()
+        messages.success(request, f"{app.organisation}: {message}")
+    return redirect("entries:staff")

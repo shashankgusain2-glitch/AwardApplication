@@ -90,7 +90,7 @@ AwardApplication/
 | `views.py`, `urls.py` | The home page |
 | `context_processors.py` | Organisation name on every page; version number on CSS/JS links so browsers don't use old copies |
 | `models.py` | `TimeStampedModel`, a shared building block for later |
-| `management/commands/seed_demo.py` | Creates the demo staff account `staff@uec.example` |
+| `management/commands/seed_demo.py` | Creates the demo staff account `staff@awards.example` |
 
 ## `templates/`
 
@@ -114,40 +114,3 @@ AwardApplication/
 | `test_applicant_workflow.py` | The whole applicant workflow (see [testing.md](testing.md)) |
 | `rules/test_rule4_form_versions.py` | Old applications keep and show their own form version ✅ |
 | `rules/test_rule1/2/3_*.py` | Planned, for when judging is built |
-
----
-
-## Added for all workflows (13 Oct 2026)
-
-### `apps/judging/`: judges, grading, Round 2
-
-| File | What it does | Why |
-|---|---|---|
-| `models.py` | **JudgeProfile** (priority, workload limit, events), **Conflict** (recorded by staff), **Assignment** (one judge, one report, one round), **Score**, **ScoreChangeRequest**, **ScoreChange** (permanent), **Round2Meeting** | Everything the judge and staff workflows need |
-| `services.py` | **All the judging rules**: suggest/assign judges (no conflicts, priority, lightest load, limits), accept/decline (back to pool), save/submit grades, statuses update automatically, ask/allow/make score changes, shortlist, Round 2 | One place for the rules, so no page can skip them |
-| `views.py`, `urls.py` | `/judge/` judging tab, `/judge/login/<token>/` email link, `/judge/reports/<id>/` grading | The judge's screens |
-| `admin.py` | Score changes are read-only in admin | Rule 3: records can't be changed |
-
-### `apps/staff/`: staff pages
-
-| File | What it does |
-|---|---|
-| `views.py`, `urls.py` | `/staff/` to-do, **reports** (confirm, reject, assign, shortlist, Round 2, edit requests), **judges** (add with priority and events, send login link, workload, conflicts), **requests** (applicant edits, judge score changes), **events** (judges per report, open/closed, deadline), **form editor** (publish a new version), **activity** |
-| `forms.py` | The staff forms (judge, conflict, reject reason, Round 2 meeting, event settings, new question) |
-
-### `apps/dashboard/`: leadership
-
-| File | What it does |
-|---|---|
-| `views.py`, `urls.py` | `/leadership/`: per event, how many reports are drafts, being checked, in the pool, under evaluation, judged, rejected, in Round 2; rankings; judge workload; recent activity |
-
-### Other changes
-
-| File | Change |
-|---|---|
-| `apps/core/models.py` | **ActivityLog**: who did what and when, for staff documentation and the leadership dashboard |
-| `apps/awards/models.py` | Events now have **judges per report** and **grading criteria** (Round 1 and Round 2) |
-| `apps/entries/models.py` | Statuses now include **staff checking**, **rejected**, **shortlisted** and **Round 2 graded**; averages per round |
-| `apps/core/management/commands/seed_demo.py` | Creates demo staff, leader and 3 judges |
-| `templates/judging/`, `templates/staff/`, `templates/dashboard/` | The new pages |
-| `tests/test_judge_workflow.py`, `tests/test_staff_and_leadership.py`, `tests/rules/` | Tests for every workflow and rules 2, 3, 4 |
