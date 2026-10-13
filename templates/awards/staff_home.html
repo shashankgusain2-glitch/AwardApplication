@@ -1,39 +1,54 @@
 {% extends "portal_base.html" %}
 
-{% block title %}My awards{% endblock %}
-{% block heading %}Good morning, Meena{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Here's what needs attention today across your awards.</p>{% endblock %}
-{% block user %}{% include "partials/user_chip.html" with initials="MS" name="Meena Shah" detail="Programme staff" %}{% endblock %}
+{% block title %}Staff home{% endblock %}
+{% block heading %}Good morning, {{ user.get_short_name }}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">What needs you today, from the live database.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
 <div class="grid grid-4" style="margin-bottom:1.5rem">
-  <div class="kpi"><span>New entries to check</span><strong>1</strong></div>
-  <div class="kpi"><span>Possible duplicates</span><strong>{{ duplicates|length }}</strong></div>
-  <div class="kpi"><span>Waiting for applicant</span><strong>1</strong></div>
-  <div class="kpi"><span>Need judges</span><strong>2</strong></div>
+  <div class="kpi"><span>Organisations to verify</span><strong>{{ to_verify|length }}</strong></div>
+  <div class="kpi"><span>Submitted, no judges yet</span><strong>{{ unassigned|length }}</strong></div>
+  <div class="kpi"><span>Judge score-change requests</span><strong>{{ score_requests }}</strong></div>
+  <div class="kpi"><span>Applicant edit requests</span><strong>{{ edit_requests }}</strong></div>
 </div>
 
-<div class="grid grid-2" style="margin-bottom:1.5rem">
-  {% for award in awards %}
-    <div class="card">
-      <div class="card-head">
-        <h2>{{ award.icon }} {{ award.name }}</h2>
-        <span class="badge badge-{{ award.status|slugify }}">{{ award.status }}</span>
-      </div>
-      <p class="muted small">{% for r in award.rounds_info %}{{ r.label }}{% if not forloop.last %} → {% endif %}{% endfor %} · {% if award.blind %}Blind judging{% else %}Open judging{% endif %} · {{ award.judges_per_entry }} judges per entry · {{ award.applicant_type }} · {{ award.fee }} · Closes {{ award.deadline }}</p>
-      <div class="row">
-        <a class="btn btn-outline btn-sm" href="{% url 'awards:settings' %}">Settings</a>
-        <a class="btn btn-outline btn-sm" href="{% url 'awards:form_builder' award.slug %}">Form</a>
-        <a class="btn btn-outline btn-sm" href="{% url 'core:award_detail' award.slug %}">Public page</a>
-      </div>
-    </div>
-  {% endfor %}
+<div class="card" style="margin-bottom:1.5rem">
+  <div class="card-head"><h2>Awards</h2><a class="btn btn-outline btn-sm" href="{% url 'awards:settings' %}">Award settings</a></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Award</th><th>Rounds</th><th>Drafts</th><th>Submitted</th><th>Being judged</th><th>Scored</th><th>Judging progress</th></tr></thead>
+      <tbody>
+        {% for row in awards %}
+          <tr>
+            <td><strong>{{ row.award.name }}</strong><br><span class="badge badge-{{ row.award.status }}">{{ row.award.get_status_display }}</span>{% if row.award.blind_judging %} <span class="badge badge-sector">🔒 Blind</span>{% endif %}</td>
+            <td class="small">{% for r in row.award.rounds.all %}{{ r.get_kind_display }}{% if not forloop.last %} → {% endif %}{% endfor %}</td>
+            <td>{{ row.award.drafts }}</td>
+            <td>{{ row.award.submitted }}</td>
+            <td>{{ row.award.evaluating }}</td>
+            <td>{{ row.award.scored }}</td>
+            <td style="min-width:140px"><div class="progress"><span style="width:{{ row.progress }}%"></span></div><span class="muted small">{{ row.evaluations_done }} of {{ row.evaluations_total }} evaluations</span></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="muted small">No awards yet. Run <code>python manage.py seed_data</code> for demo data.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<div class="card">
-  <div class="card-head"><h2>Today's to-do</h2></div>
-  <div class="settings-row"><span>📥 Check eligibility of <strong>A-0060</strong> (Vertex Pharma Labs)</span><a class="btn btn-primary btn-sm" href="{% url 'awards:entries' %}">Open</a></div>
-  <div class="settings-row"><span>🔁 Review <strong>{{ duplicates|length }}</strong> possible duplicate organisations</span><a class="btn btn-primary btn-sm" href="{% url 'awards:duplicates' %}">Review</a></div>
-  <div class="settings-row"><span>⚖️ Assign judges to <strong>A-0038</strong></span><a class="btn btn-primary btn-sm" href="{% url 'awards:assign' %}">Assign</a></div>
+<div class="grid grid-2" style="align-items:start">
+  <div class="card">
+    <h2 style="font-size:1.1rem">Organisations waiting for verification</h2>
+    {% for p in to_verify %}
+      <div class="settings-row"><span><strong>{{ p.organisation_name }}</strong><br><span class="muted small">{{ p.gstin|default:"No GSTIN yet" }} · {{ p.user.email }}</span></span></div>
+    {% empty %}<p class="muted small" style="margin:0">None waiting.</p>{% endfor %}
+  </div>
+  <div class="card">
+    <h2 style="font-size:1.1rem">Submitted reports with no judges yet</h2>
+    {% for app in unassigned %}
+      <div class="settings-row"><span><strong>{{ app.reference }}</strong> · {{ app.award.name }}<br><span class="muted small">{{ app.applicant.email }} · submitted {{ app.submitted_at|date:"j M Y" }}</span></span></div>
+    {% empty %}<p class="muted small" style="margin:0">None waiting.</p>{% endfor %}
+  </div>
 </div>
 {% endblock %}

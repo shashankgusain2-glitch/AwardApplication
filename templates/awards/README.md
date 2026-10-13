@@ -4,7 +4,7 @@
 
 | File | Page |
 |---|---|
-| `staff_home.html` | Today's to-do and the staff member's awards |
+| `staff_home.html` | Real work waiting today: organisations to verify, submitted reports with no judges, open requests, and every award's counts |
 | `settings.html` | **Award settings** for both awards side by side: round types, blind judging, judges per entry, who applies, fee, closing date |
 | `form_builder.html` | An award's questions, which are hidden in blind judging, and its locked form versions |
 | `entries.html` | All entries with status and actions |

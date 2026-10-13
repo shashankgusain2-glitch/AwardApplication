@@ -176,3 +176,17 @@ def report_for_judge(assignment):
                      "value": None if q["key"] in hidden else report.content.get(q["key"], ""),
                      "hidden": q["key"] in hidden} for q in questions],
     }
+
+
+def judge_home(user):
+    """The judge's home page: only their own assignments, as they may see them (blind applied)."""
+    rows = []
+    for assignment in visible_to(user).prefetch_related("report__award__rounds").order_by("status", "-assigned_at"):
+        round_obj = next((r for r in assignment.report.award.rounds.all() if r.number == assignment.round), None)
+        rows.append({
+            "assignment": assignment,
+            "view": report_for_judge(assignment),
+            "round_label": round_obj.get_kind_display() if round_obj else f"Round {assignment.round}",
+        })
+    counts = {s: sum(1 for r in rows if r["assignment"].status == s) for s in A.values}
+    return {"rows": rows, "counts": counts, "total": len(rows)}

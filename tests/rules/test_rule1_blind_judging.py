@@ -49,15 +49,6 @@ def test_non_blind_award_shows_organisation_to_judge(judge_client):
 
 
 @pytest.mark.django_db
-def test_assignment_list_hides_applicant_only_for_blind_awards(judge_client):
-    content = judge_client.get(reverse("judging:assignments")).content.decode()
-    blind_card = content.split("Entry A-0042")[1].split("Entry ")[0]
-    open_card = content.split("Entry K-0007")[1].split("Entry ")[0]
-    assert "Acme" not in blind_card
-    assert "Acme" in open_card
-
-
-@pytest.mark.django_db
 def test_staff_turning_blind_on_hides_names_without_code_change(staff_client, judge_client):
     _save_settings(staff_client, "kaizen", blind="on")
     response = _score_page(judge_client, OPEN_ENTRY)

@@ -2,48 +2,47 @@
 
 {% block title %}My assignments{% endblock %}
 {% block heading %}My assignments{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Scores save as you go, so a few minutes at a time is enough.</p>{% endblock %}
-{% block user %}{% include "partials/user_chip.html" with initials="RK" name=judge.name detail=judge.expertise %}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Reports assigned to you. Accept a report to start grading it, or decline it so it goes back to the pool.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
 <div class="grid grid-4" style="margin-bottom:1.5rem">
-  <div class="kpi"><span>Assigned</span><strong>{{ assignments|length }}</strong></div>
-  <div class="kpi"><span>In progress</span><strong>2</strong></div>
-  <div class="kpi"><span>Submitted</span><strong>1</strong></div>
-  <div class="kpi"><span>Next due</span><strong style="font-size:1.2rem">15 Jan 2027</strong></div>
+  <div class="kpi"><span>Assigned to you</span><strong>{{ total }}</strong></div>
+  <div class="kpi"><span>Waiting for your answer</span><strong>{{ counts.pending }}</strong></div>
+  <div class="kpi"><span>Grading</span><strong>{{ counts.in_review }}</strong></div>
+  <div class="kpi"><span>Graded</span><strong>{{ counts.completed }}</strong></div>
 </div>
 
 <div class="stack">
-  {% for a in assignments %}
+  {% for row in rows %}
+    {% with a=row.assignment view=row.view %}
     <div class="card">
       <div class="row-between">
         <div>
           <div class="row" style="margin-bottom:.35rem">
-            <strong style="font-size:1.1rem">Entry {{ a.entry }}</strong>
-            <span class="badge badge-{{ a.status|slugify }}">{{ a.status }}</span>
-            {% if a.blind %}<span class="badge badge-sector">🔒 Blind</span>{% endif %}
+            <strong style="font-size:1.1rem">{{ view.reference }}</strong>
+            <span class="badge badge-{{ a.status }}">{{ a.get_status_display }}</span>
+            {% if view.blind %}<span class="badge badge-sector">🔒 Blind</span>{% endif %}
           </div>
-          <p class="muted small" style="margin:0">{{ a.award.icon }} {{ a.award.name }} · {{ a.round }}: {{ a.round_label }} · Due {{ a.due }}</p>
-          {% if a.visit %}<p class="small" style="margin:.35rem 0 0">📍 {{ a.visit }}</p>{% endif %}
+          <p class="muted small" style="margin:0">{{ view.award }} · Round {{ a.round }}: {{ row.round_label }} · Assigned {{ a.assigned_at|date:"j M Y" }}</p>
           <p class="small" style="margin:.35rem 0 0">Applicant:
-            {% if a.applicant %}<strong>{{ a.applicant }}</strong>{% else %}<span class="hidden-value">Hidden for blind judging</span>{% endif %}
+            {% if view.applicant %}<strong>{{ view.applicant }}</strong>{% else %}<span class="hidden-value">Hidden for blind judging</span>{% endif %}
           </p>
         </div>
-        <div class="row">
-          {% if a.status == "Awaiting response" %}
-            <button class="btn btn-success btn-sm" data-demo="Demo screen: accepted (not saved yet).">Accept</button>
-            <button class="btn btn-outline btn-sm" data-demo="Demo screen: the entry goes back to the pool for another judge.">Decline</button>
-          {% elif a.status == "Submitted" %}
-            <a class="btn btn-outline btn-sm" href="{% url 'judging:score' a.entry %}">View scores</a>
-          {% else %}
-            <a class="btn btn-primary btn-sm" href="{% url 'judging:score' a.entry %}">{% if a.round_type != "desk" %}Open scorecard{% elif a.progress %}Continue scoring{% else %}Start scoring{% endif %}</a>
-          {% endif %}
-        </div>
+        {% if a.status == "pending" %}
+          <form method="post" action="{% url 'judging:respond' a.pk %}" class="row">
+            {% csrf_token %}
+            <button class="btn btn-success btn-sm" name="answer" value="accept">Accept</button>
+            <button class="btn btn-outline btn-sm" name="answer" value="decline">Decline</button>
+          </form>
+        {% elif a.status == "in_review" %}
+          <span class="muted small">Grading screen arrives in step 3.5</span>
+        {% endif %}
       </div>
-      {% if a.progress and a.progress < 100 %}
-        <div class="progress" style="margin-top:1rem"><span style="width:{{ a.progress }}%"></span></div>
-      {% endif %}
     </div>
+    {% endwith %}
+  {% empty %}
+    <div class="card"><p class="muted small" style="margin:0">No reports are assigned to you yet.</p></div>
   {% endfor %}
 </div>
 {% endblock %}

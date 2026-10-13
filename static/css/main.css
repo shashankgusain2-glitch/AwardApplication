@@ -269,3 +269,10 @@ details.faq p { padding: 0 1.25rem 1rem; margin: 0; color: var(--muted); }
 .field-error { color: var(--danger); }
 .login-card input[type=password] { width: 100%; padding: .65rem .8rem; border: 1px solid var(--border); border-radius: var(--radius-sm); font: inherit; }
 button[disabled] { opacity: .7; cursor: progress; }
+
+/* Real status codes from the database ----------------------------------------- */
+.badge-pending, .badge-upcoming { background: var(--warning-soft); color: var(--warning); }
+.badge-in_review { background: var(--info-soft); color: var(--info); }
+.badge-scored { background: var(--gold-soft); color: var(--gold-dark); }
+.badge-approved, .badge-completed, .badge-verified { background: var(--success-soft); color: var(--success); }
+.badge-rejected, .badge-declined, .badge-closed { background: var(--danger-soft); color: var(--danger); }

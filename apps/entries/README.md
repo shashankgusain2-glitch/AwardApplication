@@ -6,7 +6,7 @@
 
 | Page | Address | What the applicant does |
 |---|---|---|
-| Dashboard | `/applicant/` | See their applications and progress, and awards they can enter |
+| Dashboard | `/applicant/` | See **their own real applications** from the database, their organisation's verification status, and open awards they can enter. The other pages still use sample data until step 3.5 |
 | Organisation profile | `/applicant/organisation/` | Company details once: GSTIN, PAN, sector, size, turnover, contact |
 | Application form | `/applicant/application/<award>/` | Fill the form section by section; each award has its own questions |
 | Application status | `/applicant/status/` | Timeline of where the entry is |

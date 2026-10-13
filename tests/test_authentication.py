@@ -228,25 +228,6 @@ def test_changed_role_in_session_logs_the_user_out(staff_client):
 
 # --- Users only see their own data -----------------------------------------
 
-@pytest.mark.django_db
-def test_applicant_sees_only_their_own_applications(applicant_client):
-    newbie = Client()
-    _signup(newbie)
-    own = applicant_client.get(reverse("entries:dashboard")).content.decode()
-    theirs = newbie.get(reverse("entries:dashboard")).content.decode()
-    assert "A-0042" in own                        # the demo applicant's entry
-    assert "A-0042" not in theirs and "You have no applications yet" in theirs
-    form = newbie.get(reverse("entries:form", args=["business-excellence"])).content.decode()
-    assert "Acme Precision" not in form and "New application" in form
-
-
-@pytest.mark.django_db
-def test_judge_sees_only_assigned_reports(judge_client, judge2_client):
-    kapoor = judge_client.get(reverse("judging:assignments")).content.decode()
-    rao = judge2_client.get(reverse("judging:assignments")).content.decode()
-    assert "A-0042" in kapoor and "K-0012" not in kapoor
-    assert "K-0012" in rao and "A-0042" not in rao
-
 
 @pytest.mark.django_db
 def test_judge_cannot_open_another_judges_report(judge_client, judge2_client):

@@ -9,6 +9,7 @@ from django.http import Http404
 from django.shortcuts import render
 
 from apps.accounts.permissions import role_required
+from apps.applications.services import applicant_home
 from apps.core import demo_data as d
 
 ROLE = "applicant"
@@ -24,13 +25,8 @@ def _own(request):
 
 @role_required("applicant")
 def dashboard(request):
-    open_awards = [a for a in d.all_awards(request) if a["status"] in ("Open", "Closing soon")]
-    return render(request, "entries/dashboard.html", {
-        "role": ROLE,
-        "applications": d.MY_APPLICATIONS if _own(request) else [],
-        "open_awards": open_awards,
-        "organisation": d.APPLICANT_ORG if _own(request) else {},
-    })
+    """Home page: this applicant's own applications and profile, from the database."""
+    return render(request, "entries/dashboard.html", {"role": ROLE, **applicant_home(request.user)})
 
 
 @role_required("applicant")

@@ -8,7 +8,7 @@ Staff run each award from here, with no code changes:
 
 | Page | Address | What staff do |
 |---|---|---|
-| My awards | `/staff/` | Today's to-do and their two awards |
+| My awards | `/staff/` | **Real work waiting today** from the database: organisations to verify, reports with no judges yet, open requests, and every award's counts |
 | Award settings | `/staff/settings/` | Set round types (desk review, site visit, live presentation), blind judging, judges per entry, who applies, fee, closing date. **This is where the two awards are made to work differently.** Blind judging is blocked if every round is in person |
 | Form builder | `/staff/form-builder/<award>/` | See each award's questions, which ones are hidden in blind judging, and locked form versions |
 | Entries | `/staff/entries/` | Check new entries |

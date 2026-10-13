@@ -2,31 +2,35 @@
 
 {% block title %}Overview{% endblock %}
 {% block heading %}All awards at a glance{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">2026–27 cycle · showing 5 of 80 awards</p>{% endblock %}
-{% block user %}{% include "partials/user_chip.html" with initials="AV" name="A. Verma" detail="Programme Leader" %}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Live from the database. Leadership can see everything but doesn't change scores.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
 <div class="grid grid-4" style="margin-bottom:1.5rem">
-  <div class="kpi"><span>Total entries</span><strong>{{ total_entries }}</strong></div>
-  <div class="kpi"><span>Awards open for entries</span><strong>{{ open_count }}</strong></div>
-  <div class="kpi"><span>Items needing a decision</span><strong>{{ total_flags }}</strong></div>
-  <div class="kpi"><span>Results to approve</span><strong>1</strong></div>
+  <div class="kpi"><span>Reports submitted</span><strong>{{ total }}</strong></div>
+  <div class="kpi"><span>Under evaluation</span><strong>{{ evaluating }}</strong></div>
+  <div class="kpi"><span>Scored, waiting for approval</span><strong>{{ awaiting_approval }}</strong></div>
+  <div class="kpi"><span>Score-change requests open</span><strong>{{ score_requests }}</strong></div>
 </div>
 
 <div class="card">
   <div class="card-head"><h2>Awards</h2><a class="btn btn-primary btn-sm" href="{% url 'dashboard:review' %}">Open review queue</a></div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Award</th><th>Stage</th><th>Entries</th><th style="width:22%">Judging progress</th><th>Flags</th></tr></thead>
+      <thead><tr><th>Award</th><th>Stage</th><th>Entries</th><th>Being judged</th><th>Scored</th><th>Approved / rejected</th><th style="width:20%">Judging progress</th></tr></thead>
       <tbody>
-        {% for r in rows %}
+        {% for row in awards %}
           <tr>
-            <td><strong>{{ r.award }}</strong></td>
-            <td><span class="badge badge-{{ r.stage|slugify }}">{{ r.stage }}</span></td>
-            <td>{{ r.entries }}</td>
-            <td><div class="progress"><span style="width:{{ r.judged }}%"></span></div><span class="muted small">{{ r.judged }}%</span></td>
-            <td>{% if r.flags %}<a class="badge badge-high" href="{% url 'dashboard:review' %}" style="text-decoration:none">{{ r.flags }} to review</a>{% else %}<span class="muted small">—</span>{% endif %}</td>
+            <td><strong>{{ row.award.name }}</strong></td>
+            <td><span class="badge badge-{{ row.award.status }}">{{ row.award.get_status_display }}</span></td>
+            <td>{{ row.entries }}<br><span class="muted small">+ {{ row.award.drafts }} draft{{ row.award.drafts|pluralize }}</span></td>
+            <td>{{ row.award.evaluating }}</td>
+            <td>{{ row.award.scored }}</td>
+            <td>{{ row.award.approved }} / {{ row.award.rejected }}</td>
+            <td><div class="progress"><span style="width:{{ row.progress }}%"></span></div><span class="muted small">{{ row.progress }}%</span></td>
           </tr>
+        {% empty %}
+          <tr><td colspan="7" class="muted small">No awards yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>
