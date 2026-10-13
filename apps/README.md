@@ -1,26 +1,26 @@
 # apps/
 
-**The application itself.** All the Python code that makes the website work lives here, split into small parts called **Django apps**, one per job.
+**The application itself**, split into Django apps. Each app keeps its data (`models.py`), its business rules (`services.py`), and its part of the REST API (`api/`).
 
-| Folder | Job | Who it serves |
-|---|---|---|
-| [core/](core/) | Public website, shared helpers, sample data | Everyone |
-| [accounts/](accounts/) | Users and login | Everyone |
-| [awards/](awards/) | Award setup: settings, form builder, entries, judge assignment | Programme staff |
-| [entries/](entries/) | Applications: dashboard, organisation profile, form, status | Applicants |
-| [judging/](judging/) | Assignments and scoring | Judges |
-| [dashboard/](dashboard/) | One view of all awards, review queue, approvals | Leadership |
+## Data, business logic and API
 
-**Why split it this way:** each part matches one user from the brief, so code is easy to find. A judging problem lives in `judging/`.
-
-**Every app has the same basic files:**
-
-| File | What it does |
+| Folder | Job |
 |---|---|
-| `__init__.py` | Empty. Tells Python this folder is a package |
-| `apps.py` | Registers the app with Django |
-| `models.py` | Database tables for this app (most are still planned) |
-| `views.py` | Functions that build each page |
-| `urls.py` | Which web address runs which view |
-| `admin.py` | Shows this app's tables on the `/admin/` screen |
-| `migrations/` | Instructions that build and change this app's database tables |
+| [core/](core/) | Shared base models (timestamps, soft delete), API building blocks, validators, demo data commands, public website pages |
+| [accounts/](accounts/) | Users (email login, one role), applicant and judge profiles, web login/sign-up, JWT auth API |
+| [awards/](awards/) | Awards, rounds, versioned forms, criteria; staff portal screens |
+| [applications/](applications/) | Applications ("reports") and attachments |
+| [assignments/](assignments/) | Judge assignments and staff-recorded conflicts |
+| [evaluations/](evaluations/) | Scores and the permanent record of score changes |
+| [notifications/](notifications/) | In-app notifications |
+| [audit/](audit/) | Append-only audit trail |
+
+## Server-rendered portal screens (sample data until Phase 3)
+
+| Folder | Who |
+|---|---|
+| [entries/](entries/) | Applicant pages |
+| [judging/](judging/) | Judge pages |
+| [dashboard/](dashboard/) | Leadership pages |
+
+**Rule:** views and serializers stay thin; business rules live in each app's `services.py`, which also writes the audit log.

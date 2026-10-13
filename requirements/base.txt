@@ -1,0 +1,9 @@
+# Runtime packages (what the app needs to run)
+Django>=5.2,<5.3
+psycopg[binary]>=3.2,<4
+django-environ>=0.11,<1
+djangorestframework>=3.15,<4
+djangorestframework-simplejwt>=5.3,<6
+django-filter>=24.0,<26
+django-cors-headers>=4.4,<5
+drf-spectacular>=0.27,<1

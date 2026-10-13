@@ -1,2 +1,2 @@
 {# The logged-in user, on every portal page. (Older templates still pass initials/name/detail; they're ignored.) #}
-<div class="user-chip"><span class="avatar">{{ user.first_name|first|default:user.email|first|upper }}{{ user.last_name|first|upper }}</span><span>{{ user.display_name }}<br><span class="muted small">{{ user.get_role_display }}</span></span></div>
+<div class="user-chip"><span class="avatar">{{ user.display_name|first|upper }}</span><span>{{ user.display_name }}<br><span class="muted small">{{ user.get_role_display }}</span></span></div>

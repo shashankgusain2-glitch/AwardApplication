@@ -119,3 +119,26 @@ Each decision: the options, the one we picked, why, and what would change our mi
 **What would change our mind:** a separate mobile app or API clients would need token auth (e.g. JWT) alongside sessions.
 
 **Update (14 Oct 2026): one login form instead of four tabs.** The user asked for a single login: everyone enters email + password and is sent to their own area based on the **role stored on their account** (applicant → applicant portal, staff → staff portal, and so on). The role is never chosen by the person logging in; a role sent with the form is ignored. Access control is unchanged: every portal page still checks the role on the server and returns 403 Access Denied to other roles. Error messages no longer mention tabs: "Incorrect email or password."
+
+---
+
+## D7. Backend foundation: models, service layer and a versioned REST API
+
+**Date:** 14 Oct 2026 · Data model approved by the user before building ([Data-Model.md](../Data-Model.md)).
+
+| Choice | Options | Picked | Why |
+|---|---|---|---|
+| App layout | Rename the existing screen apps vs. add new domain apps | **New apps** (`applications`, `assignments`, `evaluations`, `notifications`, `audit`) next to the existing screen apps | Nothing that works today breaks; the screens move to real data in Phase 3 |
+| Business logic | In views/serializers vs. a service layer | **`services.py` per app** | One place for each rule, used by the API, the admin, the seed command and later the screens; easy to test |
+| Scores | JSON blob vs. one row per criterion | **`CriterionScore` rows** | Database enforces 1–10; reports and dashboards can query scores |
+| Delete | Hard delete vs. soft delete | **Soft delete** for Award and Application; **PROTECT** on judging history | History and the audit trail must survive |
+| API auth | Session only vs. JWT | **JWT** (access + refresh, rotation, blacklist on logout) for API clients; sessions stay for the web pages | Frontend and mobile clients; role in the token claims |
+| Role at login | Required vs. optional | **Optional**: if sent, it must match | The web login is one form (user decision); the API still rejects a mismatched role on the server |
+| Object-level security | Check after loading vs. filter the queryset | **Filter in `get_queryset()`** | Another user's record returns 404, so ids can't be probed |
+| Response format | DRF default vs. envelope | **`{success, data, message, errors}`** for every response | One shape for the frontend to handle |
+| Lint/format | black + isort + flake8 vs. ruff | **ruff** | One fast tool doing all three |
+| Award settings screen | Keep `AwardSetting` JSON vs. real columns | **Real `Award`/`AwardRound` columns** (`AwardSetting` removed) | One source of truth; audited |
+
+**Assumptions made:** Phase 2 of the roadmap, 10 working days; ApplicantProfile fields taken from the organisation-profile screen; Kaizen and Business Excellence as the two demo awards.
+
+**What would change our mind:** a separate frontend team might want cookie-based JWT (HttpOnly) instead of Bearer headers; large file uploads would move attachments to object storage (S3-style).

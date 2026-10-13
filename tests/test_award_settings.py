@@ -87,10 +87,15 @@ def test_unknown_award_cannot_be_saved(staff_client):
 
 
 @pytest.mark.django_db
-def test_settings_record_who_saved_them(staff_client):
-    from apps.awards.models import AwardSetting
-    _post(staff_client, judges_per_entry="3")
-    assert AwardSetting.objects.get(slug="kaizen").updated_by.email == "staff@awards.example"
+def test_settings_are_saved_in_the_award_table_and_audited(staff_client):
+    from apps.audit.models import AuditLog
+    from apps.awards.models import Award
+    _post(staff_client, judges_per_entry="3", round2_type="live")
+    award = Award.objects.get(slug="kaizen")
+    assert award.judges_per_report == 3
+    assert [r.kind for r in award.rounds.all()] == ["desk", "live"]
+    entry = AuditLog.objects.get(entity="award", entity_id=str(award.pk))
+    assert entry.user.email == "staff@awards.example"
 
 
 # --- Blind judging only where it can work ----------------------------------

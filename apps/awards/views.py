@@ -5,8 +5,9 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
 from apps.accounts.permissions import role_required
-from apps.awards.models import AwardSetting
+from apps.awards import services as award_services
 from apps.core import demo_data as d
+from apps.core.services import BusinessRuleError
 
 ROLE = "staff"
 
@@ -76,7 +77,7 @@ def settings(request):
             raise Http404("Award not found")
 
         if "reset" in request.POST:
-            AwardSetting.objects.filter(slug=slug).delete()
+            award_services.reset_screen_settings(slug, request.user)
             messages.success(request, f"{award['name']} is back to its default settings.")
         else:
             new_settings, errors = _clean_settings(request.POST)
@@ -84,7 +85,11 @@ def settings(request):
                 for error in errors:
                     messages.error(request, f"{award['name']}: {error}")
                 return redirect("awards:settings")
-            AwardSetting.objects.update_or_create(slug=slug, defaults={"data": new_settings, "updated_by": request.user})
+            try:
+                award_services.save_screen_settings(slug, new_settings, request.user)
+            except BusinessRuleError as error:
+                messages.error(request, f"{award['name']}: {error}")
+                return redirect("awards:settings")
             messages.success(request, f"Saved {award['name']}. Every screen now follows these settings.")
         return redirect("awards:settings")
 

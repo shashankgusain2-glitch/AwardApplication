@@ -1,3 +1,2 @@
--r requirements.txt
-pytest>=8,<9
-pytest-django>=4.9,<5
+# Kept so older instructions keep working; the real list is in requirements/.
+-r requirements/dev.txt

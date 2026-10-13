@@ -20,3 +20,12 @@
 | [templatetags/](templatetags/) | A small helper for templates |
 | [management/commands/](management/commands/) | Custom commands you run with `python manage.py ...` |
 | [migrations/](migrations/) | Database changes for this app (none yet) |
+
+## Added in the backend foundation (14 Oct 2026)
+
+| File / folder | What it does |
+|---|---|
+| `models.py` | `TimeStampedModel` and `SoftDeleteModel` (with `objects` hiding deleted rows and `all_objects` showing all) |
+| `services.py` | `BusinessRuleError`: services raise it; the API turns it into a clear 400 message |
+| `validators.py` | GSTIN and PAN format checks |
+| [api/](api/) | Shared API pieces: response format, error handler, pagination, role permissions, health |

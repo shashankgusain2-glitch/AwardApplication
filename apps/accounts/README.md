@@ -14,7 +14,9 @@
 
 | File | What it does |
 |---|---|
-| `models.py` | `User` with a unique email and one **role** (applicant, staff, judge, leader) |
+| `models.py` | `User` (email is the login, `name`, one **role**, timestamps), `ApplicantProfile` (organisation details + staff verification), `JudgeProfile` (expertise, priority, workload limit, award panels) |
+| `services.py` | Applicant registration, accounts created by leaders, staff verification of organisations |
+| `api/` | `/api/v1/auth/` (JWT login, refresh, logout, register), `/users/`, `/profiles/` |
 | `backends.py` | Log in with email + password (case-insensitive email) |
 | `forms.py` | Login form (email + password), sign-up form (validation, always creates an applicant) |
 | `views.py` | Login, sign-up, logout, and the forgot-password pages |

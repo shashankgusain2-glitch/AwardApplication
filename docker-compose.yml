@@ -17,10 +17,11 @@ services:
 
   web:
     build: .
-    command: sh -c "python manage.py migrate && python manage.py seed_demo && python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "python manage.py migrate && python manage.py seed_data && python manage.py runserver 0.0.0.0:8000"
     environment:
       DEBUG: "True"
       DATABASE_URL: postgres://awards:awards@db:5432/awards
+      DJANGO_SETTINGS_MODULE: config.settings.dev
     ports:
       - "8000:8000"
     volumes:
