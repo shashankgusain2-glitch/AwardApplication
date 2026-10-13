@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Awards · {{ org.name }}{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+  <div class="container">
+    <div class="breadcrumb"><a href="{% url 'core:home' %}">Home</a> / Awards</div>
+    <h1>Our awards</h1>
+    <p>Find the right award for your organisation or team. Each one has its own process, but you apply to all of them from one account.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <nav class="chips" aria-label="Filter by sector">
+      <a class="chip {% if not active_sector %}active{% endif %}" href="{% url 'core:awards' %}">All</a>
+      {% for sector in sectors %}
+        <a class="chip {% if active_sector == sector %}active{% endif %}" href="?sector={{ sector|urlencode }}">{{ sector }}</a>
+      {% endfor %}
+    </nav>
+    <div class="grid grid-3">
+      {% for award in awards %}
+        {% include "partials/award_card.html" %}
+      {% empty %}
+        <p class="muted">No awards in this sector yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

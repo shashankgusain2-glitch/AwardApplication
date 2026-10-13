@@ -1,0 +1,26 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Review queue{% endblock %}
+{% block heading %}Review queue{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Cases sent up for a leadership decision.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="AV" name="A. Verma" detail="Programme Leader" %}{% endblock %}
+
+{% block content %}
+<div class="stack">
+  {% for item in items %}
+    <div class="card">
+      <div class="row-between">
+        <div>
+          <div class="row" style="margin-bottom:.35rem"><span class="badge badge-high">{{ item.type }}</span><span class="muted small">{{ item.award }} · {{ item.entry }}</span></div>
+          <p style="margin:0">{{ item.detail }}</p>
+        </div>
+        <div class="row">
+          <button class="btn btn-primary btn-sm" data-demo="Demo screen: decision not saved yet.">{{ item.action }}</button>
+          <button class="btn btn-outline btn-sm" data-demo="Demo screen: audit trail view not built yet.">View history</button>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+<p class="muted small" style="margin-top:1rem">Leadership can approve or send back. Only judges change scores, and every change needs a reason.</p>
+{% endblock %}

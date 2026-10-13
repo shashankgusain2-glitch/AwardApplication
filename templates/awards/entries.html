@@ -1,0 +1,44 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Entries{% endblock %}
+{% block heading %}Entries{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Business Excellence Award 2026</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="MS" name="Meena Shah" detail="Programme staff" %}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-head">
+    <div class="row">
+      <input type="text" placeholder="Search entries…" style="width:240px">
+      <select style="width:180px"><option>All statuses</option><option>New</option><option>Eligible</option><option>Info requested</option></select>
+    </div>
+    <button class="btn btn-outline btn-sm" data-demo="Demo screen: manual entry form not built yet.">+ Add entry by hand</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Entry</th><th>Organisation</th><th>Submitted</th><th>Status</th><th>Flag</th><th></th></tr></thead>
+      <tbody>
+        {% for e in entries %}
+          <tr>
+            <td><strong>{{ e.id }}</strong></td>
+            <td>{{ e.org }}</td>
+            <td class="muted small">{{ e.submitted }}</td>
+            <td><span class="badge badge-{{ e.status|slugify }}">{{ e.status }}</span></td>
+            <td>{% if e.flag %}<a class="badge badge-{{ e.flag|slugify }}" href="{% url 'awards:duplicates' %}" style="text-decoration:none">{{ e.flag }}</a>{% endif %}</td>
+            <td class="row">
+              {% if e.status == "New" %}
+                <button class="btn btn-success btn-sm" data-demo="Demo screen: marked eligible (not saved yet).">Eligible</button>
+                <button class="btn btn-outline btn-sm" data-demo="Demo screen: the applicant would be asked for more information.">Ask for info</button>
+              {% elif e.status == "Eligible" %}
+                <a class="btn btn-primary btn-sm" href="{% url 'awards:assign' %}">Assign judges</a>
+              {% else %}
+                <button class="btn btn-outline btn-sm" data-demo="Demo screen: entry view not built yet.">View</button>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

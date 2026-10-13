@@ -1,0 +1,39 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Organisation profile{% endblock %}
+{% block heading %}Organisation profile{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Filled once, used for every award you enter.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="PK" name="Priya Kulkarni" detail="Applicant" %}{% endblock %}
+
+{% block content %}
+<form class="stack">
+  <div class="card">
+    <div class="card-head"><h2>Company details</h2><span class="badge badge-submitted">✓ GSTIN format valid</span></div>
+    <div class="form-grid">
+      <div class="field"><label for="o-name">Registered name</label><input id="o-name" type="text" value="{{ organisation.name }}"></div>
+      <div class="field"><label for="o-gstin">GSTIN</label><input id="o-gstin" type="text" value="{{ organisation.gstin }}" readonly><p class="hint">Locked after registration. One entry per GSTIN per award.</p></div>
+      <div class="field"><label for="o-pan">PAN of authorised person</label><input id="o-pan" type="text" value="{{ organisation.pan }}"></div>
+      <div class="field"><label for="o-sector">Sector</label><select id="o-sector"><option>{{ organisation.sector }}</option><option>Services</option><option>Energy</option></select></div>
+      <div class="field"><label for="o-size">Size</label><select id="o-size"><option>Small (under 250 employees)</option><option selected>{{ organisation.size }}</option><option>Large (1,000+ employees)</option></select></div>
+      <div class="field"><label for="o-turnover">Annual turnover</label><select id="o-turnover"><option>Under ₹100 crore</option><option selected>{{ organisation.turnover }}</option><option>Over ₹500 crore</option></select></div>
+      <div class="field"><label for="o-year">Year established</label><input id="o-year" type="number" value="{{ organisation.established }}"></div>
+      <div class="field"><label for="o-web">Website</label><input id="o-web" type="text" value="{{ organisation.website }}"></div>
+    </div>
+    <div class="field" style="margin-top:1rem"><label for="o-address">Registered address</label><input id="o-address" type="text" value="{{ organisation.address }}"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Main contact</h2></div>
+    <div class="form-grid">
+      <div class="field"><label for="c-name">Name</label><input id="c-name" type="text" value="{{ organisation.contact_name }}"></div>
+      <div class="field"><label for="c-role">Role</label><input id="c-role" type="text" value="{{ organisation.contact_role }}"></div>
+      <div class="field"><label for="c-email">Email</label><input id="c-email" type="email" value="{{ organisation.contact_email }}"></div>
+      <div class="field"><label for="c-phone">Phone</label><input id="c-phone" type="text" value="{{ organisation.contact_phone }}"></div>
+    </div>
+  </div>
+
+  <div class="callout callout-info"><div><strong>Why we ask for your GSTIN</strong>It stops anyone else applying in your name, and makes sure each organisation enters an award only once.</div></div>
+
+  <div class="row"><button class="btn btn-primary" data-demo="Demo screen: profile not saved yet.">Save profile</button></div>
+</form>
+{% endblock %}

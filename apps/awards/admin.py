@@ -1,6 +1,3 @@
-from django.contrib import admin
+from django.contrib import admin  # noqa: F401
 
-from .models import Award, FormVersion
-
-admin.site.register(Award)
-admin.site.register(FormVersion)
+# Register this app's models here as they are built.

@@ -1,0 +1,31 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Approve results{% endblock %}
+{% block heading %}Approve results{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">{{ award.icon }} {{ award.name }} · Final ranking from Round 2</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" with initials="AV" name="A. Verma" detail="Programme Leader" %}{% endblock %}
+
+{% block content %}
+<div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(260px,1fr);align-items:start">
+  <div class="card">
+    <div class="card-head"><h2>Proposed winners</h2><span class="badge badge-results">Waiting for approval</span></div>
+    <table>
+      <thead><tr><th>Rank</th><th>Organisation</th><th>Average score</th></tr></thead>
+      <tbody>
+        {% for r in results %}
+          <tr><td><strong>{% if r.rank == 1 %}🥇{% elif r.rank == 2 %}🥈{% else %}🥉{% endif %} {{ r.rank }}</strong></td><td>{{ r.org }}</td><td>{{ r.score }} / 10</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card stack">
+    <h3>Before you approve</h3>
+    <p class="small" style="margin:0">✓ All entries scored by 3 judges</p>
+    <p class="small" style="margin:0">✓ No open conflicts</p>
+    <p class="small" style="margin:0">✓ 2 score changes, both with reasons</p>
+    <div class="field"><label for="note">Comment (optional)</label><textarea id="note" style="min-height:80px"></textarea></div>
+    <button class="btn btn-success btn-block" data-demo="Demo screen: results approved (not saved yet). They'd be published to applicants.">Approve and publish</button>
+    <button class="btn btn-outline btn-block" data-demo="Demo screen: sent back to programme staff with your comment.">Send back</button>
+  </div>
+</div>
+{% endblock %}
