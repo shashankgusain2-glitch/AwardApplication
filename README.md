@@ -54,13 +54,6 @@ python manage.py seed_demo
 
 All demo data is fake.
 
-## Run the tests
-
-```bash
-pytest
-```
-
-See [docs/testing.md](docs/testing.md) for what the tests check and what they don't.
 
 ## Project layout
 
