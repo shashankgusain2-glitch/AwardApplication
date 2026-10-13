@@ -6,17 +6,15 @@ User = get_user_model()
 
 class LoginForm(forms.Form):
     """
-    Email + password for ONE role (the tab the user is on).
-    The role is checked here, on the server: a judge's details fail on the
-    Applicant tab even if the password is right.
+    One login for everyone: email + password. The account's role (stored on
+    the user, never chosen by the person logging in) decides where they go.
     """
     email = forms.EmailField(label="Email", widget=forms.EmailInput(attrs={"autocomplete": "email", "autofocus": True}))
     password = forms.CharField(label="Password", strip=False,
                                widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}))
 
-    def __init__(self, *args, role, request=None, **kwargs):
+    def __init__(self, *args, request=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.role = role
         self.request = request
         self.user = None
 
@@ -25,14 +23,10 @@ class LoginForm(forms.Form):
         email, password = cleaned.get("email"), cleaned.get("password")
         if email and password:
             user = authenticate(self.request, email=email, password=password)
-            # Same message for "no account", "wrong password" and "wrong tab",
+            # Same message for "no account" and "wrong password",
             # so the form doesn't reveal which accounts exist.
-            if user is None or user.role != self.role:
-                role_label = User.Role(self.role).label
-                article = "an" if role_label[0] in "AEIOU" else "a"
-                raise forms.ValidationError(
-                    f"Incorrect email or password for {article} {role_label} account. "
-                    f"Check you're on the right tab.")
+            if user is None:
+                raise forms.ValidationError("Incorrect email or password.")
             self.user = user
         return cleaned
 

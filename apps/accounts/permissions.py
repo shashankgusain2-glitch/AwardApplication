@@ -27,10 +27,8 @@ ROLE_HOME = {
 }
 
 
-def login_url(role=None, next_path=None):
+def login_url(next_path=None):
     params = {}
-    if role:
-        params["role"] = role
     if next_path:
         params["next"] = next_path
     url = reverse("accounts:login")
@@ -43,10 +41,10 @@ def role_required(*roles):
         def wrapper(request, *args, **kwargs):
             user = request.user
             if not user.is_authenticated:
-                return redirect(login_url(roles[0], request.get_full_path()))
+                return redirect(login_url(request.get_full_path()))
             if request.session.get(SESSION_ROLE) != user.role:
                 logout(request)
-                return redirect(login_url(roles[0], request.get_full_path()))
+                return redirect(login_url(request.get_full_path()))
             if user.role not in roles:
                 raise PermissionDenied("Your role can't open this page.")
             return view(request, *args, **kwargs)

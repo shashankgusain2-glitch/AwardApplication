@@ -6,18 +6,10 @@
 <div class="login-wrap">
   <div class="card login-card">
     <h1 style="font-size:1.6rem">Log in</h1>
-    <p class="muted">Choose who you are, then sign in with your email and password.</p>
-
-    <nav class="tabs" role="tablist" aria-label="Log in as">
-      {% for value, label in tabs %}
-        <a role="tab" class="tab {% if value == role %}active{% endif %}" aria-selected="{% if value == role %}true{% else %}false{% endif %}"
-           href="?role={{ value }}{% if next %}&amp;next={{ next|urlencode }}{% endif %}">{{ label }}</a>
-      {% endfor %}
-    </nav>
+    <p class="muted">Applicants, staff, judges and leaders all log in here. We take you to the right place for your account.</p>
 
     <form method="post" class="stack" data-loading-form>
       {% csrf_token %}
-      <input type="hidden" name="role" value="{{ role }}">
       <input type="hidden" name="next" value="{{ next }}">
 
       {% for error in form.non_field_errors %}
@@ -31,15 +23,12 @@
         <a href="{% url 'accounts:password_reset' %}">Forgot password?</a>
       </div>
 
-      <button class="btn btn-primary btn-block" type="submit" data-loading-text="Signing in…">Log in as {{ role_label }}</button>
+      <button class="btn btn-primary btn-block" type="submit" data-loading-text="Signing in…">Log in</button>
     </form>
 
-    {% if role == "applicant" %}
-      <div class="divider">New here?</div>
-      <a class="btn btn-outline btn-block" href="{% url 'accounts:signup' %}">Sign up as an applicant</a>
-    {% else %}
-      <p class="hint" style="margin-top:1.5rem">{{ role_label }} accounts are created by the awards team. If you don't have one, contact {{ org.email }}.</p>
-    {% endif %}
+    <div class="divider">New applicant?</div>
+    <a class="btn btn-outline btn-block" href="{% url 'accounts:signup' %}">Sign up to apply</a>
+    <p class="hint" style="margin-top:1rem">Staff, judge and leader accounts are created by the awards team. If you need one, contact {{ org.email }}.</p>
   </div>
 </div>
 {% endblock %}
