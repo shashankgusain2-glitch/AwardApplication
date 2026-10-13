@@ -97,3 +97,20 @@ def fast_password_hashing(settings, request):
         settings.PASSWORD_HASHERS = ["django.contrib.auth.hashers.PBKDF2PasswordHasher"]
     else:
         settings.PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+
+@pytest.fixture
+def seeded(db, monkeypatch):
+    """The full demo data (python manage.py seed_data); every demo account uses the test PASSWORD."""
+    from io import StringIO
+
+    from django.core.management import call_command
+    monkeypatch.setenv("DEMO_PASSWORD", PASSWORD)
+    call_command("seed_data", stdout=StringIO())
+
+
+def seeded_client(key):
+    """A client logged in (through the real login page) as one of the seeded demo accounts."""
+    c = Client()
+    assert login(c, ACCOUNTS[key]).status_code == 302, f"demo login failed for {key}"
+    return c

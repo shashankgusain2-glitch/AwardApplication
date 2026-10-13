@@ -77,7 +77,8 @@ def create_draft(*, applicant, award, title):
     return app
 
 
-def _can_edit(application):
+def can_edit(application):
+    """Drafts can be changed; submitted ones only after staff allow an edit."""
     return application.status == S.DRAFT or application.edit_allowed
 
 
@@ -93,7 +94,7 @@ def update(application, *, by, content=None, title=None):
     """Save answers (can be partial: the form saves midway)."""
     if application.applicant_id != by.id:
         raise BusinessRuleError("You can only change your own application.")
-    if not _can_edit(application):
+    if not can_edit(application):
         raise BusinessRuleError("This application is submitted. Ask staff to allow changes first.")
     if content is not None:
         _check_answers(application, content)
@@ -109,7 +110,7 @@ def update(application, *, by, content=None, title=None):
 def submit(application, *, by):
     if application.applicant_id != by.id:
         raise BusinessRuleError("You can only submit your own application.")
-    if not _can_edit(application):
+    if not can_edit(application):
         raise BusinessRuleError("This application is already submitted.")
     missing = [q["label"] for q in application.form_version.questions
                if q.get("required") and not str(application.content.get(q["key"], "")).strip()]

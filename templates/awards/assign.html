@@ -1,36 +1,69 @@
 {% extends "portal_base.html" %}
 
 {% block title %}Assign judges{% endblock %}
-{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'awards:entries' %}">Entries</a> / {{ entry.id }}</p>{% endblock %}
-{% block heading %}Assign judges to {{ entry.id }}{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">{{ entry.org }} · {{ award.name }} · needs {{ needed }} judge{{ needed|pluralize }}</p>{% endblock %}
-{% block user %}{% include "partials/user_chip.html" with initials="MS" name="Meena Shah" detail="Programme staff" %}{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'awards:assign' %}">Assign judges</a> / {{ report.reference }}</p>{% endblock %}
+{% block heading %}Judges for {{ report.reference }}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">{{ profile.organisation_name|default:report.applicant.email }} · {{ report.award.name }} · {{ report.award.judges_per_report }} judge{{ report.award.judges_per_report|pluralize }} per report · <span class="badge badge-{{ report.status }}">{{ report.get_status_display }}</span></p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-<div class="callout callout-teal" style="margin-bottom:1.5rem">
-  <div><strong>🛡️ 1 judge is not shown because of a declared conflict</strong>Judges with a conflict with this organisation are never offered, and can't be added by hand.</div>
-</div>
+{% if not verified %}
+  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>Verify the organisation first</strong>Reports go to judges only after staff verify the organisation. <a href="{% url 'awards:entries' %}">Go to Entries</a>.</div></div>
+{% endif %}
+{% if conflicted %}
+  <div class="callout callout-teal" style="margin-bottom:1.5rem"><div><strong>🛡️ {{ conflicted }} judge{{ conflicted|pluralize }} not shown because of a recorded conflict</strong>Judges with a conflict with this organisation are never offered, and can't be added by hand.</div></div>
+{% endif %}
 
-<div class="card">
-  <div class="card-head"><h2>Suggested judges</h2><span class="muted small">Sorted by expertise match, then lightest workload</span></div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th></th><th>Judge</th><th>Expertise</th><th>Match</th><th>Workload</th></tr></thead>
-      <tbody>
-        {% for j in judges %}
-          <tr>
-            <td><input type="checkbox" aria-label="Select {{ j.name }}" {% if forloop.counter <= needed %}checked{% endif %}></td>
-            <td><strong>{{ j.name }}</strong></td>
-            <td class="muted small">{{ j.expertise }}</td>
-            <td><span class="badge badge-{{ j.match|slugify }}">{{ j.match }}</span></td>
-            <td class="small">{{ j.load }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<div class="grid grid-2" style="align-items:start">
+  <div class="card">
+    <div class="card-head"><h2>Eligible judges</h2><span class="muted small">Best first: priority, then lightest workload</span></div>
+    {% if not assignable %}
+      <p class="muted small" style="margin:0">This report is {{ report.get_status_display|lower }}, so judges can't be assigned.</p>
+    {% elif needed == 0 %}
+      <p class="muted small" style="margin:0">This report already has enough judges.</p>
+    {% else %}
+    <form method="post">
+      {% csrf_token %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th></th><th>Judge</th><th>Expertise</th><th>Open reports</th></tr></thead>
+          <tbody>
+            {% for j in eligible %}
+              <tr>
+                <td><input type="checkbox" name="judges" value="{{ j.pk }}" aria-label="Select {{ j.display_name }}" {% if forloop.counter <= needed %}checked{% endif %}></td>
+                <td><strong>{{ j.display_name }}</strong><br><span class="muted small">priority {{ j.judge_profile.priority }}</span></td>
+                <td class="muted small">{{ j.judge_profile.expertise|default:"—" }}</td>
+                <td class="small">{{ j.open_count }} of {{ j.judge_profile.max_open_assignments }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4" class="muted small">No eligible judges left (panel, conflicts or workload).</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if eligible %}
+      <div class="row" style="margin-top:1rem">
+        <button class="btn btn-primary" type="submit" {% if not verified %}disabled{% endif %}>Assign selected</button>
+        <button class="btn btn-outline" name="action" value="auto" type="submit" {% if not verified %}disabled{% endif %}>Fill with the best {{ needed }}</button>
+      </div>
+      {% endif %}
+    </form>
+    {% endif %}
   </div>
-  <div class="row" style="margin-top:1rem">
-    <button class="btn btn-primary" data-demo="Demo screen: judges assigned (not saved yet). They would get an email.">Assign {{ needed }} judge{{ needed|pluralize }}</button>
+
+  <div class="stack">
+    <div class="card">
+      <h2 style="font-size:1.1rem">Assigned so far</h2>
+      {% for a in current %}
+        <div class="settings-row"><span><strong>{{ a.judge.display_name }}</strong><br><span class="muted small">Round {{ a.round }} · assigned {{ a.assigned_at|date:"j M Y" }}</span></span><span class="badge badge-{{ a.status }}">{{ a.get_status_display }}</span></div>
+      {% empty %}<p class="muted small" style="margin:0">No judges yet. Needs {{ needed }}.</p>{% endfor %}
+    </div>
+    {% if next_reports %}
+      <div class="card">
+        <h2 style="font-size:1.1rem">Next reports needing judges</h2>
+        {% for r in next_reports %}<p class="small" style="margin:0 0 .3rem"><a href="{% url 'awards:assign' r.pk %}">{{ r.reference }}</a> · {{ r.award.name }}</p>{% endfor %}
+      </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

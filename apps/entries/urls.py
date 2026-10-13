@@ -10,4 +10,5 @@ urlpatterns = [
     path("application/", views.application_form, name="form"),
     path("application/<slug:slug>/", views.application_form, name="form"),
     path("status/", views.application_status, name="status"),
+    path("application/draft/<int:pk>/delete/", views.delete_draft, name="delete_draft"),
 ]

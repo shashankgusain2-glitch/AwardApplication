@@ -276,3 +276,6 @@ button[disabled] { opacity: .7; cursor: progress; }
 .badge-scored { background: var(--gold-soft); color: var(--gold-dark); }
 .badge-approved, .badge-completed, .badge-verified { background: var(--success-soft); color: var(--success); }
 .badge-rejected, .badge-declined, .badge-closed { background: var(--danger-soft); color: var(--danger); }
+
+/* Form field errors (real forms, step 3.5) */
+.field-error { color: #b42318; }

@@ -1,0 +1,33 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Application form{% endblock %}
+{% block heading %}Application form{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Open one of your applications, or start one for an open award.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:1.5rem">
+  <div class="card-head"><h2>My applications</h2></div>
+  {% for app in applications %}
+    <div class="settings-row">
+      <span><strong>{{ app.reference }}</strong> · {{ app.award.name }}<br><span class="muted small">{{ app.title }}</span></span>
+      <span class="row"><span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span><a class="btn btn-outline btn-sm" href="{% url 'entries:form' app.award.slug %}">Open</a></span>
+    </div>
+  {% empty %}
+    <p class="muted small" style="margin:0">You have no applications yet.</p>
+  {% endfor %}
+</div>
+
+<h2 style="font-size:1.2rem">Start a new application</h2>
+<div class="grid grid-3">
+  {% for award in open_awards %}
+    <div class="card">
+      <h3>{{ award.name }}</h3>
+      <p class="muted small">{{ award.summary|truncatechars:120 }}</p>
+      <a class="btn btn-primary btn-sm" href="{% url 'entries:form' award.slug %}">Start</a>
+    </div>
+  {% empty %}
+    <p class="muted small">No other awards are open right now.</p>
+  {% endfor %}
+</div>
+{% endblock %}

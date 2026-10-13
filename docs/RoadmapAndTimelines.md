@@ -18,7 +18,7 @@
 |---|---|---|---|
 | 1 | Planning | ✅ Done | Workflows mapped, roadmap drafted |
 | 2 | Skeleton | 🔄 In progress | Skeleton app ready for review |
-| 3 | Core Development | 🔄 In progress (3.1–3.3 done) | All main features working on real data |
+| 3 | Core Development | 🔄 In progress (3.1–3.5 done) | All main features working on real data |
 | 4 | Testing | ⏳ Ongoing (after each Phase 3 milestone) | All tests pass, no critical bugs |
 | 5 | Deployment | ⏳ Not started | App live in production |
 | 6 | Maintenance and Updates | ⏳ Not started | Steady support and regular updates |
@@ -57,7 +57,7 @@
 
 ## Phase 3 · Core Development
 
-**Status:** 🔄 In progress. Steps 3.1, 3.2 and 3.3 are done.
+**Status:** 🔄 In progress. Steps 3.1 to 3.5 are done; the quick review comes next.
 
 **Goal:** Build the real features and connect the screens to real logic.
 
@@ -68,8 +68,8 @@
 | 3.1 | ✅ Data model and database | 3 hours | Day 1 | Database created with all tables and relationships |
 | 3.2 | ✅ Backend foundation | 2 hours | Day 1 | Health-check endpoint shows the server is up and connected to the database |
 | 3.3 | ✅ Authentication and roles | 3 hours | Day 1 | Login and logout work, and each role sees only its own pages |
-| 3.4 | Core API | 6 hours | Day 2 | Every endpoint tested on its own in Postman |
-| 3.5 | Frontend and backend integration | 4 hours | Day 2–3 | Skeleton runs on real data |
+| 3.4 | ✅ Core API | 6 hours | Day 2 | Every endpoint tested on its own in Postman |
+| 3.5 | ✅ Frontend and backend integration | 4 hours | Day 2–3 | Skeleton runs on real data |
 | 🔍 | *Quick review* | *1 hour* | *Day 3* | *Problems caught before feature work starts* |
 | 3.6 | Feature slices | 8 hours | Day 3–4 | Most important flows work from start to finish |
 | 3.7 | Validation and edge cases | 3 hours | Day 4 | Bad situations show a clear message instead of crashing |
@@ -107,16 +107,20 @@
 
 ### 3.4 Core API (6 hours)
 
-- [ ] Build the endpoints the frontend uses to talk to the backend, such as *create item*, *get list* and *update status*.
-- [ ] Test each endpoint on its own with Postman.
+- [x] Build the endpoints the frontend uses to talk to the backend, such as *create item*, *get list* and *update status*.
+- [x] Test each endpoint on its own with Postman.
+
+> **Done (14 Oct 2026):** the API gaps were filled (`/auth/me/`, deactivate and activate users, bulk assign, dashboard summary, lookups, fuller judge rows) and six bugs found while testing were fixed. [postman/](../postman/README.md) has a ready-to-import collection (116 requests, with tests on each, including no token, wrong role, another judge's report and invalid data) and a checklist. It passes in full on fresh seed data. Details: [API.md](API.md).
 
 ### 3.5 Frontend and backend integration (4 hours)
 
-- [ ] Replace the fake data in the skeleton with real data from the API.
-- [ ] Add loading spinners, error messages and empty-state screens.
+- [x] Replace the fake data in the skeleton with real data from the API.
+- [x] Add loading spinners, error messages and empty-state screens.
 - [ ] Hold a quick review (1 hour) before the big feature work, to catch problems early.
 
 > **Result:** the skeleton works for real.
+
+> **Done (14 Oct 2026):** every applicant, judge, staff and leadership screen now reads and writes the real database through the same services as the API (the pages are server-rendered Django templates, so there is no separate loading state; each page has empty and error states). The whole flow (apply → verify → assign → grade → approve) was run end to end on the seed data, in the browser and in `tests/test_web_workflow.py`. Still sample content: the public marketing pages and the duplicate-review screen (no duplicate model yet). Writing new form versions in the form builder is part of 3.6.
 
 ### 3.6 Feature slices (8 hours)
 

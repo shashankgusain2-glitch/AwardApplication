@@ -89,3 +89,23 @@ def set_active(user, *, by, active):
             BlacklistedToken.objects.get_or_create(token=token)
     record(by, "update", user, changes={"is_active": active})
     return user
+
+
+@transaction.atomic
+def save_profile(user, data, *, partial=True):
+    """
+    Create or update the applicant's own organisation profile. Used by the
+    API (/profiles/mine/) and the web form, so both check the same rules:
+    GSTIN and PAN format, one profile per GSTIN, and a verified
+    organisation's GSTIN can't change. Raises a DRF ValidationError.
+    """
+    from .api.serializers import ApplicantProfileSerializer
+
+    if user.role != User.Role.APPLICANT:
+        raise BusinessRuleError("Only applicants have an organisation profile.")
+    profile = ApplicantProfile.objects.filter(user=user).first()
+    serializer = ApplicantProfileSerializer(profile, data=data, partial=partial and profile is not None)
+    serializer.is_valid(raise_exception=True)
+    saved = serializer.save(user=user)
+    record(user, "create" if profile is None else "update", saved)
+    return saved

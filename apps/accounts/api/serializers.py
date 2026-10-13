@@ -114,6 +114,14 @@ class ApplicantProfileSerializer(serializers.ModelSerializer):
         from apps.core.validators import validate_pan
         return validate_pan(value) if value else value
 
+    def validate(self, attrs):
+        profile = self.instance
+        verified = profile and profile.verification_status == ApplicantProfile.Verification.VERIFIED
+        if verified and "gstin" in attrs and attrs["gstin"] != profile.gstin:
+            raise serializers.ValidationError(
+                {"gstin": ["A verified organisation's GSTIN can't be changed. Contact staff."]})
+        return attrs
+
 
 class VerifySerializer(serializers.Serializer):
     approve = serializers.BooleanField()

@@ -17,6 +17,7 @@ from .models import ConflictOfInterest, JudgeAssignment
 A = JudgeAssignment.Status
 OPEN_STATUSES = [A.PENDING, A.IN_REVIEW]
 ASSIGNABLE = [Application.Status.SUBMITTED, Application.Status.ASSIGNED, Application.Status.IN_REVIEW]
+FILE_NAME_HIDDEN = "File attached (name hidden for blind judging)"
 
 
 def visible_to(user):
@@ -199,8 +200,9 @@ def record_conflict(*, judge, profile, by, reason=""):
 def report_for_judge(assignment):
     """
     What the judge may see of the report.                          [Rule 1]
-    In a blind award's desk-review round, identifying answers and the
-    applicant's identity are removed here, before anything is sent.
+    In a blind award's desk-review round, the applicant's identity is
+    removed here, before anything is sent: identifying answers, the title
+    (applicants often put their name in it) and uploaded file names.
     """
     report = assignment.report
     award = report.award
@@ -208,17 +210,26 @@ def report_for_judge(assignment):
     blind = award.blind_judging and (round_obj is None or round_obj.kind == "desk")
     questions = report.form_version.questions
     hidden = {q["key"] for q in questions if q.get("identifying")} if blind else set()
+
+    def value(q):
+        answer = report.content.get(q["key"], "")
+        if q["key"] in hidden:
+            return None
+        if blind and q.get("type") == "file" and answer:
+            return FILE_NAME_HIDDEN
+        return answer
+
     return {
         "reference": report.reference,
         "award": award.name,
-        "title": report.title,
+        "title": None if blind else report.title,
         "submitted_at": report.submitted_at.isoformat() if report.submitted_at else None,
         "report_status": report.status,
         "blind": blind,
         "applicant": None if blind else report.applicant.display_name,
-        "answers": [{"key": q["key"], "label": q["label"],
-                     "value": None if q["key"] in hidden else report.content.get(q["key"], ""),
-                     "hidden": q["key"] in hidden} for q in questions],
+        "answers": [{"key": q["key"], "label": q["label"], "section": q.get("section", ""),
+                     "type": q.get("type", "text"), "value": value(q), "hidden": q["key"] in hidden}
+                    for q in questions],
     }
 
 

@@ -2,40 +2,90 @@
 
 {% block title %}Entries{% endblock %}
 {% block heading %}Entries{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Business Excellence Award 2026</p>{% endblock %}
-{% block user %}{% include "partials/user_chip.html" with initials="MS" name="Meena Shah" detail="Programme staff" %}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Every application, and the decisions waiting for staff.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-<div class="card">
-  <div class="card-head">
-    <div class="row">
-      <input type="text" placeholder="Search entries…" style="width:240px">
-      <select style="width:180px"><option>All statuses</option><option>New</option><option>Eligible</option><option>Info requested</option></select>
-    </div>
-    <button class="btn btn-outline btn-sm" data-demo="Demo screen: manual entry form not built yet.">+ Add entry by hand</button>
+{% if to_verify or edit_requests or score_requests %}
+<div class="grid grid-3" style="align-items:start;margin-bottom:1.5rem">
+  <div class="card">
+    <h2 style="font-size:1.05rem">Organisations to verify ({{ to_verify|length }})</h2>
+    {% for p in to_verify %}
+      <div class="settings-row" style="display:block">
+        <strong>{{ p.organisation_name }}</strong><br>
+        <span class="muted small">{{ p.gstin|default:"No GSTIN yet" }} · {{ p.user.email }}</span>
+        <form method="post" action="{% url 'awards:verify_organisation' p.pk %}" class="row" style="margin-top:.4rem">
+          {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button class="btn btn-success btn-sm" name="decision" value="approve" {% if not p.gstin %}disabled title="Needs a GSTIN first"{% endif %}>Verify</button>
+          <button class="btn btn-outline btn-sm" name="decision" value="reject">Reject</button>
+        </form>
+      </div>
+    {% empty %}<p class="muted small" style="margin:0">None waiting.</p>{% endfor %}
   </div>
+  <div class="card">
+    <h2 style="font-size:1.05rem">Applicants asking to edit ({{ edit_requests|length }})</h2>
+    {% for app in edit_requests %}
+      <div class="settings-row" style="display:block">
+        <strong>{{ app.reference }}</strong> · {{ app.award.name }}<br>
+        <span class="muted small">“{{ app.edit_reason }}”</span>
+        <form method="post" action="{% url 'awards:decide_edit' app.pk %}" class="row" style="margin-top:.4rem">
+          {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button class="btn btn-success btn-sm" name="decision" value="allow">Allow</button>
+          <button class="btn btn-outline btn-sm" name="decision" value="refuse">Refuse</button>
+        </form>
+      </div>
+    {% empty %}<p class="muted small" style="margin:0">None waiting.</p>{% endfor %}
+  </div>
+  <div class="card">
+    <h2 style="font-size:1.05rem">Judges asking to change a score ({{ score_requests|length }})</h2>
+    {% for r in score_requests %}
+      <div class="settings-row" style="display:block">
+        <strong>{{ r.evaluation.assignment.report.reference }}</strong> · {{ r.evaluation.assignment.judge.display_name }}<br>
+        <span class="muted small">“{{ r.reason }}”</span>
+        <form method="post" action="{% url 'awards:decide_score_change' r.pk %}" class="row" style="margin-top:.4rem">
+          {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button class="btn btn-success btn-sm" name="decision" value="approve">Allow</button>
+          <button class="btn btn-outline btn-sm" name="decision" value="refuse">Refuse</button>
+        </form>
+      </div>
+    {% empty %}<p class="muted small" style="margin:0">None waiting.</p>{% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <form method="get" class="card-head">
+    <div class="row">
+      <input name="q" type="text" placeholder="Reference, title or organisation…" value="{{ filters.q }}" style="width:260px">
+      <select name="status" style="width:170px"><option value="">All statuses</option>{% for v, l in statuses %}<option value="{{ v }}" {% if filters.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+      <select name="award" style="width:220px"><option value="">All awards</option>{% for a in awards %}<option value="{{ a.slug }}" {% if filters.award == a.slug %}selected{% endif %}>{{ a.name }}</option>{% endfor %}</select>
+      <button class="btn btn-outline btn-sm" type="submit">Filter</button>
+    </div>
+    <span class="muted small">{{ reports|length }} application{{ reports|length|pluralize }}</span>
+  </form>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Entry</th><th>Organisation</th><th>Submitted</th><th>Status</th><th>Flag</th><th></th></tr></thead>
+      <thead><tr><th>Reference</th><th>Organisation</th><th>Award</th><th>Submitted</th><th>Status</th><th></th></tr></thead>
       <tbody>
-        {% for e in entries %}
+        {% for r in reports %}
           <tr>
-            <td><strong>{{ e.id }}</strong></td>
-            <td>{{ e.org }}</td>
-            <td class="muted small">{{ e.submitted }}</td>
-            <td><span class="badge badge-{{ e.status|slugify }}">{{ e.status }}</span></td>
-            <td>{% if e.flag %}<a class="badge badge-{{ e.flag|slugify }}" href="{% url 'awards:duplicates' %}" style="text-decoration:none">{{ e.flag }}</a>{% endif %}</td>
+            <td><strong>{{ r.reference }}</strong><br><span class="muted small">{{ r.title }}</span></td>
+            <td>{{ r.applicant.applicant_profile.organisation_name|default:r.applicant.email }}{% if r.applicant.applicant_profile.verification_status != "verified" %}<br><span class="badge badge-pending">Not verified</span>{% endif %}</td>
+            <td class="small">{{ r.award.name }}</td>
+            <td class="muted small">{{ r.submitted_at|date:"j M Y"|default:"—" }}</td>
+            <td><span class="badge badge-{{ r.status }}">{{ r.get_status_display }}</span></td>
             <td class="row">
-              {% if e.status == "New" %}
-                <button class="btn btn-success btn-sm" data-demo="Demo screen: marked eligible (not saved yet).">Eligible</button>
-                <button class="btn btn-outline btn-sm" data-demo="Demo screen: the applicant would be asked for more information.">Ask for info</button>
-              {% elif e.status == "Eligible" %}
-                <a class="btn btn-primary btn-sm" href="{% url 'awards:assign' %}">Assign judges</a>
-              {% else %}
-                <button class="btn btn-outline btn-sm" data-demo="Demo screen: entry view not built yet.">View</button>
+              {% if r.status in "submitted assigned in_review" %}<a class="btn btn-primary btn-sm" href="{% url 'awards:assign' r.pk %}">Judges</a>{% endif %}
+              {% if r.status == "submitted" %}
+                <form method="post" action="{% url 'awards:reject_report' r.pk %}" onsubmit="return confirm('Reject {{ r.reference }}? The applicant will see it as rejected.')">
+                  {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="note" value="Not eligible (staff check)">
+                  <button class="btn btn-outline btn-sm" type="submit">Reject</button>
+                </form>
               {% endif %}
             </td>
           </tr>
+        {% empty %}
+          <tr><td colspan="6" class="muted small">No applications match.</td></tr>
         {% endfor %}
       </tbody>
     </table>

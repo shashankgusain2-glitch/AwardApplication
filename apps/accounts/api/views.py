@@ -195,15 +195,7 @@ class ApplicantProfileViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, 
             if profile is None:
                 return Response(None)
             return Response(self.get_serializer(profile).data)
-        if profile and profile.verification_status == ApplicantProfile.Verification.VERIFIED \
-                and "gstin" in request.data and request.data["gstin"] != profile.gstin:
-            return Response({"success": False, "data": None, "errors": None,
-                             "message": "A verified organisation's GSTIN can't be changed. Contact staff."},
-                            status=status.HTTP_400_BAD_REQUEST)
-        serializer = self.get_serializer(profile, data=request.data, partial=request.method == "PATCH")
-        serializer.is_valid(raise_exception=True)
-        profile = serializer.save(user=request.user)
-        record(request.user, "update", profile)
+        profile = services.save_profile(request.user, request.data, partial=request.method == "PATCH")
         return Response(self.get_serializer(profile).data)
 
     @extend_schema(request=VerifySerializer, responses=ApplicantProfileSerializer)

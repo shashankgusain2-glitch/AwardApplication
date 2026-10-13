@@ -1,32 +1,25 @@
 {% extends "portal_base.html" %}
 
-{% block title %}Score entry {{ assignment.entry }}{% endblock %}
-{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'judging:assignments' %}">My assignments</a> / {{ assignment.entry }}</p>{% endblock %}
-{% block heading %}Entry {{ assignment.entry }}{% endblock %}
+{% block title %}Grade {{ view.reference }}{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'judging:assignments' %}">My assignments</a> / {{ view.reference }}</p>{% endblock %}
+{% block heading %}{{ view.reference }}{% if view.title %}: {{ view.title }}{% endif %}{% endblock %}
 {% block subheading %}
-  <p class="muted small" style="margin:.25rem 0 0">{{ award.icon }} {{ award.name }} · {{ assignment.round }}: {{ assignment.round_label }} · ✓ Scores saved automatically</p>
-  {% if assignment.visit %}<p class="small" style="margin:.25rem 0 0">📍 {{ assignment.visit }}</p>{% endif %}
-  {% if assignment.applicant %}<p class="small" style="margin:.25rem 0 0">Applicant: <strong>{{ assignment.applicant }}</strong></p>{% endif %}
+  <p class="muted small" style="margin:.25rem 0 0">{{ award.name }} · Round {{ assignment.round }}: {{ round.get_kind_display }} · <span class="badge badge-{{ assignment.status }}">{{ assignment.get_status_display }}</span></p>
+  <p class="small" style="margin:.25rem 0 0">Applicant: {% if view.applicant %}<strong>{{ view.applicant }}</strong>{% else %}<span class="hidden-value">Hidden for blind judging</span>{% endif %}</p>
 {% endblock %}
-{% block user %}{% include "partials/user_chip.html" with initials="RK" name="Dr. R. Kapoor" detail="Judge" %}{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-{% if hidden %}
+{% if view.blind %}
   <div class="callout callout-teal" style="margin-bottom:1.5rem">
-    <div><strong>🔒 Blind judging is on for this award</strong>Answers that reveal who applied were removed before this page was made, and file names are hidden. Please score only what you see.</div>
+    <div><strong>🔒 Blind judging is on for this award</strong>Answers that reveal who applied were removed before this page was made. Please score only what you see.</div>
   </div>
-{% elif assignment.round_type == "site" %}
-  <div class="callout callout-info" style="margin-bottom:1.5rem">
-    <div><strong>📍 Site visit: not blind</strong>You'll see the work in place and meet the team, so names are shown. Use the written entry below to prepare, then score what you see on the day.</div>
-  </div>
-{% elif assignment.round_type == "live" %}
-  <div class="callout callout-info" style="margin-bottom:1.5rem">
-    <div><strong>🎤 Live presentation: not blind</strong>The organisation presents to the jury in person, so names are shown.</div>
-  </div>
+{% elif round.kind == "site" %}
+  <div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>📍 Site visit: not blind</strong>You'll see the work in place and meet the team, so names are shown.</div></div>
+{% elif round.kind == "live" %}
+  <div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>🎤 Live presentation: not blind</strong>The organisation presents to the jury in person, so names are shown.</div></div>
 {% else %}
-  <div class="callout callout-info" style="margin-bottom:1.5rem">
-    <div><strong>Open judging</strong>This award doesn't use blind judging, so you can see who applied.</div>
-  </div>
+  <div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>Open judging</strong>This award doesn't use blind judging, so you can see who applied.</div></div>
 {% endif %}
 
 <div class="grid grid-2" style="align-items:start">
@@ -45,34 +38,78 @@
     {% endfor %}
   </div>
 
-  <form class="stack">
-    <div class="card">
-      <div class="row-between" style="margin-bottom:.5rem"><h2 style="font-size:1.1rem;margin:0">Your scores</h2><span class="muted small">{{ progress }}% done</span></div>
-      <div class="progress" style="margin-bottom:1rem"><span style="width:{{ progress }}%"></span></div>
-      {% for c in scorecard %}
-        {% with cid=forloop.counter %}
-        <fieldset class="settings-row" style="display:block;border:0;padding:1rem 0;margin:0">
-          <legend class="label" style="font-weight:600">{{ c.name }} <span class="muted small">· weight {{ c.weight }}%</span></legend>
-          <div class="score-scale" style="margin:.5rem 0">
-            {% for n in scale %}
-              <label><input type="radio" name="c{{ cid }}" value="{{ n }}" {% if c.score == n %}checked{% endif %}><span>{{ n }}</span></label>
-            {% endfor %}
-          </div>
-          <textarea style="min-height:70px" placeholder="Short comment for this criterion">{{ c.comment }}</textarea>
-        </fieldset>
-        {% endwith %}
-      {% endfor %}
-    </div>
-
-    <div class="callout callout-info"><div><strong>Before you submit</strong>After you submit, any change needs a reason. The change is recorded with your name and the time.</div></div>
-
-    <div class="row-between">
-      <span></span>
-      <div class="row">
-        <button class="btn btn-outline" data-demo="Saved. Come back any time before {{ assignment.due }}.">Save and exit</button>
-        <button class="btn btn-primary" data-demo="Demo screen: scores not submitted yet.">Submit scores</button>
+  <div class="stack">
+    {% if not can_grade and not submitted %}
+      <div class="card"><p class="muted small" style="margin:0">This assignment is {{ assignment.get_status_display|lower }}, so it can't be graded.</p></div>
+    {% else %}
+    <form method="post" class="stack">
+      {% csrf_token %}
+      <div class="card">
+        <div class="row-between" style="margin-bottom:.5rem">
+          <h2 style="font-size:1.1rem;margin:0">Your scores</h2>
+          <span class="muted small">{% if evaluation %}Weighted total {{ evaluation.total_score }} / 10 · {% endif %}{{ progress }}% done</span>
+        </div>
+        <div class="progress" style="margin-bottom:1rem"><span style="width:{{ progress }}%"></span></div>
+        {% for c in scorecard %}
+          <fieldset class="settings-row" style="display:block;border:0;padding:1rem 0;margin:0">
+            <legend class="label" style="font-weight:600">{{ c.label }} <span class="muted small">· weight {{ c.weight }}%</span></legend>
+            <div class="score-scale" style="margin:.5rem 0">
+              {% for n in scale %}
+                <label><input type="radio" name="score_{{ c.key }}" value="{{ n }}" {% if c.score == n %}checked{% endif %} {% if submitted and change_request.status != "approved" %}disabled{% endif %}><span>{{ n }}</span></label>
+              {% endfor %}
+            </div>
+            <textarea name="comment_{{ c.key }}" style="min-height:70px" placeholder="Short comment for this criterion" {% if submitted %}readonly{% endif %}>{{ c.comment }}</textarea>
+          </fieldset>
+        {% empty %}
+          <p class="muted small">No criteria are set for this round yet. Ask the programme staff.</p>
+        {% endfor %}
+        <div class="field" style="margin-top:1rem">
+          <label for="feedback">Overall feedback</label>
+          <textarea id="feedback" name="feedback" placeholder="What stood out, and what could be better?" {% if submitted %}readonly{% endif %}>{{ evaluation.feedback|default:"" }}</textarea>
+        </div>
       </div>
-    </div>
-  </form>
+
+      {% if not submitted %}
+        <div class="callout callout-info"><div><strong>Before you submit</strong>Score every criterion. After you submit, any change needs staff permission and a reason, and is recorded with your name and the time.</div></div>
+        <div class="row-between"><span></span>
+          <div class="row">
+            <button class="btn btn-outline" name="action" value="save">Save and finish later</button>
+            <button class="btn btn-primary" name="action" value="submit">Submit scores</button>
+          </div>
+        </div>
+      {% elif change_request.status == "approved" %}
+        <div class="card">
+          <h3 style="margin-top:0">Staff allowed you to change your scores</h3>
+          <div class="field"><label for="reason">Reason for the change (recorded)</label><input id="reason" name="reason" type="text" required></div>
+          <div class="row"><button class="btn btn-primary" name="action" value="change">Save the change</button></div>
+        </div>
+      {% endif %}
+    </form>
+
+    {% if submitted and change_request.status != "approved" %}
+      <div class="card">
+        {% if change_request.status == "requested" %}
+          <p class="small" style="margin:0"><strong>Change requested</strong> on {{ change_request.created_at|date:"j M Y" }}: “{{ change_request.reason }}”. Waiting for staff.</p>
+        {% else %}
+          <p class="small" style="margin:0 0 .5rem"><strong>Submitted{% if evaluation.submitted_at %} on {{ evaluation.submitted_at|date:"j M Y" }}{% endif %}.</strong> To change a score, ask the programme staff first.{% if change_request.status == "declined" %} Your last request was refused.{% endif %}</p>
+          <form method="post" class="row">
+            {% csrf_token %}<input type="hidden" name="action" value="request_change">
+            <input name="reason" type="text" placeholder="Why do you need to change it?" required style="flex:1">
+            <button class="btn btn-outline btn-sm" type="submit">Ask to change</button>
+          </form>
+        {% endif %}
+      </div>
+    {% endif %}
+    {% endif %}
+
+    {% if history %}
+      <div class="card">
+        <h3 style="margin-top:0">Score changes (permanent record)</h3>
+        {% for h in history %}
+          <p class="small" style="margin:0 0 .4rem">{{ h.created_at|date:"j M Y H:i" }} · {{ h.criterion.label }}: {{ h.old_score }} → {{ h.new_score }} · by {{ h.changed_by.display_name }} · “{{ h.reason }}”</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}
