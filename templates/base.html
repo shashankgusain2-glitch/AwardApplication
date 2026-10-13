@@ -22,6 +22,7 @@
         <a href="{% url 'core:home' %}" {% if name == 'home' %}class="active"{% endif %}>Home</a>
         <a href="{% url 'core:awards' %}" {% if name == 'awards' or name == 'award_detail' %}class="active"{% endif %}>Awards</a>
         <a href="{% url 'core:about' %}" {% if name == 'about' %}class="active"{% endif %}>About us</a>
+        <a href="{% url 'core:journeys' %}" {% if name == 'journeys' %}class="active"{% endif %}>User journeys</a>
         <a href="{% url 'core:home' %}#how-it-works">How it works</a>
         <a href="{% url 'core:about' %}#contact">Contact</a>
         <a class="btn btn-primary btn-sm" href="{% url 'core:login' %}">Log in</a>

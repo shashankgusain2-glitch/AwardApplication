@@ -72,4 +72,6 @@ See [docs/testing.md](docs/testing.md) for what the tests check and what they do
 | `tests/` | Tests, including one file per rule in `tests/rules/` |
 | `docs/` | Roadmap, user workflows, architecture, decisions, daily reports, meeting notes |
 
+Each user's journey on one page: [docs/User-Journeys.md](docs/User-Journeys.md), or open http://localhost:8000/journeys/ while the app runs.
+
 Full details: [docs/Architecture.md](docs/Architecture.md). What every award shares, what changes per award, and where the model breaks: [docs/Abstraction.md](docs/Abstraction.md). All documents: [docs/README.md](docs/README.md).

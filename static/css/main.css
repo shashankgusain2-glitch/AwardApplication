@@ -261,3 +261,19 @@ details.faq p { padding: 0 1.25rem 1rem; margin: 0; color: var(--muted); }
   .stat { border-right: 0; border-bottom: 1px solid var(--border); }
   .cta-band { padding: 2rem; }
 }
+
+/* User journeys page -------------------------------------------------------- */
+.cycle { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: .5rem; }
+.cycle li { background: var(--surface); border-radius: var(--radius-sm); box-shadow: var(--shadow); padding: .8rem .6rem; text-align: center; position: relative; }
+.cycle li strong { display: block; font-size: .92rem; color: var(--navy); }
+.cycle-no { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--gold); color: var(--navy); font-weight: 800; font-size: .75rem; margin-bottom: .35rem; }
+.journey-head { display: flex; gap: .9rem; align-items: center; margin-bottom: 1rem; }
+.journey-head h2 { font-size: 1.15rem; margin: 0; }
+.journey-icon { width: 46px; height: 46px; border-radius: 12px; background: var(--gold-soft); display: grid; place-items: center; font-size: 1.4rem; flex: none; }
+.journey-steps { list-style: none; counter-reset: jstep; padding: 0; margin: 0; }
+.journey-steps li { counter-increment: jstep; }
+.journey-steps a { display: flex; align-items: center; gap: .75rem; padding: .6rem .5rem; border-radius: var(--radius-sm); color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border); }
+.journey-steps li:last-child a { border-bottom: 0; }
+.journey-steps a::before { content: counter(jstep); flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--navy); color: #fff; display: grid; place-items: center; font-size: .8rem; font-weight: 700; }
+.journey-steps a span:first-child { flex: 1; }
+.journey-steps a:hover { background: var(--bg); }

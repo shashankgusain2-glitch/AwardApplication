@@ -1,5 +1,6 @@
 from django.http import Http404
 from django.shortcuts import render
+from django.urls import reverse
 
 from . import demo_data as d
 
@@ -40,6 +41,26 @@ def award_detail(request, slug):
     return render(request, "core/award_detail.html", {
         "award": award,
         "details": d.award_details(award),
+    })
+
+
+def journeys(request):
+    """One page: each user's steps through one award cycle, linked to the real screens."""
+    journeys = []
+    for journey in d.JOURNEYS:
+        steps = []
+        for step in journey["steps"]:
+            args = [step["arg"]] if "arg" in step else []
+            steps.append({
+                **step,
+                "href": reverse(step["url"], args=args),
+                "rule_name": d.RULE_NAMES.get(step.get("rule"), ""),
+            })
+        journeys.append({**journey, "steps": steps})
+    return render(request, "core/journeys.html", {
+        "cycle": d.CYCLE,
+        "journeys": journeys,
+        "rules": d.RULE_NAMES,
     })
 
 
