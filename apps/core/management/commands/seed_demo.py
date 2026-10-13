@@ -7,7 +7,7 @@ Log in as staff by verifying the email below on the website.
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
-STAFF_EMAIL = "staff@uec.example"
+STAFF_EMAIL = "staff@awards.example"
 
 
 class Command(BaseCommand):

@@ -27,6 +27,6 @@ def staff_client(client, db):
     """A second client logged in as staff."""
     from django.test import Client
     staff = Client()
-    get_user_model().objects.create(email="staff@uec.example", username="staff@uec.example", is_staff=True)
-    verify(staff, "staff@uec.example")
+    get_user_model().objects.create(email="staff@awards.example", username="staff@awards.example", is_staff=True)
+    verify(staff, "staff@awards.example")
     return staff

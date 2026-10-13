@@ -90,7 +90,7 @@ AwardApplication/
 | `views.py`, `urls.py` | The home page |
 | `context_processors.py` | Organisation name on every page; version number on CSS/JS links so browsers don't use old copies |
 | `models.py` | `TimeStampedModel`, a shared building block for later |
-| `management/commands/seed_demo.py` | Creates the demo staff account `staff@uec.example` |
+| `management/commands/seed_demo.py` | Creates the demo staff account `staff@awards.example` |
 
 ## `templates/`
 

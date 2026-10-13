@@ -25,7 +25,7 @@ Home → Verify email (6-digit code) → Register organisation (GSTIN + PAN)
 **Demo notes**
 - No real email is sent. The 6-digit code is shown on screen (and printed in the server log).
 - GSTIN and PAN are checked for the right **format** only. Use test values, e.g. GSTIN `27ABCDE1234F1Z5`, PAN `PQRSX6789K`.
-- **To log in as staff**, verify the email `staff@uec.example` (created automatically).
+- **To log in as staff**, verify the email `staff@awards.example` (created automatically).
 - Judging isn't built yet, so staff move a report to "Assigned", "Being judged" and "Judged" by hand.
 
 ## The four rules this platform keeps
