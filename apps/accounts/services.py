@@ -66,3 +66,26 @@ def verify_organisation(profile, *, by, approve, note=""):
     profile.save()
     record(by, "verify", profile, changes={"from": before, "to": profile.verification_status, "note": note})
     return profile
+
+
+@transaction.atomic
+def set_active(user, *, by, active):
+    """
+    Leaders deactivate or reactivate accounts (nothing is deleted). A
+    deactivated user's refresh tokens are blacklisted, so the API stops
+    working for them at once; web sessions end on their next request.
+    """
+    if not (by.role == User.Role.LEADER or by.is_superuser):
+        raise BusinessRuleError("Only a leader can deactivate or reactivate accounts.")
+    if user.pk == by.pk:
+        raise BusinessRuleError("You can't deactivate your own account.")
+    if user.is_active == active:
+        return user
+    user.is_active = active
+    user.save(update_fields=["is_active", "updated_at"])
+    if not active:
+        from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+        for token in OutstandingToken.objects.filter(user=user):
+            BlacklistedToken.objects.get_or_create(token=token)
+    record(by, "update", user, changes={"is_active": active})
+    return user

@@ -1,6 +1,7 @@
 """
-/auth/  login, refresh, logout, register
-/users/ leaders manage accounts; staff read; everyone reads/updates their own (/users/me/)
+/auth/  login, refresh, logout, register, me
+/users/ leaders manage accounts (create, update, deactivate, activate); staff read;
+        everyone reads/updates their own (/users/me/ or /auth/me/)
 /profiles/ applicant organisation profiles; staff verify them
 """
 from django.shortcuts import get_object_or_404
@@ -16,6 +17,7 @@ from apps.accounts import services
 from apps.accounts.models import ApplicantProfile, User
 from apps.audit.services import record
 from apps.core.api.permissions import IsApplicant, IsLeader, IsStaffOrLeader
+from apps.core.services import BusinessRuleError
 
 from .serializers import (
     AccountCreateSerializer,
@@ -60,6 +62,21 @@ class LogoutView(GenericAPIView):
         return Response({"success": True, "data": None, "message": "Logged out.", "errors": None})
 
 
+class MeView(GenericAPIView):
+    """GET: who am I (id, email, name, role). PATCH {name}: change my own name. Role and email can't change."""
+    serializer_class = MeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response(MeSerializer(request.user).data)
+
+    def patch(self, request):
+        serializer = MeSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
 class RegisterView(GenericAPIView):
     """Applicant self sign-up. Staff, judges and leaders are created by a leader (POST /users/)."""
     serializer_class = RegisterSerializer
@@ -95,7 +112,7 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
     def get_permissions(self):
         if self.action == "me":
             return [permissions.IsAuthenticated()]
-        if self.action in ("create", "update", "partial_update"):
+        if self.action in ("create", "update", "partial_update", "deactivate", "activate"):
             return [IsLeader()]
         return [IsStaffOrLeader()]
 
@@ -113,9 +130,27 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
     def perform_update(self, serializer):
+        data = serializer.validated_data
+        if serializer.instance.pk == self.request.user.pk and ("role" in data or "is_active" in data):
+            raise BusinessRuleError("You can't change your own role or deactivate yourself.")
+        if "is_active" in data:   # same rules as /deactivate/ and /activate/ (tokens blacklisted)
+            services.set_active(serializer.instance, by=self.request.user, active=data.pop("is_active"))
         user = serializer.save()
         record(self.request.user, "update", user,
                changes={k: str(v) for k, v in serializer.validated_data.items()})
+
+    @extend_schema(request=None, responses=UserSerializer)
+    @action(detail=True, methods=["post"])
+    def deactivate(self, request, pk=None):
+        """The account can't log in any more; its refresh tokens stop working. Nothing is deleted."""
+        user = services.set_active(self.get_object(), by=request.user, active=False)
+        return Response(UserSerializer(user).data)
+
+    @extend_schema(request=None, responses=UserSerializer)
+    @action(detail=True, methods=["post"])
+    def activate(self, request, pk=None):
+        user = services.set_active(self.get_object(), by=request.user, active=True)
+        return Response(UserSerializer(user).data)
 
     @extend_schema(request=MeSerializer, responses=MeSerializer)
     @action(detail=False, methods=["get", "patch"])

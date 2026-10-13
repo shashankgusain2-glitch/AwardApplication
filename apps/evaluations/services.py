@@ -55,7 +55,8 @@ def _clean_scores(assignment, scores):
         raise BusinessRuleError(f"Unknown criteria: {', '.join(sorted(unknown))}.")
     for key, value in scores.items():
         score = value["score"] if isinstance(value, dict) else value
-        if not isinstance(score, int) or not 1 <= score <= 10:
+        # bool is a kind of int in Python: true/false must not count as 1/0
+        if isinstance(score, bool) or not isinstance(score, int) or not 1 <= score <= 10:
             raise BusinessRuleError(f"{criteria[key].label}: score must be a whole number from 1 to 10.")
     return criteria
 

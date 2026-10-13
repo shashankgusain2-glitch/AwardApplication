@@ -99,6 +99,48 @@ def reassign(assignment, new_judge, *, by):
     return new
 
 
+@transaction.atomic
+def bulk_assign(pairs, *, by, round=1):
+    """
+    Assign many (report, judge) pairs at once. All or nothing: if any pair
+    breaks a rule, nothing is saved and the error names the pair.
+    """
+    made = []
+    for n, (report, judge) in enumerate(pairs, start=1):
+        try:
+            made.append(assign(report, judge, by=by, round=round))
+        except BusinessRuleError as error:
+            raise BusinessRuleError(f"Item {n} ({report.reference} → {judge.email}): {error}") from None
+    return made
+
+
+def judges_still_needed(report, round=1):
+    """How many more judges this report needs in this round (declined ones don't count)."""
+    have = report.assignments.filter(round=round).exclude(status=A.DECLINED).count()
+    return max(report.award.judges_per_report - have, 0)
+
+
+@transaction.atomic
+def auto_assign(report, *, by, round=1):
+    """Fill the report up to the award's judges-per-report with the best eligible judges."""
+    _check_can_assign(by)
+    needed = judges_still_needed(report, round)
+    if needed == 0:
+        return []
+    picks = eligible_judges(report, round)[:needed]
+    if not picks:
+        raise BusinessRuleError(f"{report.reference}: no eligible judges left (panel, conflicts, workload).")
+    return [assign(report, judge, by=by, round=round) for judge in picks]
+
+
+@transaction.atomic
+def auto_assign_many(reports, *, by, round=1):
+    made = []
+    for report in reports:
+        made += auto_assign(report, by=by, round=round)
+    return made
+
+
 def _own(assignment, judge):
     if assignment.judge_id != judge.id:
         raise BusinessRuleError("This assignment isn't yours.")
@@ -170,6 +212,8 @@ def report_for_judge(assignment):
         "reference": report.reference,
         "award": award.name,
         "title": report.title,
+        "submitted_at": report.submitted_at.isoformat() if report.submitted_at else None,
+        "report_status": report.status,
         "blind": blind,
         "applicant": None if blind else report.applicant.display_name,
         "answers": [{"key": q["key"], "label": q["label"],

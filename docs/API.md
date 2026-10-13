@@ -23,9 +23,11 @@ Most lists also accept **filters** (e.g. `?status=submitted&award=kaizen`), **se
 | `/auth/refresh/` | POST | anyone | `{refresh}` → new `{access, refresh}` |
 | `/auth/logout/` | POST | logged in | `{refresh}`: blacklists the refresh token |
 | `/auth/register/` | POST | anyone | Applicant sign-up `{email, name, password, organisation_name?}`. Always creates an **applicant** |
+| `/auth/me/` | GET / PATCH | everyone | Who am I (`id, email, name, role`). PATCH changes only `name` |
 | `/users/` | GET | staff, leader | List users (`?role=judge`, `?search=`) |
 | `/users/` | POST | **leader** | Create staff, judge or leader accounts (`{email, name, role, password?, expertise?, priority?, max_open_assignments?}`) |
-| `/users/{id}/` | GET / PATCH | staff, leader / **leader** | Read / change (role, active, name) |
+| `/users/{id}/` | GET / PATCH | staff, leader / **leader** | Read / change (role, active, name). A leader can't change their own role or deactivate themselves |
+| `/users/{id}/deactivate/` · `/activate/` | POST | **leader** | Turn an account off or on (nothing is deleted). Deactivating blacklists the user's refresh tokens at once |
 | `/users/me/` | GET / PATCH | everyone | Your own account (only `name` can change) |
 | `/profiles/mine/` | GET / PUT / PATCH | applicant | Your organisation profile (GSTIN and PAN format-checked) |
 | `/profiles/` · `/profiles/{id}/verify/` | GET · POST | staff, leader | List organisations; verify or reject `{approve, note}` |
@@ -39,9 +41,10 @@ Most lists also accept **filters** (e.g. `?status=submitted&award=kaizen`), **se
 | `/applications/{id}/eligible-judges/` | GET | staff, leader | Judges who may take it: panel, no conflict, under limit, best first |
 | `/assignments/` | GET | judge (own only), staff, leader | |
 | `/assignments/` | POST | **staff, leader** | `{report, judge, round?}`: checks verified organisation, role, conflict, workload |
+| `/assignments/bulk/` | POST | staff, leader | `{items: [{report, judge}], round?}` assigns exact pairs, or `{reports: [ids]}` fills each report with the best eligible judges. All or nothing: one broken rule and nothing is saved (the 400 names the item) |
 | `/assignments/{id}/reassign/` | POST | staff, leader | `{judge}` |
 | `/assignments/{id}/accept/` · `/decline/` | POST | judge (own) | Declined reports go back to the pool |
-| `/judge/my-assignments/` | GET | judge | Your reports only (judge taken from your token). **Blind awards hide identity** in desk rounds |
+| `/judge/my-assignments/` | GET | judge | Your reports only (judge taken from your token): title, applicant name, submission date, report status, assignment status and the criteria to score. **Blind awards hide identity** in desk rounds |
 | `/conflicts/` | GET / POST | staff, leader | Record a conflict `{judge, applicant_profile, reason}`; open assignments are withdrawn |
 | `/evaluations/` | GET | judge (own), staff, leader | |
 | `/evaluations/` | POST | judge (own assignments only) | `{assignment, scores: {criterion_key: 1-10}, feedback?, submit?}`. `submit=false` saves midway |
@@ -50,9 +53,15 @@ Most lists also accept **filters** (e.g. `?status=submitted&award=kaizen`), **se
 | `/evaluations/{id}/change-scores/` | POST | judge (own) | `{scores, reason}`: needs an approved request; every change is recorded |
 | `/score-change-requests/` · `/{id}/decide/` | GET · POST | staff, leader | `{approve}` |
 | `/notifications/` · `/{id}/read/` | GET · POST | everyone (own) | |
+| `/dashboard/summary/` | GET | everyone | Counts by status for **your** role: applicants their own reports, judges their own assignments, staff and leaders the whole event plus per-award progress |
+| `/lookups/` | GET | everyone | Codes and labels for drop-downs and badges (roles, statuses, round kinds, score range) |
 | `/health/` | GET | anyone | `{status, database}` |
 
 **Security rules:** a user's role always comes from their account, never from the request. Every list is limited in `get_queryset()`, so another user's record returns **404** (not someone else's data). A wrong role returns **403**.
+
+## Postman
+
+A ready-to-import collection (116 requests in 12 folders, with tests) and a testing checklist are in [postman/](../postman/README.md).
 
 ## Sample requests (curl)
 

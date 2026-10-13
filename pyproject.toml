@@ -20,6 +20,7 @@ ignore = [
 "config/settings/*.py" = ["F403", "F405"]   # `from .base import *` is the settings pattern
 "tests/*" = ["B018"]
 "apps/core/demo_data.py" = ["E501"]   # sample copy for the screens; removed in Phase 3
+"postman/build_collection.py" = ["E501"]   # Postman test scripts are JavaScript strings
 
 [tool.ruff.lint.isort]
 known-first-party = ["apps", "config"]

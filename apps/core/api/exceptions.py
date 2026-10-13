@@ -20,6 +20,12 @@ def _message(errors, fallback):
         return str(errors["non_field_errors"][0])
     if isinstance(errors, list) and errors:
         return str(errors[0])
+    if isinstance(errors, dict) and errors:   # field errors: name the first one
+        field, problems = next(iter(errors.items()))
+        first = problems[0] if isinstance(problems, list) and problems else problems
+        if isinstance(first, dict):   # nested (e.g. items[0].judge): stay generic
+            return "Check the highlighted fields."
+        return f"{field}: {first}"
     return fallback
 
 

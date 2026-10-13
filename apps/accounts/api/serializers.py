@@ -1,6 +1,7 @@
 from django.contrib.auth import password_validation
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -82,8 +83,15 @@ class RegisterSerializer(serializers.Serializer):
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
 
+    def validate_refresh(self, value):
+        try:
+            self._token = RefreshToken(value)
+        except TokenError:
+            raise serializers.ValidationError("This refresh token is invalid or already used.") from None
+        return value
+
     def save(self, **kwargs):
-        RefreshToken(self.validated_data["refresh"]).blacklist()
+        self._token.blacklist()
 
 
 class ApplicantProfileSerializer(serializers.ModelSerializer):
