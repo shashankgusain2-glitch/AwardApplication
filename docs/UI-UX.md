@@ -43,7 +43,7 @@ The four rules are visible in the UI, not only enforced in the background:
 
 ## Host organisation
 
-The public site is for a **fictional** industry body, *Udyog Excellence Council*. Its structure follows how real Indian industry bodies (e.g. CII) present awards: eligibility, step-by-step process, key dates, jury criteria and FAQs. The name, address and numbers live in one place (`apps/core/demo_data.py → ORGANISATION`) so they're easy to change.
+The site is called **Awards Platform** (a demo name, not a real organisation). Its structure follows how real Indian industry bodies (e.g. CII) present awards: eligibility, step-by-step process, key dates, jury criteria and FAQs. The name, address and numbers live in one place (`apps/core/demo_data.py → ORGANISATION`) so they're easy to change.
 
 ## Where the sample data lives
 

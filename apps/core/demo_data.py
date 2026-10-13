@@ -11,11 +11,11 @@ so every screen follows them. This stands in for the database for now.
 """
 
 ORGANISATION = {
-    "name": "Udyog Excellence Council",
-    "short_name": "UEC",
+    "name": "Awards Platform",
+    "short_name": "AP",
     "tagline": "Recognising the best of Indian industry",
     "founded": 1985,
-    "email": "awards@uec.example",
+    "email": "awards@awards.example",
     "phone": "+91 11 0000 0000",
     "address": "Excellence House, Lodhi Road, New Delhi 110003",
     "is_fictional": True,
@@ -490,7 +490,7 @@ ASSIGNMENTS = [
     {"entry": "K-0003", "round": "Round 2", "status": "Visit scheduled", "progress": 0, "due": "5 Feb 2027",
      "visit": "5 Feb 2027, 10:00 · Deccan Forge, Plant 2, Hosur"},
     {"entry": "A-0029", "round": "Round 2", "status": "Presentation scheduled", "progress": 0, "due": "12 Feb 2027",
-     "visit": "12 Feb 2027, 14:30 · UEC Excellence House, New Delhi"},
+     "visit": "12 Feb 2027, 14:30 · Awards Platform office, New Delhi"},
 ]
 
 # Sample scores already entered, per entry (criterion name -> score, comment)
