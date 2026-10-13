@@ -1,7 +1,7 @@
 {% extends "portal_base.html" %}
 
 {% block title %}Dashboard{% endblock %}
-{% block heading %}Welcome back, {{ user.first_name|default:user.display_name }}{% endblock %}
+{% block heading %}Welcome back, {{ user.get_short_name }}{% endblock %}
 {% block subheading %}<p class="muted" style="margin:.25rem 0 0">{{ organisation.name|default:"Start by completing your organisation profile." }}</p>{% endblock %}
 {% block user %}{% include "partials/user_chip.html" with initials="PK" name="Priya Kulkarni" detail="Applicant" %}{% endblock %}
 

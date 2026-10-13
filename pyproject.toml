@@ -1,0 +1,28 @@
+# Code quality: ruff replaces black (formatting), isort (imports) and flake8 (linting).
+#   ruff check .          lint (including import order)
+#   ruff check . --fix    lint and fix what can be fixed safely
+#   ruff format .         format code
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["*/migrations/*", "staticfiles", "media", "logs"]
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I isort, B bugbear, UP pyupgrade, DJ django
+select = ["E", "W", "F", "I", "B", "UP", "DJ"]
+ignore = [
+    "DJ001",   # CharField null=True: we use blank + default="" deliberately
+    "B904",    # raise ... from err inside except: not needed for our user-facing errors
+]
+
+[tool.ruff.lint.per-file-ignores]
+"config/settings/*.py" = ["F403", "F405"]   # `from .base import *` is the settings pattern
+"tests/*" = ["B018"]
+"apps/core/demo_data.py" = ["E501"]   # sample copy for the screens; removed in Phase 3
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]
+
+[tool.ruff.format]
+quote-style = "double"

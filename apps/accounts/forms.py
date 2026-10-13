@@ -54,7 +54,7 @@ class SignUpForm(forms.Form):
         if p1 and p2 and p1 != p2:
             self.add_error("password2", "The two passwords don't match.")
         if p1:
-            candidate = User(email=cleaned.get("email", ""), first_name=cleaned.get("full_name", ""))
+            candidate = User(email=cleaned.get("email", ""), name=cleaned.get("full_name", ""))
             try:
                 password_validation.validate_password(p1, candidate)
             except forms.ValidationError as error:
@@ -62,9 +62,6 @@ class SignUpForm(forms.Form):
         return cleaned
 
     def save(self):
-        first, _, last = self.cleaned_data["full_name"].strip().partition(" ")
-        user = User(email=self.cleaned_data["email"], username=self.cleaned_data["email"],
-                    first_name=first, last_name=last, role=User.Role.APPLICANT)
-        user.set_password(self.cleaned_data["password1"])   # stored hashed
-        user.save()
-        return user
+        from .services import register_applicant
+        return register_applicant(email=self.cleaned_data["email"], password=self.cleaned_data["password1"],
+                                  name=self.cleaned_data["full_name"].strip())

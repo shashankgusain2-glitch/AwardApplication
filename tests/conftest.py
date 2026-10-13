@@ -27,7 +27,7 @@ APP_ROLE = {"entries": "applicant", "judging": "judge", "awards": "staff", "dash
 
 def make_user(email, role, password=PASSWORD, **extra):
     User = get_user_model()
-    user = User(email=email, username=email, role=role, **extra)
+    user = User(email=email, role=role, **extra)
     user.set_password(password)
     user.save()
     return user
@@ -93,5 +93,7 @@ def fast_password_hashing(settings, request):
     Real hashing (PBKDF2, 1 million rounds) makes every test login slow.
     Tests use a fast hasher, except tests marked @pytest.mark.real_hashing.
     """
-    if "real_hashing" not in request.keywords:
+    if "real_hashing" in request.keywords:
+        settings.PASSWORD_HASHERS = ["django.contrib.auth.hashers.PBKDF2PasswordHasher"]
+    else:
         settings.PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]

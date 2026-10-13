@@ -255,12 +255,12 @@ EDITABLE_SETTINGS = ["round_types", "blind", "judges_per_entry", "applicant_type
 
 def award_overrides(request=None):
     """
-    Settings staff saved on the Award settings screen, from the database,
-    so every user (staff, judges, the public site) sees the same settings.
+    Settings staff saved on the Award settings screen, read from the Award
+    tables, so every user (staff, judges, the public site) sees the same settings.
     `request` is kept for callers that pass it; it isn't needed any more.
     """
-    from apps.awards.models import AwardSetting
-    return {s.slug: s.data for s in AwardSetting.objects.all()}
+    from apps.awards.services import screen_overrides
+    return screen_overrides()
 
 
 def blind_possible(round_types):

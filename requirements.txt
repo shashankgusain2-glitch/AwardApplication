@@ -1,3 +1,2 @@
-Django>=5.2,<5.3
-psycopg[binary]>=3.2,<4
-django-environ>=0.11,<1
+# Kept so older instructions keep working; the real list is in requirements/.
+-r requirements/base.txt
