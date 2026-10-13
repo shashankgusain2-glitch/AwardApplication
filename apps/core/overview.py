@@ -58,3 +58,51 @@ def leader_overview():
         "score_requests": ScoreChangeRequest.objects.filter(status=ScoreChangeRequest.Status.REQUESTED).count(),
         "awards": _per_award(),
     }
+
+
+# --- API: GET /api/v1/dashboard/summary/ --------------------------------------
+
+def _counts(queryset, field, choices):
+    found = dict(queryset.values_list(field).annotate(n=Count("id")).values_list(field, "n"))
+    return {value: found.get(value, 0) for value, _ in choices}
+
+
+def _award_rows():
+    return [{"slug": r["award"].slug, "name": r["award"].name, "status": r["award"].status,
+             "drafts": r["award"].drafts, "entries": r["entries"], "evaluating": r["award"].evaluating,
+             "scored": r["award"].scored, "approved": r["award"].approved, "rejected": r["award"].rejected,
+             "evaluations_done": r["evaluations_done"], "evaluations_total": r["evaluations_total"],
+             "progress": r["progress"]} for r in _per_award()]
+
+
+def summary_for(user):
+    """
+    Counts by status for the logged-in user's dashboard. Each role only gets
+    numbers about what it may see: applicants their own reports, judges
+    their own assignments, staff and leaders the whole event.
+    """
+    from apps.accounts.models import User
+    from apps.applications.services import visible_to as reports_visible_to
+    from apps.assignments.services import visible_to as assignments_visible_to
+
+    if user.role == User.Role.APPLICANT:
+        mine = reports_visible_to(user)
+        return {"role": user.role, "total": mine.count(),
+                "applications_by_status": _counts(mine, "status", S.choices)}
+    if user.role == User.Role.JUDGE:
+        mine = assignments_visible_to(user)
+        return {"role": user.role, "total": mine.count(),
+                "assignments_by_status": _counts(mine, "status", JudgeAssignment.Status.choices)}
+    reports = Application.objects.all()
+    return {
+        "role": user.role,
+        "total": reports.exclude(status=S.DRAFT).count(),
+        "applications_by_status": _counts(reports, "status", S.choices),
+        "organisations_to_verify": ApplicantProfile.objects.filter(
+            verification_status=ApplicantProfile.Verification.PENDING).count(),
+        "submitted_without_judges": reports.filter(status=S.SUBMITTED).count(),
+        "score_change_requests": ScoreChangeRequest.objects.filter(
+            status=ScoreChangeRequest.Status.REQUESTED).count(),
+        "edit_requests": reports.filter(edit_requested=True).count(),
+        "awards": _award_rows(),
+    }

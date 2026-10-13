@@ -7,6 +7,7 @@ import django_filters
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.accounts.api.serializers import UserSerializer
@@ -120,5 +121,8 @@ class ApplicationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixin
     @action(detail=True, methods=["get"], url_path="eligible-judges")
     def eligible_judges(self, request, pk=None):
         """Judges staff may assign: on the panel, no conflict, under their limit; best first."""
-        round_number = int(request.query_params.get("round", 1))
+        try:
+            round_number = int(request.query_params.get("round", 1))
+        except ValueError:
+            raise ValidationError({"round": ["Round must be a whole number."]}) from None
         return Response(UserSerializer(eligible_judges(self.get_object(), round_number), many=True).data)

@@ -1,84 +1,114 @@
 """
 Rule 1: if an award uses blind judging, a judge cannot see who applied.
 
-These run against the demo screens, where hiding happens in
-demo_data.answers_for_judge before the page is built. A logged-in staff
-member changes settings; a different, logged-in judge sees the effect.
+These run on the real demo data (seed_data): Business Excellence is blind
+(desk review, then a live presentation); Kaizen is not (desk review, then a
+site visit). A logged-in staff member changes settings; a different,
+logged-in judge sees the effect on the real scoring page.
 """
 import pytest
 from django.urls import reverse
 
-BLIND_ENTRY = "A-0042"      # Business Excellence: blind by default
-OPEN_ENTRY = "K-0007"       # Kaizen: not blind by default
-ORG_NAME = b"Acme Precision"  # both entries come from this organisation
+from apps.accounts.models import User
+from apps.applications.models import Application
+from apps.assignments import services as assignment_services
+from apps.assignments.models import JudgeAssignment
+
+from ..conftest import ACCOUNTS, seeded_client
+
+ORG_NAME = "Acme Precision"   # Priya's organisation
 
 
-def _score_page(judge_client, entry):
-    return judge_client.get(reverse("judging:score", args=[entry]))
+def _assignment(award, applicant="priya@acme.example", round=1):
+    return JudgeAssignment.objects.get(judge__email=ACCOUNTS["judge"], report__applicant__email=applicant,
+                                       report__award__slug=award, round=round)
 
 
-def _save_settings(staff_client, slug, **changes):
+def _score_page(client, assignment):
+    response = client.get(reverse("judging:score", args=[assignment.pk]))
+    assert response.status_code == 200
+    return response.content.decode()
+
+
+def _save_settings(staff, slug, **changes):
     settings = {
         "slug": slug, "round1_type": "desk", "round2_type": "site", "judges_per_entry": "2",
         "applicant_type": "Team", "fee_amount": "0", "deadline": "15 Dec 2026",
     }
     settings.update(changes)
-    return staff_client.post(reverse("awards:settings"), settings)
+    return staff.post(reverse("awards:settings"), settings)
+
+
+def _round_two(award, applicant):
+    """Put judge Kapoor on Round 2 of this applicant's report (staff assign it)."""
+    report = Application.objects.get(award__slug=award, applicant__email=applicant)
+    report.status = Application.Status.IN_REVIEW
+    report.save(update_fields=["status"])
+    staff = User.objects.get(email=ACCOUNTS["staff"])
+    return assignment_services.assign(report, User.objects.get(email=ACCOUNTS["judge"]), by=staff, round=2)
 
 
 @pytest.mark.django_db
-def test_blind_award_hides_identifying_answers_from_judge(judge_client):
-    response = _score_page(judge_client, BLIND_ENTRY)
-    assert response.status_code == 200
-    assert ORG_NAME not in response.content
-    assert b"Chakan" not in response.content  # location is also identifying
+def test_blind_award_hides_identifying_answers_title_and_applicant(seeded):
+    page = _score_page(seeded_client("judge"), _assignment("business-excellence"))
+    assert ORG_NAME not in page                                  # name, title, applicant
+    assert "Hidden for blind judging" in page
+    assert "Sample answer to" in page                            # the rest of the entry is shown
 
 
 @pytest.mark.django_db
-def test_blind_award_hides_uploaded_file_names(judge_client):
-    # The file name "acme-strategy-2026.pdf" would reveal the company.
-    response = _score_page(judge_client, BLIND_ENTRY)
-    assert b"acme-strategy" not in response.content
-    assert b"name hidden" in response.content
+def test_blind_award_hides_uploaded_file_names(seeded):
+    page = _score_page(seeded_client("judge"), _assignment("business-excellence"))
+    assert "acme-precision" not in page                          # seed file names start with the organisation
+    assert "name hidden for blind judging" in page
 
 
 @pytest.mark.django_db
-def test_non_blind_award_shows_organisation_to_judge(judge_client):
-    response = _score_page(judge_client, OPEN_ENTRY)
-    assert ORG_NAME in response.content
+def test_non_blind_award_shows_organisation_to_judge(seeded):
+    page = _score_page(seeded_client("judge"), _assignment("kaizen"))
+    assert ORG_NAME in page
+    assert "acme-precision" in page                              # file names are shown too
 
 
 @pytest.mark.django_db
-def test_staff_turning_blind_on_hides_names_without_code_change(staff_client, judge_client):
-    _save_settings(staff_client, "kaizen", blind="on")
-    response = _score_page(judge_client, OPEN_ENTRY)
-    assert ORG_NAME not in response.content
-    assert b"Line 4 Changeover Crew" not in response.content  # team name is identifying too
+def test_blind_hiding_also_applies_to_the_api(seeded):
+    from rest_framework.test import APIClient
+    client = APIClient()
+    client.force_authenticate(User.objects.get(email=ACCOUNTS["judge"]))
+    row = client.get(f"/api/v1/assignments/{_assignment('business-excellence').pk}/").json()["data"]
+    assert ORG_NAME not in str(row)
+    assert row["report"]["applicant"] is None and row["report"]["title"] is None
 
 
 @pytest.mark.django_db
-def test_staff_turning_blind_off_shows_names(staff_client, judge_client):
-    _save_settings(staff_client, "business-excellence", round2_type="live", judges_per_entry="3",
-                   applicant_type="Organisation", deadline="30 Nov 2026")  # no "blind" = off
-    response = _score_page(judge_client, BLIND_ENTRY)
-    assert ORG_NAME in response.content
-
-
-@pytest.mark.skip(reason="Planned: needs the real judging API")
-def test_blind_award_hides_organisation_in_judge_api_response():
-    ...
+def test_staff_turning_blind_on_hides_names_without_code_change(seeded):
+    _save_settings(seeded_client("staff"), "kaizen", blind="on")
+    page = _score_page(seeded_client("judge"), _assignment("kaizen"))
+    assert ORG_NAME not in page
+    assert "Kaizen Team" not in page                             # the team name is identifying too
 
 
 @pytest.mark.django_db
-def test_live_round_two_is_not_blind(judge_client):
-    # Business Excellence is blind, but Round 2 is a live presentation.
-    response = _score_page(judge_client, "A-0029")
-    assert b"Vertex Pharma Labs" in response.content
-    assert b"Live presentation: not blind" in response.content
+def test_staff_turning_blind_off_shows_names(seeded):
+    _save_settings(seeded_client("staff"), "business-excellence", round2_type="live", judges_per_entry="3",
+                   applicant_type="Organisation", deadline="30 Nov 2026")   # no "blind" = off
+    page = _score_page(seeded_client("judge"), _assignment("business-excellence"))
+    assert ORG_NAME in page
 
 
 @pytest.mark.django_db
-def test_site_visit_round_is_not_blind_even_if_award_is_blind(staff_client, judge_client):
-    _save_settings(staff_client, "kaizen", blind="on")  # blind applies to Round 1 desk review only
-    assert ORG_NAME not in _score_page(judge_client, OPEN_ENTRY).content          # Round 1: hidden
-    assert b"Deccan Forge" in _score_page(judge_client, "K-0003").content          # Round 2 site visit: shown
+def test_live_round_two_is_not_blind(seeded):
+    # Business Excellence is blind, but Round 2 is a live presentation: the jury meets the team.
+    assignment = _round_two("business-excellence", "vikram@vertexpharma.example")
+    page = _score_page(seeded_client("judge"), assignment)
+    assert "Vertex Pharma Labs" in page
+    assert "Live presentation: not blind" in page
+
+
+@pytest.mark.django_db
+def test_site_visit_round_is_not_blind_even_if_award_is_blind(seeded):
+    staff, judge = seeded_client("staff"), seeded_client("judge")
+    _save_settings(staff, "kaizen", blind="on")                  # blind applies to Round 1 desk review only
+    round_two = _round_two("kaizen", "ganesh@shriganesh.example")
+    assert ORG_NAME not in _score_page(judge, _assignment("kaizen"))               # Round 1: hidden
+    assert "Shri Ganesh Polymers" in _score_page(judge, round_two)                  # Round 2 site visit: shown

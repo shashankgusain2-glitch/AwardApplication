@@ -2,30 +2,57 @@
 
 {% block title %}Approve results{% endblock %}
 {% block heading %}Approve results{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">{{ award.icon }} {{ award.name }} · Final ranking from Round 2</p>{% endblock %}
-{% block user %}{% include "partials/user_chip.html" with initials="AV" name="A. Verma" detail="Programme Leader" %}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Reports every judge has scored, best first. Approve or reject; scores can't be changed here.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-<div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(260px,1fr);align-items:start">
-  <div class="card">
-    <div class="card-head"><h2>Proposed winners</h2><span class="badge badge-results">Waiting for approval</span></div>
-    <table>
-      <thead><tr><th>Rank</th><th>Organisation</th><th>Average score</th></tr></thead>
-      <tbody>
-        {% for r in results %}
-          <tr><td><strong>{% if r.rank == 1 %}🥇{% elif r.rank == 2 %}🥈{% else %}🥉{% endif %} {{ r.rank }}</strong></td><td>{{ r.org }}</td><td>{{ r.score }} / 10</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  <div class="card stack">
-    <h3>Before you approve</h3>
-    <p class="small" style="margin:0">✓ All entries scored by 3 judges</p>
-    <p class="small" style="margin:0">✓ No open conflicts</p>
-    <p class="small" style="margin:0">✓ 2 score changes, both with reasons</p>
-    <div class="field"><label for="note">Comment (optional)</label><textarea id="note" style="min-height:80px"></textarea></div>
-    <button class="btn btn-success btn-block" data-demo="Demo screen: results approved (not saved yet). They'd be published to applicants.">Approve and publish</button>
-    <button class="btn btn-outline btn-block" data-demo="Demo screen: sent back to programme staff with your comment.">Send back</button>
-  </div>
+<div class="stack">
+  {% for row in rows %}
+    {% with r=row.report %}
+    <div class="card">
+      <div class="row-between">
+        <div>
+          <p class="muted small" style="margin:0">{{ r.award.name }} · {{ r.reference }}</p>
+          <h2 style="font-size:1.1rem;margin:.25rem 0">{{ r.applicant.applicant_profile.organisation_name|default:r.applicant.email }}</h2>
+          <p class="small" style="margin:0">{{ r.title }}</p>
+        </div>
+        <div style="text-align:right">
+          <p class="muted small" style="margin:0">Average</p>
+          <strong style="font-size:1.6rem">{{ r.average|floatformat:2 }}</strong><span class="muted small"> / 10</span>
+        </div>
+      </div>
+      {% if row.spread is not None and row.spread >= 2 %}
+        <div class="callout callout-warning" style="margin:.75rem 0 0"><div><strong>Judges disagree</strong>Totals range from {{ r.lowest|floatformat:2 }} to {{ r.highest|floatformat:2 }}. Read the feedback before deciding.</div></div>
+      {% endif %}
+      <div class="table-wrap" style="margin-top:.75rem">
+        <table>
+          <thead><tr><th>Judge</th><th>Round</th><th>Total / 10</th><th>Feedback</th></tr></thead>
+          <tbody>
+            {% for e in row.evaluations %}
+              <tr><td>{{ e.assignment.judge.display_name }}</td><td class="small">{{ e.assignment.round }}</td><td><strong>{{ e.total_score }}</strong></td><td class="muted small">{{ e.feedback|default:"—" }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <form method="post" action="{% url 'dashboard:decide' r.pk %}" class="row" style="margin-top:.75rem">
+        {% csrf_token %}
+        <input name="note" type="text" placeholder="Note (optional, recorded)" style="flex:1">
+        <button class="btn btn-success btn-sm" name="decision" value="approve">Approve</button>
+        <button class="btn btn-outline btn-sm" name="decision" value="reject">Reject</button>
+      </form>
+    </div>
+    {% endwith %}
+  {% empty %}
+    <div class="card"><p class="muted small" style="margin:0">Nothing is waiting for a decision. Reports appear here once every judge has submitted.</p></div>
+  {% endfor %}
 </div>
+
+{% if decided %}
+<div class="card" style="margin-top:1.5rem">
+  <h2 style="font-size:1.1rem">Recently decided</h2>
+  {% for r in decided %}
+    <div class="settings-row"><span><strong>{{ r.reference }}</strong> · {{ r.award.name }}</span><span class="badge badge-{{ r.status }}">{{ r.get_status_display }}</span></div>
+  {% endfor %}
+</div>
+{% endif %}
 {% endblock %}

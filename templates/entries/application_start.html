@@ -1,0 +1,19 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Start an application{% endblock %}
+{% block heading %}Start an application: {{ award.name }}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">{% if award.closes_on %}Closes {{ award.closes_on|date:"j M Y" }}. {% endif %}You can save midway and come back.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+<form method="post" class="card stack" style="max-width:640px">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="start">
+  <div class="field">
+    <label for="title">Title of your entry</label>
+    <input id="title" name="title" type="text" maxlength="200" value="{{ award.name }} {% now 'Y' %}">
+    <p class="hint">A short name for your entry.</p>
+  </div>
+  <div class="row"><button class="btn btn-primary" type="submit">Start application</button></div>
+</form>
+{% endblock %}

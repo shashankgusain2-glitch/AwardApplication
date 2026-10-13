@@ -135,7 +135,16 @@ def test_blind_never_on_for_in_person_only_award_even_if_data_says_so():
 
 
 @pytest.mark.django_db
-def test_removing_round_two_closes_the_round_two_scoring_page(staff_client, judge_client):
-    assert judge_client.get(reverse("judging:score", args=["K-0003"])).status_code == 200
-    _post(staff_client, round2_type="none")
-    assert judge_client.get(reverse("judging:score", args=["K-0003"])).status_code == 404
+def test_removing_round_two_closes_the_round_two_scoring_page(seeded):
+    from apps.accounts.models import User
+    from apps.applications.models import Application
+    from apps.assignments import services as assignment_services
+
+    from .conftest import ACCOUNTS, seeded_client
+    report = Application.objects.get(award__slug="kaizen", applicant__email="ganesh@shriganesh.example")
+    judge = User.objects.get(email=ACCOUNTS["judge"])
+    round_two = assignment_services.assign(report, judge, by=User.objects.get(email=ACCOUNTS["staff"]), round=2)
+    kapoor = seeded_client("judge")
+    assert kapoor.get(reverse("judging:score", args=[round_two.pk])).status_code == 200
+    _post(seeded_client("staff"), round2_type="none")
+    assert kapoor.get(reverse("judging:score", args=[round_two.pk])).status_code == 404

@@ -1,6 +1,7 @@
 from django.contrib.auth import password_validation
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -82,8 +83,15 @@ class RegisterSerializer(serializers.Serializer):
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
 
+    def validate_refresh(self, value):
+        try:
+            self._token = RefreshToken(value)
+        except TokenError:
+            raise serializers.ValidationError("This refresh token is invalid or already used.") from None
+        return value
+
     def save(self, **kwargs):
-        RefreshToken(self.validated_data["refresh"]).blacklist()
+        self._token.blacklist()
 
 
 class ApplicantProfileSerializer(serializers.ModelSerializer):
@@ -105,6 +113,14 @@ class ApplicantProfileSerializer(serializers.ModelSerializer):
     def validate_holder_pan(self, value):
         from apps.core.validators import validate_pan
         return validate_pan(value) if value else value
+
+    def validate(self, attrs):
+        profile = self.instance
+        verified = profile and profile.verification_status == ApplicantProfile.Verification.VERIFIED
+        if verified and "gstin" in attrs and attrs["gstin"] != profile.gstin:
+            raise serializers.ValidationError(
+                {"gstin": ["A verified organisation's GSTIN can't be changed. Contact staff."]})
+        return attrs
 
 
 class VerifySerializer(serializers.Serializer):

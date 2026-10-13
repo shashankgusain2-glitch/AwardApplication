@@ -6,7 +6,8 @@
 |---|---|
 | `staff_home.html` | Real work waiting today: organisations to verify, submitted reports with no judges, open requests, and every award's counts |
 | `settings.html` | **Award settings** for both awards side by side: round types, blind judging, judges per entry, who applies, fee, closing date |
-| `form_builder.html` | An award's questions, which are hidden in blind judging, and its locked form versions |
-| `entries.html` | All entries with status and actions |
-| `duplicates.html` | Possible duplicate companies, with Merge or Keep separate |
-| `assign.html` | Suggested judges for an entry; conflicted judges are hidden |
+| `form_builder.html` | An award's published form versions and their questions, which are required and which are hidden in blind judging |
+| `entries.html` | Every application (search, filter) plus the decisions waiting: verify organisations, edit requests, score-change requests |
+| `assign_list.html` | Reports that still need judges |
+| `assign.html` | The eligible judges for one report, best first; assign the ones ticked or fill with the best. Conflicted judges are never shown |
+| `duplicates.html` | Possible duplicate companies, with Merge or Keep separate (sample data) |

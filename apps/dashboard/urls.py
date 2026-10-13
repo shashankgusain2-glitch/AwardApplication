@@ -8,4 +8,5 @@ urlpatterns = [
     path("", views.overview, name="overview"),
     path("review/", views.review, name="review"),
     path("results/", views.results, name="results"),
+    path("results/<int:pk>/decide/", views.decide, name="decide"),
 ]

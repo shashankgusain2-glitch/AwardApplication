@@ -1,0 +1,29 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Assign judges{% endblock %}
+{% block heading %}Assign judges{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Submitted reports that still need judges. Pick one to choose its judges.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Reference</th><th>Organisation</th><th>Award</th><th>Judges</th><th></th></tr></thead>
+      <tbody>
+        {% for r in reports %}
+          <tr>
+            <td><strong>{{ r.reference }}</strong><br><span class="muted small">submitted {{ r.submitted_at|date:"j M Y" }}</span></td>
+            <td>{{ r.applicant.applicant_profile.organisation_name|default:r.applicant.email }}{% if r.applicant.applicant_profile.verification_status != "verified" %}<br><span class="badge badge-pending">Verify first</span>{% endif %}</td>
+            <td class="small">{{ r.award.name }}</td>
+            <td><span class="badge badge-{{ r.status }}">{{ r.get_status_display }}</span></td>
+            <td><a class="btn btn-primary btn-sm" href="{% url 'awards:assign' r.pk %}">Choose judges</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="muted small">Every submitted report has its judges.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -142,3 +142,21 @@ Each decision: the options, the one we picked, why, and what would change our mi
 **Assumptions made:** Phase 2 of the roadmap, 10 working days; ApplicantProfile fields taken from the organisation-profile screen; Kaizen and Business Excellence as the two demo awards.
 
 **What would change our mind:** a separate frontend team might want cookie-based JWT (HttpOnly) instead of Bearer headers; large file uploads would move attachments to object storage (S3-style).
+
+---
+
+## D8. Steps 3.4 and 3.5: finish the API; connect the screens through the service layer
+
+**Date:** 14 Oct 2026
+
+| Choice | Options | Picked | Why |
+|---|---|---|---|
+| Frontend | React / Next.js / Vue vs. the existing Django templates | **The existing Django templates** | The skeleton is already built with them, and the roadmap's 4 hours for 3.5 is enough to connect them, not to rebuild them in a new framework |
+| How screens reach the data | Call the REST API over HTTP from the browser vs. call the services directly | **Call the same `services.py` functions the API views call** | One place for every rule (Rule 1–4, ownership, roles), so a screen and an API call can never disagree. No mock data is left on any role's screens |
+| Web login | Four tabs (one per role) vs. one form | **One form** (unchanged, see D6) | The user chose a single login earlier. The role still comes from the account; the API keeps an optional `role` field that is refused if it doesn't match, and Postman tests the wrong role |
+| JWT in the browser | A fetch wrapper storing tokens vs. session cookies | **Session cookies** for the web pages; JWT stays for API clients (Postman, a future app) | No tokens in browser storage; CSRF protection on every form. CORS is already configured for a future separate frontend |
+| Bulk assign | Partial success vs. all or nothing | **All or nothing** | A half-assigned batch is hard to reason about; the error names the item that broke a rule |
+| Who deactivates accounts | Staff and leaders vs. leaders only | **Leaders only** | Matches account creation (D6/D7). Staff can read the user list |
+| Blind judging (found while integrating) | Hide identifying answers only vs. also the title and file names | **Also the title and file names** in blind rounds | Real entries put the company's name in the title and in file names; both leaked to judges before |
+
+**What would change our mind:** a separate mobile app or a JavaScript frontend would use the same API (and the Postman collection documents it); it would need its own token storage and refresh handling.

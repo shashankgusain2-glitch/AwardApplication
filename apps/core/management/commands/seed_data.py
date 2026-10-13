@@ -121,14 +121,20 @@ class Command(BaseCommand):
         return award
 
     def answers(self, form, organisation):
+        """
+        Only the questions marked identifying (and file names) mention the
+        organisation, like a real entry; blind judging hides exactly those.
+        """
         out = {}
         for q in form.questions:
             if q["type"] == "file":
-                out[q["key"]] = "evidence.pdf"
+                out[q["key"]] = f"{slugify(organisation)[:20]}-{q['key'][:20]}.pdf"
             elif q["key"] == "org":
                 out[q["key"]] = organisation
+            elif q.get("identifying"):
+                out[q["key"]] = f"{organisation} ({q['label'].lower()})"
             else:
-                out[q["key"]] = f"{organisation}: sample answer to “{q['label']}”."
+                out[q["key"]] = f"Sample answer to “{q['label']}”: what we did, the numbers, and what we learned."
         return out
 
     def reports(self, applicants, awards, staff, judges):

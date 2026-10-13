@@ -5,5 +5,5 @@
 | File | Page |
 |---|---|
 | `overview.html` | Real counts for the whole event: reports submitted, being judged, waiting for approval, score-change requests, and each award's progress |
-| `review.html` | Cases for a decision: ties, big score gaps, appeals |
-| `results.html` | Proposed winners, with Approve or Send back |
+| `review.html` | All submitted applications with status, judges done, average and spread; filter by status and award |
+| `results.html` | Scored reports, best first, with every judge's total and feedback; Approve or Reject |

@@ -36,7 +36,9 @@
             <button class="btn btn-outline btn-sm" name="answer" value="decline">Decline</button>
           </form>
         {% elif a.status == "in_review" %}
-          <span class="muted small">Grading screen arrives in step 3.5</span>
+          <a class="btn btn-primary btn-sm" href="{% url 'judging:score' a.pk %}">Grade</a>
+        {% elif a.status == "completed" %}
+          <a class="btn btn-outline btn-sm" href="{% url 'judging:score' a.pk %}">View my scores</a>
         {% endif %}
       </div>
     </div>

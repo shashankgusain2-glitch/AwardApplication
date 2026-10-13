@@ -13,13 +13,16 @@ class AttachmentSerializer(serializers.ModelSerializer):
 
 class ApplicationSerializer(serializers.ModelSerializer):
     applicant_email = serializers.EmailField(source="applicant.email", read_only=True)
+    applicant_name = serializers.CharField(source="applicant.display_name", read_only=True)
+    award_name = serializers.CharField(source="award.name", read_only=True)
     award_slug = serializers.SlugField(source="award.slug", read_only=True)
     form_version_number = serializers.IntegerField(source="form_version.version", read_only=True)
     attachments = AttachmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = Application
-        fields = ["id", "reference", "applicant_email", "award_slug", "form_version_number", "title", "content",
+        fields = ["id", "reference", "applicant_email", "applicant_name", "award_slug", "award_name",
+                  "form_version_number", "title", "content",
                   "status", "submitted_at", "edit_requested", "edit_allowed", "edit_reason", "attachments",
                   "created_at", "updated_at"]
         read_only_fields = ["id", "reference", "status", "submitted_at", "edit_requested", "edit_allowed",

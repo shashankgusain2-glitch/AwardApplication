@@ -1,0 +1,5 @@
+<div class="field">
+  <label for="f-{{ name }}">{{ label }}</label>
+  <input id="f-{{ name }}" name="{{ name }}" type="text" value="{{ value|default_if_none:'' }}">
+  {% if error %}<p class="hint field-error">{{ error }}</p>{% endif %}
+</div>

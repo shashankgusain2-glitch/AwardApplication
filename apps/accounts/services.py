@@ -66,3 +66,46 @@ def verify_organisation(profile, *, by, approve, note=""):
     profile.save()
     record(by, "verify", profile, changes={"from": before, "to": profile.verification_status, "note": note})
     return profile
+
+
+@transaction.atomic
+def set_active(user, *, by, active):
+    """
+    Leaders deactivate or reactivate accounts (nothing is deleted). A
+    deactivated user's refresh tokens are blacklisted, so the API stops
+    working for them at once; web sessions end on their next request.
+    """
+    if not (by.role == User.Role.LEADER or by.is_superuser):
+        raise BusinessRuleError("Only a leader can deactivate or reactivate accounts.")
+    if user.pk == by.pk:
+        raise BusinessRuleError("You can't deactivate your own account.")
+    if user.is_active == active:
+        return user
+    user.is_active = active
+    user.save(update_fields=["is_active", "updated_at"])
+    if not active:
+        from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+        for token in OutstandingToken.objects.filter(user=user):
+            BlacklistedToken.objects.get_or_create(token=token)
+    record(by, "update", user, changes={"is_active": active})
+    return user
+
+
+@transaction.atomic
+def save_profile(user, data, *, partial=True):
+    """
+    Create or update the applicant's own organisation profile. Used by the
+    API (/profiles/mine/) and the web form, so both check the same rules:
+    GSTIN and PAN format, one profile per GSTIN, and a verified
+    organisation's GSTIN can't change. Raises a DRF ValidationError.
+    """
+    from .api.serializers import ApplicantProfileSerializer
+
+    if user.role != User.Role.APPLICANT:
+        raise BusinessRuleError("Only applicants have an organisation profile.")
+    profile = ApplicantProfile.objects.filter(user=user).first()
+    serializer = ApplicantProfileSerializer(profile, data=data, partial=partial and profile is not None)
+    serializer.is_valid(raise_exception=True)
+    saved = serializer.save(user=user)
+    record(user, "create" if profile is None else "update", saved)
+    return saved

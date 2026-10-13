@@ -16,7 +16,6 @@ PAGES = [
     "entries:form",
     "entries:status",
     "judging:assignments",
-    "judging:score",
     "awards:staff_home",
     "awards:settings",
     "awards:form_builder",
@@ -44,40 +43,66 @@ def test_award_detail_loads(client, slug):
     assert response.status_code == 200
 
 
-PAGES_WITH_ARGS = [
-    ("entries:form", ["business-excellence"]),
-    ("entries:form", ["kaizen"]),
-    ("judging:score", ["A-0042"]),
-    ("judging:score", ["K-0007"]),
-    ("judging:score", ["A-0051"]),
-    ("judging:score", ["A-0038"]),
-    ("judging:score", ["K-0003"]),
-    ("judging:score", ["A-0029"]),
-    ("awards:form_builder", ["business-excellence"]),
-    ("awards:form_builder", ["kaizen"]),
-]
+# --- The skeleton on real data (roadmap step 3.5) ------------------------------------
+
+@pytest.mark.django_db
+def test_every_screen_opens_for_every_role_on_the_seed_data(seeded):
+    """Each role's menu pages and every detail page they can reach, on the real demo data."""
+    from apps.applications.models import Application
+    from apps.assignments.models import JudgeAssignment
+    from apps.awards.models import Award
+
+    from .conftest import ACCOUNTS, seeded_client
+
+    for key, role in (("applicant", "applicant"), ("staff", "staff"), ("judge", "judge"), ("leader", "leader")):
+        client = seeded_client(key)
+        for _, url_name in demo_data.PORTAL_NAV[role]:
+            assert client.get(reverse(url_name), follow=True).status_code == 200, f"{role}: {url_name}"
+
+    applicant = seeded_client("applicant")
+    for app in Application.objects.filter(applicant__email=ACCOUNTS["applicant"]):
+        for section in ("1", "2", "3", "99", "abc"):
+            url = reverse("entries:form", args=[app.award.slug])
+            assert applicant.get(url, {"section": section}).status_code == 200
+
+    judge = seeded_client("judge")
+    for assignment in JudgeAssignment.objects.filter(judge__email=ACCOUNTS["judge"]):
+        assert judge.get(reverse("judging:score", args=[assignment.pk])).status_code == 200
+
+    staff = seeded_client("staff")
+    for app in Application.objects.exclude(status="draft"):
+        assert staff.get(reverse("awards:assign", args=[app.pk])).status_code == 200
+    for award in Award.objects.all():
+        assert staff.get(reverse("awards:form_builder", args=[award.slug]), {"version": "1"}).status_code == 200
+    assert staff.get(reverse("awards:entries"), {"status": "submitted", "q": "Polymers"}).status_code == 200
+
+    leader = seeded_client("leader")
+    assert leader.get(reverse("dashboard:review"), {"status": "scored", "award": "kaizen"}).status_code == 200
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("name,args", PAGES_WITH_ARGS)
-def test_page_with_args_loads(client_for, name, args):
-    client = client_for(name)
-    response = client.get(reverse(name, args=args))
-    assert response.status_code == 200
+def test_screens_show_the_seed_data_not_samples(seeded):
+    from .conftest import seeded_client
+    entries = seeded_client("staff").get(reverse("awards:entries")).content.decode()
+    assert "Shri Ganesh Polymers Ltd" in entries and "Northstar Auto Components" in entries
+    review = seeded_client("leader").get(reverse("dashboard:review")).content.decode()
+    assert "Coastal Marine Foods" in review
+    status = seeded_client("applicant").get(reverse("entries:status")).content.decode()
+    assert "Business Excellence Award" in status and "Kaizen Competition" in status
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("section", ["1", "2", "3", "4", "99", "abc"])
-def test_form_sections_load(applicant_client, section):
-    client = applicant_client
-    response = client.get(reverse("entries:form", args=["kaizen"]), {"section": section})
-    assert response.status_code == 200
+def test_new_applicant_screens_have_empty_states(client_for):
+    applicant = client_for("entries:dashboard")
+    for name in ("entries:dashboard", "entries:organisation", "entries:form", "entries:status"):
+        assert applicant.get(reverse(name)).status_code == 200
 
 
 @pytest.mark.django_db
-def test_unknown_entry_returns_404(judge_client):
-    client = judge_client
-    assert client.get(reverse("judging:score", args=["X-9999"])).status_code == 404
+def test_unknown_assignment_and_award_return_404(seeded):
+    from .conftest import seeded_client
+    assert seeded_client("judge").get(reverse("judging:score", args=[999999])).status_code == 404
+    assert seeded_client("applicant").get(reverse("entries:form", args=["no-such-award"])).status_code == 404
 
 
 @pytest.mark.django_db

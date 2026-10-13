@@ -31,6 +31,26 @@ class ReassignSerializer(serializers.Serializer):
     judge = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(role=User.Role.JUDGE))
 
 
+class AssignmentPairSerializer(serializers.Serializer):
+    report = serializers.PrimaryKeyRelatedField(queryset=Application.objects.all())
+    judge = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(role=User.Role.JUDGE))
+
+
+class BulkAssignSerializer(serializers.Serializer):
+    """
+    Either `items` (exact report → judge pairs) or `reports` (each report is
+    filled with the best eligible judges, up to the award's judges per report).
+    """
+    round = serializers.IntegerField(min_value=1, default=1)
+    items = AssignmentPairSerializer(many=True, required=False)
+    reports = serializers.PrimaryKeyRelatedField(queryset=Application.objects.all(), many=True, required=False)
+
+    def validate(self, attrs):
+        if bool(attrs.get("items")) == bool(attrs.get("reports")):
+            raise serializers.ValidationError("Send either a non-empty `items` list or a non-empty `reports` list.")
+        return attrs
+
+
 class JudgeAssignmentSerializer(serializers.ModelSerializer):
     """
     Judge view: the report as the judge may see it. In blind desk-review
@@ -38,14 +58,21 @@ class JudgeAssignmentSerializer(serializers.ModelSerializer):
     """
     report = serializers.SerializerMethodField()
     evaluation_id = serializers.IntegerField(source="evaluation.id", read_only=True, default=None)
+    criteria = serializers.SerializerMethodField()
 
     class Meta:
         model = JudgeAssignment
-        fields = ["id", "round", "status", "assigned_at", "evaluation_id", "report"]
+        fields = ["id", "round", "status", "assigned_at", "evaluation_id", "report", "criteria"]
 
     @extend_schema_field(OpenApiTypes.OBJECT)
     def get_report(self, obj):
         return report_for_judge(obj)
+
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_criteria(self, obj):
+        """What the judge scores in this round: key, label and weight (%)."""
+        return [{"key": c.key, "label": c.label, "weight": c.weight}
+                for c in obj.report.award.criteria.filter(round_number=obj.round).order_by("order")]
 
 
 class ConflictSerializer(serializers.ModelSerializer):

@@ -1,26 +1,40 @@
 {% extends "portal_base.html" %}
 
 {% block title %}Application form{% endblock %}
-{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem">{% if entry_id %}Entry {{ entry_id }}{% else %}New application{% endif %} · {{ award.icon }} {{ award.name }}</p>{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem">{{ application.reference }} · {{ award.name }}</p>{% endblock %}
 {% block heading %}{{ current.name }}{% endblock %}
-{% block subheading %}<p class="muted small" style="margin:.25rem 0 0">Form version {{ award.form_version }} · {% if submitted %}Submitted, read-only{% else %}✓ All changes saved 2 minutes ago{% endif %}</p>{% endblock %}
-{% block user %}{% include "partials/user_chip.html" with initials="PK" name="Priya Kulkarni" detail="Applicant" %}{% endblock %}
+{% block subheading %}<p class="muted small" style="margin:.25rem 0 0">Form version {{ application.form_version.version }} · <span class="badge badge-{{ application.status }}">{{ application.get_status_display }}</span>{% if editable %} · Answers save when you press Save or move to another section{% else %} · Read-only{% endif %}</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-{% if other_awards %}
+{% if other_applications %}
   <nav class="chips" aria-label="Your applications">
-    <a class="chip active" href="{% url 'entries:form' award.slug %}">{{ award.icon }} {{ award.name }}</a>
-    {% for a in other_awards %}<a class="chip" href="{% url 'entries:form' a.slug %}">{{ a.icon }} {{ a.name }}</a>{% endfor %}
+    <a class="chip active" href="{% url 'entries:form' award.slug %}">{{ award.name }}</a>
+    {% for a in other_applications %}<a class="chip" href="{% url 'entries:form' a.award.slug %}">{{ a.award.name }}</a>{% endfor %}
   </nav>
 {% endif %}
 
-{% if submitted %}
-  <div class="callout callout-success" style="margin-bottom:1.5rem"><div><strong>This entry was submitted and is locked</strong>You can read it, but changes are only possible if programme staff ask for more information.</div></div>
+{% if not editable %}
+  <div class="callout callout-success" style="margin-bottom:1.5rem">
+    <div>
+      <strong>This application was submitted{% if application.submitted_at %} on {{ application.submitted_at|date:"j M Y" }}{% endif %} and is locked</strong>
+      {% if application.edit_requested %}You asked to change it: “{{ application.edit_reason }}”. Staff will reply.
+      {% else %}If something is wrong, ask the programme staff to let you change it.
+        <form method="post" class="row" style="margin-top:.5rem">
+          {% csrf_token %}<input type="hidden" name="action" value="request_edit"><input type="hidden" name="section" value="{{ current_index }}">
+          <input name="reason" type="text" placeholder="What do you need to change, and why?" required style="flex:1">
+          <button class="btn btn-outline btn-sm" type="submit">Ask to edit</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+{% elif application.edit_allowed %}
+  <div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>Staff allowed you to change this application</strong>Make your changes, then submit again.</div></div>
 {% endif %}
 
 <div class="grid" style="grid-template-columns:260px minmax(0,1fr);align-items:start">
   <aside class="card" style="position:sticky;top:1rem">
-    <p class="small" style="margin:0 0 .4rem"><strong>{{ progress }}% complete</strong></p>
+    <p class="small" style="margin:0 0 .4rem"><strong>{{ progress }}% answered</strong></p>
     <div class="progress" style="margin-bottom:1rem"><span style="width:{{ progress }}%"></span></div>
     <nav class="section-nav" aria-label="Form sections">
       {% for s in sections %}
@@ -30,37 +44,49 @@
         </a>
       {% endfor %}
     </nav>
-    <button class="btn btn-outline btn-block btn-sm" style="margin-top:1rem" data-demo="Demo screen: download not built yet.">Download as PDF</button>
   </aside>
 
-  <form class="stack">
+  <form method="post" class="stack">
+    {% csrf_token %}
+    <input type="hidden" name="section" value="{{ current_index }}">
     {% for q in current.questions %}
+      <input type="hidden" name="keys" value="{{ q.key }}">
       <div class="card field">
-        <label for="q{{ forloop.counter }}">{{ forloop.counter }}. {{ q.label }} <span class="muted">*</span></label>
+        <label for="q-{{ q.key }}">{{ forloop.counter }}. {{ q.label }}{% if q.required %} <span class="muted">*</span>{% endif %}</label>
         {% if q.type == "textarea" %}
-          <textarea id="q{{ forloop.counter }}" placeholder="Write your answer here…" {% if submitted %}readonly{% endif %}>{{ q.value }}</textarea>
-          {% if not submitted %}<p class="hint">Tip: give real examples and numbers.</p>{% endif %}
+          <textarea id="q-{{ q.key }}" name="q_{{ q.key }}" {% if not editable %}readonly{% endif %}>{{ q.value }}</textarea>
         {% elif q.type == "file" %}
-          {% if q.value %}
-            <div class="file-drop">📎 <strong>{{ q.value }}</strong> uploaded{% if not submitted %} · <a href="#" data-demo="Demo screen: upload not built yet.">Replace</a>{% endif %}</div>
-          {% else %}
-            <div class="file-drop">Drag a file here or <a href="#" data-demo="Demo screen: upload not built yet.">choose one</a><br><span class="small">PDF, JPG or PNG, up to 10 MB</span></div>
-          {% endif %}
+          <input id="q-{{ q.key }}" name="q_{{ q.key }}" type="text" value="{{ q.value }}" placeholder="File name" {% if not editable %}readonly{% endif %}>
+          <p class="hint">File upload comes in a later step. For now, type the file's name.</p>
         {% else %}
-          <input id="q{{ forloop.counter }}" type="text" value="{{ q.value }}" {% if submitted %}readonly{% endif %}>
+          <input id="q-{{ q.key }}" name="q_{{ q.key }}" type="text" value="{{ q.value }}" {% if not editable %}readonly{% endif %}>
         {% endif %}
-        {% if q.identifying and award.blind %}<p class="hint">🔒 Hidden from judges in desk review rounds (blind judging).</p>{% endif %}
+        {% if q.identifying and award.blind_judging %}<p class="hint">🔒 Hidden from judges in desk review rounds (blind judging).</p>{% endif %}
       </div>
+    {% empty %}
+      <div class="card"><p class="muted small" style="margin:0">This form has no questions.</p></div>
     {% endfor %}
 
     <div class="row-between">
-      {% if has_previous %}<a class="btn btn-outline" href="?section={{ current_index|add:'-1' }}">← Previous</a>{% else %}<span></span>{% endif %}
+      {% if has_previous %}
+        {% if editable %}<button class="btn btn-outline" name="go" value="{{ current_index|add:'-1' }}">← Save and go back</button>
+        {% else %}<a class="btn btn-outline" href="?section={{ current_index|add:'-1' }}">← Previous</a>{% endif %}
+      {% else %}<span></span>{% endif %}
       <div class="row">
-        {% if not submitted %}<button class="btn btn-outline" data-demo="Saved. You can come back any time before {{ award.deadline }}.">Save and exit</button>{% endif %}
-        {% if has_next %}<a class="btn btn-primary" href="?section={{ current_index|add:'1' }}">Next section →</a>
-        {% elif not submitted %}<button class="btn btn-primary" data-demo="Demo screen: submission not built yet. Required answers would be checked first.">Review and submit</button>{% endif %}
+        {% if editable %}<button class="btn btn-outline" name="go" value="{{ current_index }}">Save</button>{% endif %}
+        {% if has_next %}
+          {% if editable %}<button class="btn btn-primary" name="go" value="{{ current_index|add:'1' }}">Save and next →</button>
+          {% else %}<a class="btn btn-primary" href="?section={{ current_index|add:'1' }}">Next →</a>{% endif %}
+        {% elif editable %}
+          <button class="btn btn-primary" name="action" value="submit">Submit application</button>
+        {% endif %}
       </div>
     </div>
   </form>
 </div>
+{% if application.status == "draft" %}
+  <form method="post" action="{% url 'entries:delete_draft' application.pk %}" style="margin-top:1.5rem" onsubmit="return confirm('Delete this draft? Its answers will be lost.')">
+    {% csrf_token %}<button class="btn btn-outline btn-sm" type="submit">Delete this draft</button>
+  </form>
+{% endif %}
 {% endblock %}

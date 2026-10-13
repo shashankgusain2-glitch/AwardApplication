@@ -70,9 +70,9 @@
 
 <div class="callout callout-info" style="margin-top:1.5rem">
   <div><strong>Try it</strong>
-    Turn blind judging <strong>off</strong> for Business Excellence and save, then open <a href="{% url 'judging:score' 'A-0042' %}">the judge's scoring page for A-0042</a>: the company name now shows.
+    Turn blind judging <strong>off</strong> for Business Excellence and save: judges grading a Business Excellence report now see the applicant's name.
     Set Kaizen's Round 1 to <em>Site visit</em> and remove Round 2: the blind switch is disabled, because judges meet the team on site.
     Every change also shows on the <a href="{% url 'core:award_detail' 'kaizen' %}">public award page</a>.
-    <span class="muted">(Demo: settings are kept in your browser session until the database is built.)</span></div>
+    <span class="muted">Settings are saved in the database and recorded in the audit log.</span></div>
 </div>
 {% endblock %}

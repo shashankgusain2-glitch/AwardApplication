@@ -590,7 +590,7 @@ PORTAL_NAV = {
     ],
     "leader": [
         ("Overview", "dashboard:overview"),
-        ("Review queue", "dashboard:review"),
+        ("All applications", "dashboard:review"),
         ("Approve results", "dashboard:results"),
     ],
 }

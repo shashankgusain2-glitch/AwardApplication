@@ -230,10 +230,17 @@ def test_changed_role_in_session_logs_the_user_out(staff_client):
 
 
 @pytest.mark.django_db
-def test_judge_cannot_open_another_judges_report(judge_client, judge2_client):
-    assert judge_client.get(reverse("judging:score", args=["K-0012"])).status_code == 403
-    assert judge2_client.get(reverse("judging:score", args=["A-0042"])).status_code == 403
-    assert judge2_client.get(reverse("judging:score", args=["K-0012"])).status_code == 200
+def test_judge_cannot_open_another_judges_report(seeded):
+    from apps.assignments.models import JudgeAssignment
+
+    from .conftest import seeded_client
+    kapoor, rao = seeded_client("judge"), seeded_client("judge2")
+    mine = JudgeAssignment.objects.filter(judge__email=ACCOUNTS["judge"]).first()
+    theirs = JudgeAssignment.objects.filter(judge__email=ACCOUNTS["judge2"]).first()
+    assert kapoor.get(reverse("judging:score", args=[mine.pk])).status_code == 200
+    assert kapoor.get(reverse("judging:score", args=[theirs.pk])).status_code == 404   # not even admitted to exist
+    assert rao.get(reverse("judging:score", args=[mine.pk])).status_code == 404
+    assert rao.get(reverse("judging:score", args=[theirs.pk])).status_code == 200
 
 
 # --- Forgot password -------------------------------------------------------

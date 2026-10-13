@@ -99,6 +99,10 @@ To see the password in your own terminal:
 grep DEMO_PASSWORD .env
 ```
 
+## Test the API with Postman
+
+Import the collection and environment from [postman/](../postman/README.md), set `demo_password` in the environment, and run the collection top to bottom (116 requests, each with tests). The checklist is in [postman/CHECKLIST.md](../postman/CHECKLIST.md). Interactive API docs: http://localhost:8000/api/docs/.
+
 ## Production notes
 
 Use `DJANGO_SETTINGS_MODULE=config.settings.prod`. It **requires** `SECRET_KEY` and `ALLOWED_HOSTS` from the environment, forces HTTPS, secure cookies and HSTS. Set `JWT_SIGNING_KEY` (32+ characters), `CORS_ALLOWED_ORIGINS` for the frontend, and a real `EMAIL_BACKEND`. Never run `seed_data` in production.

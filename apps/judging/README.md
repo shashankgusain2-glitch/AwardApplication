@@ -1,24 +1,27 @@
 # apps/judging/
 
-**Judging: the judge's screens.**
+**Judging: the judge's screens**, on the real database (`apps/assignments/` and `apps/evaluations/` services).
 
 ## What it does in the application
 
 | Page | Address | What the judge does |
 |---|---|---|
-| My assignments | `/judge/` | See **their own real assignments** from the database, with the round type; Accept or Decline (declined reports go back to the pool) |
-| Answer an assignment | `/judge/assignments/<id>/respond/` | The Accept / Decline button. A judge can only answer their own assignments (others give 404) |
-| Score an entry | `/judge/score/<entry>/` | Read the entry and score each criterion 1–10 (still sample data until step 3.5) |
+| My assignments | `/judge/` | Their **own assignments**, with the round type and status. Accept or Decline (declined reports go back to the pool). This is where a judge lands after logging in |
+| Answer an assignment | `/judge/assignments/<id>/respond/` | The Accept / Decline buttons. Accepting opens the grading page |
+| Grade a report | `/judge/score/<assignment id>/` | Read the report as the judge may see it, score each criterion 1–10 with comments and overall feedback, save midway, submit. After submitting: ask staff to change a score, and change it with a reason once allowed (Rule 3; every change is listed) |
+| Score an entry (menu) | `/judge/score/` | Opens the first report being graded, or the list |
 
-**Blind judging (Rule 1) happens here.** In a blind award's desk-review round, the company name, location and file names are **removed on the server before the page is built**, so they can't leak. Site visits and live presentations are never blind.
+A judge only ever reaches their own assignments: another judge's gives **404**.
+
+**Blind judging (Rule 1) happens on the server** in `report_for_judge()` (`apps/assignments/services.py`): in a blind award's desk-review round, identifying answers, the report title, the applicant's name and uploaded file names are removed before the page is built. Site visits and live presentations are never blind.
 
 ## Files
 
 | File | What it does |
 |---|---|
-| `views.py` | Builds the judge pages; decides what the judge is allowed to see |
+| `views.py` | The judge pages: assignments, accept/decline, grading (save, submit, ask to change, change) |
 | `urls.py` | The `/judge/...` addresses |
-| `models.py` | **Planned** tables: JudgeProfile, Assignment, Score, ScoreChange (who changed a score, when and why, for Rule 3) |
-| [migrations/](migrations/) | Database changes for this app (none yet) |
+| `models.py` | No tables here: assignments and evaluations live in `apps/assignments/` and `apps/evaluations/` |
+| [migrations/](migrations/) | Empty: this app has no tables |
 
 From the 12 Oct meeting: judges don't declare conflicts; staff record them.

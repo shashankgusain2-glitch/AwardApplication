@@ -1,39 +1,38 @@
 {% extends "portal_base.html" %}
 
 {% block title %}Application status{% endblock %}
-{% block breadcrumb %}{% if application %}<p class="muted small" style="margin:0 0 .25rem">Entry {{ application.id }}</p>{% endif %}{% endblock %}
-{% block heading %}{% if application %}{{ application.award }}{% else %}Application status{% endif %}{% endblock %}
-{% block subheading %}{% if application %}<p style="margin:.5rem 0 0"><span class="badge badge-{{ application.status|slugify }}">{{ application.status }}</span></p>{% endif %}{% endblock %}
-{% block user %}{% include "partials/user_chip.html" with initials="PK" name="Priya Kulkarni" detail="Applicant" %}{% endblock %}
+{% block heading %}Application status{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Where each of your applications is, with dates. Scores stay private until results are published.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-{% if not application %}
-<div class="card">
-  <h2 style="font-size:1.1rem">Nothing submitted yet</h2>
-  <p class="muted small" style="margin:0">When you submit an application, you'll follow its progress here. <a href="{% url 'entries:dashboard' %}">Go to your dashboard</a>.</p>
-</div>
-{% else %}
-<div class="grid grid-2" style="align-items:start">
-  <div class="card">
-    <h2 style="font-size:1.1rem">Where your entry is</h2>
-    <ol class="timeline" style="margin-top:1rem">
-      {% for step in timeline %}
-        <li class="{{ step.state }}"><span class="dot"></span><strong>{{ step.label }}</strong><span class="muted small">{{ step.date }}</span></li>
-      {% endfor %}
-    </ol>
-  </div>
-  <div class="stack">
-    <div class="callout callout-success"><div><strong>Your entry is locked</strong>It was submitted on 2 Oct 2026 and can't be changed, unless our staff ask you for more information.</div></div>
+<div class="stack">
+  {% for row in rows %}
+    {% with app=row.application %}
     <div class="card">
-      <h3>Your submission</h3>
-      <p class="muted small">Sent with form version {{ application.form_version }}. It will always open exactly as you sent it.</p>
-      <button class="btn btn-outline btn-sm" data-demo="Demo screen: view not built yet.">View submitted answers</button>
+      <div class="row-between">
+        <div>
+          <p class="muted small" style="margin:0">{{ app.reference }} · form version {{ app.form_version.version }}</p>
+          <h2 style="font-size:1.1rem;margin:.25rem 0">{{ app.award.name }}</h2>
+          <p class="small" style="margin:0">{{ app.title }}</p>
+        </div>
+        <div class="row">
+          <span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span>
+          <a class="btn btn-outline btn-sm" href="{% url 'entries:form' app.award.slug %}">{% if app.status == "draft" %}Continue{% else %}View answers{% endif %}</a>
+        </div>
+      </div>
+      <ol class="timeline" style="margin-top:1rem">
+        {% for step in row.timeline %}
+          <li class="{{ step.state }}"><span class="dot"></span><strong>{{ step.label }}</strong><span class="muted small">{{ step.date|date:"j M Y"|default:"" }}</span></li>
+        {% endfor %}
+      </ol>
     </div>
+    {% endwith %}
+  {% empty %}
     <div class="card">
-      <h3>Need help?</h3>
-      <p class="muted small">If something is wrong with your entry, contact the programme team at {{ org.email }}.</p>
+      <h2 style="font-size:1.1rem">Nothing yet</h2>
+      <p class="muted small" style="margin:0">When you start an application, you'll follow its progress here. <a href="{% url 'entries:form' %}">Start an application</a>.</p>
     </div>
-  </div>
+  {% endfor %}
 </div>
-{% endif %}
 {% endblock %}

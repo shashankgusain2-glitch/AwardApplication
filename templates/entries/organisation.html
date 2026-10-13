@@ -2,38 +2,61 @@
 
 {% block title %}Organisation profile{% endblock %}
 {% block heading %}Organisation profile{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Filled once, used for every award you enter.</p>{% endblock %}
-{% block user %}{% include "partials/user_chip.html" with initials="PK" name="Priya Kulkarni" detail="Applicant" %}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Filled once, used for every award you enter. Staff verify it before your applications go to judges.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-<form class="stack">
+{% if profile %}
+  {% if profile.verification_status == "verified" %}
+    <div class="callout callout-success" style="margin-bottom:1rem"><div><strong>Verified</strong>Staff verified {{ profile.organisation_name }} on {{ profile.verified_at|date:"j M Y" }}. The GSTIN is now locked.</div></div>
+  {% elif profile.verification_status == "rejected" %}
+    <div class="callout callout-warning" style="margin-bottom:1rem"><div><strong>Not verified</strong>{{ profile.verification_note|default:"Please check your details and contact the awards team." }}</div></div>
+  {% else %}
+    <div class="callout callout-info" style="margin-bottom:1rem"><div><strong>Waiting for staff to verify</strong>{% if not profile.gstin %}Add your GSTIN so staff can verify your organisation.{% else %}You can fill and submit applications meanwhile.{% endif %}</div></div>
+  {% endif %}
+{% endif %}
+
+<form method="post" class="stack" novalidate>
+  {% csrf_token %}
   <div class="card">
-    <div class="card-head"><h2>Company details</h2>{% if organisation.gstin %}<span class="badge badge-submitted">✓ GSTIN format valid</span>{% endif %}</div>
+    <div class="card-head"><h2>Company details</h2></div>
     <div class="form-grid">
-      <div class="field"><label for="o-name">Registered name</label><input id="o-name" type="text" value="{{ organisation.name|default:'' }}"></div>
-      <div class="field"><label for="o-gstin">GSTIN</label><input id="o-gstin" type="text" value="{{ organisation.gstin|default:'' }}" {% if organisation.gstin %}readonly{% endif %}><p class="hint">Locked after registration. One entry per GSTIN per award.</p></div>
-      <div class="field"><label for="o-pan">PAN of authorised person</label><input id="o-pan" type="text" value="{{ organisation.pan }}"></div>
-      <div class="field"><label for="o-sector">Sector</label><select id="o-sector"><option>{{ organisation.sector }}</option><option>Services</option><option>Energy</option></select></div>
-      <div class="field"><label for="o-size">Size</label><select id="o-size"><option>Small (under 250 employees)</option><option selected>{{ organisation.size }}</option><option>Large (1,000+ employees)</option></select></div>
-      <div class="field"><label for="o-turnover">Annual turnover</label><select id="o-turnover"><option>Under ₹100 crore</option><option selected>{{ organisation.turnover }}</option><option>Over ₹500 crore</option></select></div>
-      <div class="field"><label for="o-year">Year established</label><input id="o-year" type="number" value="{{ organisation.established }}"></div>
-      <div class="field"><label for="o-web">Website</label><input id="o-web" type="text" value="{{ organisation.website }}"></div>
+      {% include "entries/_field.html" with name="organisation_name" label="Registered name *" value=values.organisation_name error=errors.organisation_name %}
+      <div class="field">
+        <label for="f-gstin">GSTIN</label>
+        <input id="f-gstin" name="gstin" type="text" maxlength="15" value="{{ values.gstin }}" {% if gstin_locked %}readonly{% endif %}>
+        {% if errors.gstin %}<p class="hint field-error">{{ errors.gstin }}</p>{% else %}<p class="hint">15 characters, like 27ABCDE1234F1Z5. Locked once verified.</p>{% endif %}
+      </div>
+      {% include "entries/_field.html" with name="holder_pan" label="PAN of authorised person" value=values.holder_pan error=errors.holder_pan %}
+      {% include "entries/_field.html" with name="sector" label="Sector" value=values.sector error=errors.sector %}
+      <div class="field">
+        <label for="f-size">Size</label>
+        <select id="f-size" name="organisation_size"><option value="">Choose…</option>{% for v, l in sizes %}<option value="{{ v }}" {% if values.organisation_size == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+      </div>
+      <div class="field">
+        <label for="f-turnover">Annual turnover</label>
+        <select id="f-turnover" name="annual_turnover_band"><option value="">Choose…</option>{% for v, l in turnovers %}<option value="{{ v }}" {% if values.annual_turnover_band == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+      </div>
+      {% include "entries/_field.html" with name="established_year" label="Year established" value=values.established_year error=errors.established_year %}
+      {% include "entries/_field.html" with name="website" label="Website" value=values.website error=errors.website %}
+      {% include "entries/_field.html" with name="address" label="Registered address" value=values.address error=errors.address %}
+      {% include "entries/_field.html" with name="city" label="City" value=values.city error=errors.city %}
+      {% include "entries/_field.html" with name="state" label="State" value=values.state error=errors.state %}
+      {% include "entries/_field.html" with name="pincode" label="PIN code" value=values.pincode error=errors.pincode %}
     </div>
-    <div class="field" style="margin-top:1rem"><label for="o-address">Registered address</label><input id="o-address" type="text" value="{{ organisation.address }}"></div>
   </div>
 
   <div class="card">
     <div class="card-head"><h2>Main contact</h2></div>
     <div class="form-grid">
-      <div class="field"><label for="c-name">Name</label><input id="c-name" type="text" value="{{ organisation.contact_name }}"></div>
-      <div class="field"><label for="c-role">Role</label><input id="c-role" type="text" value="{{ organisation.contact_role }}"></div>
-      <div class="field"><label for="c-email">Email</label><input id="c-email" type="email" value="{{ organisation.contact_email }}"></div>
-      <div class="field"><label for="c-phone">Phone</label><input id="c-phone" type="text" value="{{ organisation.contact_phone }}"></div>
+      {% include "entries/_field.html" with name="contact_name" label="Name" value=values.contact_name error=errors.contact_name %}
+      {% include "entries/_field.html" with name="contact_designation" label="Role" value=values.contact_designation error=errors.contact_designation %}
+      {% include "entries/_field.html" with name="contact_phone" label="Phone" value=values.contact_phone error=errors.contact_phone %}
+      <div class="field"><label for="f-email">Email</label><input id="f-email" type="email" value="{{ user.email }}" readonly></div>
     </div>
   </div>
 
-  <div class="callout callout-info"><div><strong>Why we ask for your GSTIN</strong>It stops anyone else applying in your name, and makes sure each organisation enters an award only once.</div></div>
-
-  <div class="row"><button class="btn btn-primary" data-demo="Demo screen: profile not saved yet.">Save profile</button></div>
+  {% if errors.non_field_errors %}<div class="callout callout-warning"><div>{{ errors.non_field_errors }}</div></div>{% endif %}
+  <div class="row"><button class="btn btn-primary" type="submit">Save profile</button></div>
 </form>
 {% endblock %}
