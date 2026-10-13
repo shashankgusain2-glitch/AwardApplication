@@ -19,12 +19,14 @@
           <a href="{{ href }}" {% if request.resolver_match.view_name == url_name %}class="active" aria-current="page"{% endif %}>{{ label }}</a>
         {% endfor %}
       </nav>
-      <p class="sidebar-label">Demo: view as</p>
+      <p class="sidebar-label">Signed in as</p>
       <div class="role-switch">
-        <a href="{% url 'entries:dashboard' %}" {% if role == 'applicant' %}class="current"{% endif %}>Applicant</a>
-        <a href="{% url 'judging:assignments' %}" {% if role == 'judge' %}class="current"{% endif %}>Judge</a>
-        <a href="{% url 'awards:staff_home' %}" {% if role == 'staff' %}class="current"{% endif %}>Programme staff</a>
-        <a href="{% url 'dashboard:overview' %}" {% if role == 'leader' %}class="current"{% endif %}>Leadership</a>
+        <span style="display:block;padding:.3rem .8rem;color:#fff;font-size:.85rem;word-break:break-all">{{ user.email }}</span>
+        <span style="display:block;padding:0 .8rem .5rem;font-size:.8rem">{{ user.get_role_display }}</span>
+        <form method="post" action="{% url 'accounts:logout' %}" style="padding:0 .8rem">
+          {% csrf_token %}
+          <button class="btn btn-outline-light btn-sm" type="submit">Log out</button>
+        </form>
       </div>
       <p class="sidebar-label">Site</p>
       <div class="role-switch">

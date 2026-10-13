@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Sign up · {{ org.name }}{% endblock %}
+
+{% block content %}
+<div class="login-wrap">
+  <div class="card login-card">
+    <h1 style="font-size:1.6rem">Sign up as an applicant</h1>
+    <p class="muted">Create an account to apply for awards. Judges, staff and leaders get their accounts from the awards team.</p>
+
+    <form method="post" class="stack" data-loading-form>
+      {% csrf_token %}
+      {% for error in form.non_field_errors %}
+        <div class="callout callout-warning" role="alert"><div>{{ error }}</div></div>
+      {% endfor %}
+      {% include "partials/form_field.html" with field=form.full_name %}
+      {% include "partials/form_field.html" with field=form.email %}
+      {% include "partials/form_field.html" with field=form.password1 %}
+      {% include "partials/form_field.html" with field=form.password2 %}
+      <button class="btn btn-primary btn-block" type="submit" data-loading-text="Creating your account…">Create account</button>
+    </form>
+
+    <p class="small" style="margin-top:1.5rem">Already have an account? <a href="{% url 'accounts:login' %}?role=applicant">Log in</a></p>
+  </div>
+</div>
+{% endblock %}

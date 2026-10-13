@@ -96,3 +96,19 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Emails are printed to the console instead of being sent (demo "outbox").
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# --- Authentication ------------------------------------------------------------
+# Log in with email + password. Passwords are stored hashed (Django's default:
+# salted PBKDF2-SHA256), never as plain text.
+AUTHENTICATION_BACKENDS = ["apps.accounts.backends.EmailBackend"]
+LOGIN_URL = "accounts:login"
+LOGOUT_REDIRECT_URL = "core:home"
+
+# Session cookie holds the session id; the session stores the user id and role.
+SESSION_COOKIE_HTTPONLY = True             # not readable by JavaScript
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = not DEBUG          # HTTPS-only outside local development
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_AGE = 8 * 60 * 60           # log in again after 8 hours
+PASSWORD_RESET_TIMEOUT = 60 * 60           # reset links work for 1 hour
+DEFAULT_FROM_EMAIL = "awards@awards.example"

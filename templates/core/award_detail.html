@@ -78,7 +78,7 @@
         <div class="settings-row"><span class="muted">Jury per entry</span><strong>{{ award.judges_per_entry }}</strong></div>
         <div class="settings-row"><span class="muted">Fee</span><strong>{{ award.fee }}</strong></div>
         {% if award.status == "Open" or award.status == "Closing soon" %}
-          <a class="btn btn-primary btn-block" style="margin-top:1rem" href="{% url 'core:login' %}">Apply now</a>
+          <a class="btn btn-primary btn-block" style="margin-top:1rem" href="{% url 'accounts:login' %}">Apply now</a>
         {% else %}
           <button class="btn btn-outline btn-block" style="margin-top:1rem" data-demo="Demo screen: you'll be notified when entries open.">Notify me</button>
         {% endif %}

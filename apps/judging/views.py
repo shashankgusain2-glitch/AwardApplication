@@ -1,7 +1,9 @@
 """Judge screens (sample data until the judging models are built)."""
+from django.core.exceptions import PermissionDenied
 from django.http import Http404
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 
+from apps.accounts.permissions import role_required
 from apps.core import demo_data as d
 
 ROLE = "judge"
@@ -26,18 +28,28 @@ def _with_award(assignment, request):
     }
 
 
+@role_required("judge")
 def assignments(request):
+    mine = d.assignments_for(request.user)   # only this judge's assignments
     return render(request, "judging/assignments.html", {
         "role": ROLE,
-        "judge": d.JUDGE,
-        "assignments": [a for a in (_with_award(a, request) for a in d.ASSIGNMENTS) if a],
+        "judge": d.JUDGES.get(request.user.email.lower(), {"name": request.user.display_name, "expertise": ""}),
+        "assignments": [a for a in (_with_award(a, request) for a in mine) if a],
     })
 
 
-def score(request, entry_id="A-0042"):
-    assignment = next((a for a in d.ASSIGNMENTS if a["entry"] == entry_id), None)
+@role_required("judge")
+def score(request, entry_id=None):
+    mine = d.assignments_for(request.user)
+    if entry_id is None:
+        if not mine:
+            return redirect("judging:assignments")
+        entry_id = mine[0]["entry"]
+    assignment = next((a for a in mine if a["entry"] == entry_id), None)
     if assignment is None:
-        raise Http404("Not assigned to you")
+        if any(a["entry"] == entry_id for a in d.ASSIGNMENTS):
+            raise PermissionDenied("This report is assigned to another judge.")
+        raise Http404("No such report")
     assignment = _with_award(assignment, request)
     if assignment is None:
         raise Http404("This round is no longer part of the award")

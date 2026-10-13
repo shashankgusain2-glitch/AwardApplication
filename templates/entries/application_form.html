@@ -1,7 +1,7 @@
 {% extends "portal_base.html" %}
 
 {% block title %}Application form{% endblock %}
-{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem">Entry {{ entry_id }} · {{ award.icon }} {{ award.name }}</p>{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem">{% if entry_id %}Entry {{ entry_id }}{% else %}New application{% endif %} · {{ award.icon }} {{ award.name }}</p>{% endblock %}
 {% block heading %}{{ current.name }}{% endblock %}
 {% block subheading %}<p class="muted small" style="margin:.25rem 0 0">Form version {{ award.form_version }} · {% if submitted %}Submitted, read-only{% else %}✓ All changes saved 2 minutes ago{% endif %}</p>{% endblock %}
 {% block user %}{% include "partials/user_chip.html" with initials="PK" name="Priya Kulkarni" detail="Applicant" %}{% endblock %}

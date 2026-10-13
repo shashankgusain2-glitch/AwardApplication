@@ -250,13 +250,17 @@ BUILT_AWARDS = ["business-excellence", "kaizen"]
 
 # --- Award settings: defaults + what staff changed -------------------------
 
-SESSION_KEY = "award_settings"
 EDITABLE_SETTINGS = ["round_types", "blind", "judges_per_entry", "applicant_type", "fee_amount", "deadline"]
 
 
-def award_overrides(request):
-    """Settings staff saved on the Award settings screen (kept in the session for now)."""
-    return request.session.get(SESSION_KEY, {}) if request is not None else {}
+def award_overrides(request=None):
+    """
+    Settings staff saved on the Award settings screen, from the database,
+    so every user (staff, judges, the public site) sees the same settings.
+    `request` is kept for callers that pass it; it isn't needed any more.
+    """
+    from apps.awards.models import AwardSetting
+    return {s.slug: s.data for s in AwardSetting.objects.all()}
 
 
 def blind_possible(round_types):
@@ -445,6 +449,15 @@ def answers_for_judge(entry_id, award, round_name):
 
 # --- Applicant portal -------------------------------------------------------
 
+# The sample application data below belongs to this demo applicant only.
+# Any other applicant who signs up starts with no applications (RBAC: an
+# applicant sees only their own data).
+SAMPLE_APPLICANT_EMAIL = "priya@acme.example"
+
+
+def owns_sample_data(user):
+    return user.email.lower() == SAMPLE_APPLICANT_EMAIL
+
 APPLICANT_ORG = {
     "name": "Acme Precision Components Pvt Ltd",
     "gstin": "27ABCDE1234F1Z5",
@@ -479,17 +492,23 @@ APPLICATION_TIMELINE = [
 
 # --- Judge portal -----------------------------------------------------------
 
-JUDGE = {"name": "Dr. R. Kapoor", "expertise": "Manufacturing, Quality"}
+# Demo judges, by login email. Each assignment below belongs to one judge;
+# a judge only sees and opens their own assignments.
+JUDGES = {
+    "kapoor@judges.example": {"name": "Dr. R. Kapoor", "expertise": "Manufacturing, Quality"},
+    "rao@judges.example": {"name": "Prof. N. Rao", "expertise": "Quality, Academia"},
+}
+JUDGE = JUDGES["kapoor@judges.example"]
 
 ASSIGNMENTS = [
-    {"entry": "A-0042", "round": "Round 1", "status": "In progress", "progress": 67, "due": "15 Jan 2027"},
-    {"entry": "K-0007", "round": "Round 1", "status": "In progress", "progress": 50, "due": "20 Jan 2027"},
-    {"entry": "A-0051", "round": "Round 1", "status": "Awaiting response", "progress": 0, "due": "15 Jan 2027"},
-    {"entry": "K-0012", "round": "Round 1", "status": "Not started", "progress": 0, "due": "20 Jan 2027"},
-    {"entry": "A-0038", "round": "Round 1", "status": "Submitted", "progress": 100, "due": "15 Jan 2027"},
-    {"entry": "K-0003", "round": "Round 2", "status": "Visit scheduled", "progress": 0, "due": "5 Feb 2027",
+    {"judge": "kapoor@judges.example", "entry": "A-0042", "round": "Round 1", "status": "In progress", "progress": 67, "due": "15 Jan 2027"},
+    {"judge": "kapoor@judges.example", "entry": "K-0007", "round": "Round 1", "status": "In progress", "progress": 50, "due": "20 Jan 2027"},
+    {"judge": "kapoor@judges.example", "entry": "A-0051", "round": "Round 1", "status": "Awaiting response", "progress": 0, "due": "15 Jan 2027"},
+    {"judge": "rao@judges.example", "entry": "K-0012", "round": "Round 1", "status": "Not started", "progress": 0, "due": "20 Jan 2027"},
+    {"judge": "kapoor@judges.example", "entry": "A-0038", "round": "Round 1", "status": "Submitted", "progress": 100, "due": "15 Jan 2027"},
+    {"judge": "kapoor@judges.example", "entry": "K-0003", "round": "Round 2", "status": "Visit scheduled", "progress": 0, "due": "5 Feb 2027",
      "visit": "5 Feb 2027, 10:00 · Deccan Forge, Plant 2, Hosur"},
-    {"entry": "A-0029", "round": "Round 2", "status": "Presentation scheduled", "progress": 0, "due": "12 Feb 2027",
+    {"judge": "kapoor@judges.example", "entry": "A-0029", "round": "Round 2", "status": "Presentation scheduled", "progress": 0, "due": "12 Feb 2027",
      "visit": "12 Feb 2027, 14:30 · Awards Platform office, New Delhi"},
 ]
 
@@ -582,3 +601,15 @@ ROLE_LABELS = {
     "staff": "Programme staff",
     "leader": "Leadership",
 }
+
+
+def assignments_for(user):
+    """Only the assignments that belong to this judge."""
+    return [a for a in ASSIGNMENTS if a["judge"] == user.email.lower()]
+
+
+def blank_answers(slug):
+    """An award's form with no answers yet (for an applicant starting fresh)."""
+    award = get_award(slug)
+    return [{"name": s["name"], "questions": [{**q, "value": ""} for q in s["questions"]]}
+            for s in award["form_sections"]]

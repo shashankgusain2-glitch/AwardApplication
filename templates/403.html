@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}403 Access Denied · {{ org.name }}{% endblock %}
+
+{% block content %}
+<div class="login-wrap">
+  <div class="card login-card" style="text-align:center">
+    <p class="eyebrow">Error 403</p>
+    <h1 style="font-size:1.8rem">Access Denied</h1>
+    <p class="muted">Your account doesn't have permission to open this page.</p>
+    {% if user.is_authenticated %}
+      <p class="small">You're signed in as <strong>{{ user.email }}</strong> ({{ user.get_role_display }}).</p>
+      <a class="btn btn-primary btn-block" href="{% url 'accounts:login' %}">Go to my portal</a>
+    {% else %}
+      <a class="btn btn-primary btn-block" href="{% url 'accounts:login' %}">Log in</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -93,3 +93,27 @@ Each decision: the options, the one we picked, why, and what would change our mi
 **Where the model breaks:** a pure on-site audit (like 5S) doesn't fit "the applicant fills a form, the judge scores the form". Judges fill a checklist on the floor instead. We show the round type, but an on-site checklist screen is out of scope for now.
 
 **What would change our mind:** if the client says every Kaizen entry gets a site visit with no desk screening, Kaizen becomes one site-visit round, and blind judging is simply unavailable for it.
+
+---
+
+## D6. Authentication: email + password, four role tabs, role checked on the server
+
+**Date:** 14 Oct 2026
+
+**What we needed:** sign up (applicants only) and log in for four roles, with each role seeing only what it's allowed to.
+
+| Choice | Options | Picked | Why |
+|---|---|---|---|
+| Tokens vs. sessions | JWT in the browser vs. secure session cookie | **Session cookie** (HttpOnly, SameSite=Lax, Secure outside local dev) | Our pages are built by Django on the server, so sessions are the standard, simplest fit; nothing to store in JavaScript. The session holds the user id and the role |
+| Password hashing | bcrypt vs. Django's PBKDF2 | **PBKDF2-SHA256** (Django default, salted, 1M rounds) | Equivalent strength, no extra package; switching to bcrypt or Argon2 later is one setting |
+| Where the role lives | Separate tables per role vs. one `role` field | **One `role` field on the user** | Each person has exactly one role; replaces the old `is_leader` flag (migrated) |
+| Role check | In the page only vs. on the server | **On the server**: the login form rejects a correct password on the wrong tab, and every portal view checks the role | The UI can be bypassed; the server can't |
+| Wrong role | Redirect vs. error | **403 Access Denied** page | Clear to the user; logged-out users are sent to log in instead |
+| Error messages | "No such account" vs. one message | **One message** for unknown email, wrong password and wrong tab | Doesn't reveal which emails have accounts |
+| Award settings | Browser session vs. database | **Database** (`AwardSetting`) | With real logins, staff and judges are different sessions; a judge must see the blind-judging setting staff saved (this completes D3) |
+
+**Accounts for staff, judges and leaders** are created in `/admin/` (by an admin) or by `python manage.py seed_demo` for the demo. They can't sign up.
+
+**Not built yet (known gaps):** limiting repeated failed logins (brute force), two-factor login, and **verifying new applicants** before they get access. The 13 Oct meeting flagged that last one as unclear; sign-up currently gives immediate access.
+
+**What would change our mind:** a separate mobile app or API clients would need token auth (e.g. JWT) alongside sessions.

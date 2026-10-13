@@ -8,10 +8,10 @@
 {% block content %}
 <form class="stack">
   <div class="card">
-    <div class="card-head"><h2>Company details</h2><span class="badge badge-submitted">✓ GSTIN format valid</span></div>
+    <div class="card-head"><h2>Company details</h2>{% if organisation.gstin %}<span class="badge badge-submitted">✓ GSTIN format valid</span>{% endif %}</div>
     <div class="form-grid">
-      <div class="field"><label for="o-name">Registered name</label><input id="o-name" type="text" value="{{ organisation.name }}"></div>
-      <div class="field"><label for="o-gstin">GSTIN</label><input id="o-gstin" type="text" value="{{ organisation.gstin }}" readonly><p class="hint">Locked after registration. One entry per GSTIN per award.</p></div>
+      <div class="field"><label for="o-name">Registered name</label><input id="o-name" type="text" value="{{ organisation.name|default:'' }}"></div>
+      <div class="field"><label for="o-gstin">GSTIN</label><input id="o-gstin" type="text" value="{{ organisation.gstin|default:'' }}" {% if organisation.gstin %}readonly{% endif %}><p class="hint">Locked after registration. One entry per GSTIN per award.</p></div>
       <div class="field"><label for="o-pan">PAN of authorised person</label><input id="o-pan" type="text" value="{{ organisation.pan }}"></div>
       <div class="field"><label for="o-sector">Sector</label><select id="o-sector"><option>{{ organisation.sector }}</option><option>Services</option><option>Energy</option></select></div>
       <div class="field"><label for="o-size">Size</label><select id="o-size"><option>Small (under 250 employees)</option><option selected>{{ organisation.size }}</option><option>Large (1,000+ employees)</option></select></div>
