@@ -181,7 +181,7 @@ def test_edit_after_submit_needs_staff_approval(client, applicant, staff_client)
     assert app.edit_request == Application.EditRequest.REQUESTED
     assert not app.can_edit
 
-    staff_client.post(reverse("staff:report_action", args=[app.pk]), {"action": "approve_edit"})
+    staff_client.post(reverse("entries:staff_action", args=[app.pk]), {"action": "approve_edit"})
     app.refresh_from_db()
     assert app.can_edit
 
@@ -196,50 +196,26 @@ def test_declined_edit_keeps_report_locked(client, applicant, staff_client):
     app = _start(client)
     client.post(reverse("entries:application", args=[app.pk]), {**BE_ANSWERS, "action": "submit"})
     client.post(reverse("entries:request_edit", args=[app.pk]), {"reason": "Typo"})
-    staff_client.post(reverse("staff:report_action", args=[app.pk]), {"action": "decline_edit"})
+    staff_client.post(reverse("entries:staff_action", args=[app.pk]), {"action": "decline_edit"})
     app.refresh_from_db()
     assert not app.can_edit
     assert app.can_request_edit  # can ask again
 
 
 @pytest.mark.django_db
-def test_staff_confirm_puts_report_in_pool(client, applicant, staff_client):
+def test_applicant_sees_status_change_to_judged(client, applicant, staff_client):
     app = _start(client)
     client.post(reverse("entries:application", args=[app.pk]), {**BE_ANSWERS, "action": "submit"})
-    staff_client.post(reverse("staff:report_action", args=[app.pk]), {"action": "confirm"})
-    app.refresh_from_db()
-    assert app.status == Application.Status.POOL
+    for action in ["assign", "judging", "judged"]:
+        staff_client.post(reverse("entries:staff_action", args=[app.pk]), {"action": action})
     page = client.get(reverse("entries:application", args=[app.pk])).content.decode()
-    assert "In report pool" in page
-
-
-@pytest.mark.django_db
-def test_staff_reject_tells_applicant(client, applicant, staff_client):
-    app = _start(client)
-    client.post(reverse("entries:application", args=[app.pk]), {**BE_ANSWERS, "action": "submit"})
-    staff_client.post(reverse("staff:report_action", args=[app.pk]), {"action": "reject", "reason": "GSTIN not found"})
-    app.refresh_from_db()
-    assert app.status == Application.Status.REJECTED
-    assert "not accepted" in client.get(reverse("entries:application", args=[app.pk])).content.decode()
-
-
-@pytest.mark.django_db
-def test_resubmitting_after_approved_edit_keeps_place_in_queue(client, applicant, staff_client):
-    app = _start(client)
-    client.post(reverse("entries:application", args=[app.pk]), {**BE_ANSWERS, "action": "submit"})
-    staff_client.post(reverse("staff:report_action", args=[app.pk]), {"action": "confirm"})
-    client.post(reverse("entries:request_edit", args=[app.pk]), {"reason": "Typo"})
-    staff_client.post(reverse("staff:report_action", args=[app.pk]), {"action": "approve_edit"})
-    client.post(reverse("entries:application", args=[app.pk]), {**BE_ANSWERS, "about": "Fixed", "action": "submit"})
-    app.refresh_from_db()
-    assert app.status == Application.Status.POOL  # not sent back to "staff checking"
-    assert app.answers["about"] == "Fixed"
+    assert "Your report has been judged" in page
 
 
 @pytest.mark.django_db
 def test_applicant_cannot_use_staff_actions(client, applicant):
     app = _start(client)
-    response = client.post(reverse("staff:report_action", args=[app.pk]), {"action": "approve_edit"})
+    response = client.post(reverse("entries:staff_action", args=[app.pk]), {"action": "approve_edit"})
     assert response.status_code == 302  # sent to log in as staff
     app.refresh_from_db()
     assert app.edit_request == Application.EditRequest.NONE

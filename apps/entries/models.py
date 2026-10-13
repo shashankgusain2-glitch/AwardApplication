@@ -26,14 +26,10 @@ class Organisation(models.Model):
 class Application(models.Model):
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
-        SUBMITTED = "submitted", "Submitted, staff checking"
-        POOL = "pool", "In report pool"
-        REJECTED = "rejected", "Rejected (failed proof check)"
+        SUBMITTED = "submitted", "In report pool"
         ASSIGNED = "assigned", "Assigned to judges"
         JUDGING = "judging", "Being judged"
         JUDGED = "judged", "Judged"
-        SHORTLISTED = "shortlisted", "Shortlisted for Round 2"
-        ROUND2_DONE = "round2_done", "Round 2 graded"
 
     class EditRequest(models.TextChoices):
         NONE = "", "None"
@@ -71,26 +67,10 @@ class Application(models.Model):
 
     @property
     def progress_steps(self):
-        """The status tracker shown to the applicant (Round 2 steps only if shortlisted)."""
-        S = self.Status
-        order = [S.SUBMITTED, S.POOL, S.ASSIGNED, S.JUDGING, S.JUDGED]
-        if self.status in (S.SHORTLISTED, S.ROUND2_DONE):
-            order += [S.SHORTLISTED, S.ROUND2_DONE]
+        """The status tracker shown to the applicant."""
+        order = [s for s in self.Status if s != self.Status.DRAFT]
         current = order.index(self.status) if self.status in order else -1
         return [
             {"label": s.label, "state": "done" if i < current else "current" if i == current else "todo"}
             for i, s in enumerate(order)
         ]
-
-    def average(self, round_no=1):
-        """Average of the judges' weighted totals for a round (completed gradings only)."""
-        totals = [a.total for a in self.assignments.filter(round=round_no, status="completed")]
-        return round(sum(totals) / len(totals), 2) if totals else None
-
-    @property
-    def round1_average(self):
-        return self.average(1)
-
-    @property
-    def round2_average(self):
-        return self.average(2)
