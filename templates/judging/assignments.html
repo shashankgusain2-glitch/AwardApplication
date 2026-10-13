@@ -33,7 +33,6 @@
           {% if a.status == "Awaiting response" %}
             <button class="btn btn-success btn-sm" data-demo="Demo screen: accepted (not saved yet).">Accept</button>
             <button class="btn btn-outline btn-sm" data-demo="Demo screen: the entry goes back to the pool for another judge.">Decline</button>
-            <button class="btn btn-danger btn-sm" data-demo="Demo screen: conflict declared. The entry is removed from your list and staff are told.">Declare conflict</button>
           {% elif a.status == "Submitted" %}
             <a class="btn btn-outline btn-sm" href="{% url 'judging:score' a.entry %}">View scores</a>
           {% else %}

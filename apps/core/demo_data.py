@@ -540,8 +540,6 @@ REVIEW_QUEUE = [
      "detail": "Judge scores 4.1, 8.6 and 7.9: a gap of 4.5 points.", "action": "Add an extra judge"},
     {"type": "Tie", "award": "Safety Excellence Award", "entry": "S-0004 / S-0019",
      "detail": "Both entries average 8.20 for 3rd place.", "action": "Decide tie-break"},
-    {"type": "Late conflict", "award": "Safety Excellence Award", "entry": "S-0027",
-     "detail": "Judge declared a conflict after starting. Scores removed and logged.", "action": "Confirm reassignment"},
     {"type": "Appeal", "award": "Sustainability Leadership Award", "entry": "SL-0009",
      "detail": "Applicant asks for review of Round 2 result.", "action": "Review appeal"},
 ]
