@@ -13,8 +13,54 @@ How to put the Awards Platform on a real server. The full checklists (security, 
 | `docker-compose.prod.yml` | Single-server option: the app plus Nginx. The database is a **managed** PostgreSQL |
 | `deploy/nginx.conf` | HTTPS, HTTP→HTTPS redirect, 12 MB upload limit, rate limit on the web login |
 | `.github/workflows/ci.yml` | Lint, migration check, tests, dependency scan, and a job that **builds the production image and runs `check --deploy`** |
+| `render.yaml` | Render Blueprint: the web service, health check, and every variable (secrets generated or asked for) |
+| `railway.json` | Railway: build with `Dockerfile.prod`, health check |
+| `deploy/start.sh` | Start-up: Gunicorn on the platform's `$PORT`; migrations first when `RUN_MIGRATIONS_ON_START=true` |
 
-## Option A: Render or Railway (simplest)
+The app finds the address Render or Railway gives it by itself (`RENDER_EXTERNAL_HOSTNAME`, `RAILWAY_PUBLIC_DOMAIN`), so `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` and `SITE_URL` are only needed for your own domain.
+
+## The chosen setup: Supabase (database + files) with Render or Railway (the app)
+
+You need four free accounts: **GitHub** (you have it), **Supabase**, **Render** *or* **Railway**, and an **email service** (Brevo, Resend or SendGrid all have free tiers). Do the steps in this order. Paste secrets only into the dashboards, never into chat, email or the repository.
+
+### Step 1: Supabase (about 10 minutes)
+1. Sign up at supabase.com → **New project**. Name `awards-platform`, region **Mumbai (ap-south-1)**. Save the database password in a password manager.
+2. **Connect** → choose the **Session pooler** connection string (it works over IPv4, which Render and Railway need). Copy it and add `?sslmode=require` at the end. This is your `DATABASE_URL`. Keep `DB_TRANSACTION_POOLER=False`.
+3. **Storage** → **New bucket** `awards-uploads`, **Public: off**. Then **Storage → Settings → S3 connection**: copy the endpoint and region, and **create an access key** (ID and secret).
+
+### Step 2a: Render (recommended; about 10 minutes)
+1. Sign up at render.com with GitHub. **New → Blueprint** → pick `AwardApplication`. Render reads `render.yaml`.
+2. Fill in the values it asks for:
+   - `DATABASE_URL`: from step 1.2.
+   - `AWS_*`: from step 1.3.
+   - `EMAIL_*` and `DEFAULT_FROM_EMAIL`: from step 3. You can leave them empty for now; `SHOW_INVITE_LINKS=True` covers you.
+   - `SENTRY_DSN`: optional.
+   
+   `SECRET_KEY` and `JWT_SIGNING_KEY` are generated for you.
+3. **Apply**. The first build takes a few minutes; migrations run on start. When it shows *Live*, open `https://<name>.onrender.com/api/v1/health/`. It should say `"database": "ok"`.
+4. The free plan sleeps when idle, so the first visit takes about a minute. Switch the plan to *Starter* before real users arrive.
+
+### Step 2b: Railway (alternative)
+1. Sign up at railway.com with GitHub → **New project → Deploy from GitHub repo** → `AwardApplication`. Railway reads `railway.json` and builds `Dockerfile.prod`.
+2. **Variables**: add the same values as in `render.yaml`:
+   - `DJANGO_SETTINGS_MODULE=config.settings.prod`
+   - `RUN_MIGRATIONS_ON_START=true`
+   - a `SECRET_KEY` and `JWT_SIGNING_KEY` (make each with `python -c "import secrets; print(secrets.token_urlsafe(50))"`)
+   - `DATABASE_URL`, `AWS_*`, `EMAIL_*`, `SHOW_INVITE_LINKS=True`
+3. **Settings → Networking → Generate domain**. Open `https://<name>.up.railway.app/api/v1/health/` and check it says `"database": "ok"`.
+
+Use **one** of Render or Railway for the live site. Keeping the second one as a staging copy is fine, but give it its **own** Supabase project, so tests never touch real data.
+
+### Step 3: Email (so invites and notifications arrive)
+1. Sign up with an email service and verify your sending address or domain. For a domain, add the SPF and DKIM records it shows you.
+2. Copy its **SMTP** details into the variables: `EMAIL_HOST`, `EMAIL_PORT=587`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL`.
+3. Test: add yourself as a staff member under *People*. If the email arrives, set `SHOW_INVITE_LINKS=False`.
+4. If no email arrives and the logs show a connection timeout, the hosting plan may block outgoing mail ports. Some free plans do; check your plan's current rules. Try the provider's alternative port (often `2525`), or a paid plan. Until then, `SHOW_INVITE_LINKS=True` shows the leader each invite link to send by hand.
+
+### Step 4: First leader and real data
+In the Render **Shell** tab (or `railway run`), run `python manage.py createsuperuser` once. Then follow "From an empty database to a working site" below.
+
+## Option A: Render or Railway with any managed PostgreSQL
 
 1. Create a managed PostgreSQL 16 database and copy its connection URL.
 2. Create a web service from this repository using **`Dockerfile.prod`**.

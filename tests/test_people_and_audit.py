@@ -144,3 +144,16 @@ def test_api_created_account_without_password_gets_an_invite(saved, mailoutbox):
                                                "role": "staff"}, format="json")
     assert response.status_code == 201
     assert mailoutbox and mailoutbox[-1].to == ["new.staff@awards.example"]
+
+
+@pytest.mark.django_db
+def test_invite_link_shown_on_screen_only_when_switched_on(settings):
+    client, _ = leader_client()
+    settings.SHOW_INVITE_LINKS = False
+    page = client.post(reverse("dashboard:people"), NEW_JUDGE, follow=True).content.decode()
+    assert "/password-reset/" not in page
+
+    settings.SHOW_INVITE_LINKS = True
+    page = client.post(reverse("dashboard:people"), {**NEW_JUDGE, "email": "second@judges.example"},
+                       follow=True).content.decode()
+    assert "send second@judges.example this one-time link yourself" in page and "/password-reset/" in page

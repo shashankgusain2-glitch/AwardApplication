@@ -6,6 +6,7 @@ staff permission: Rule 3).
 from datetime import date
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -109,6 +110,12 @@ def _number(raw, default):
     return int(raw) if raw.isdigit() else default
 
 
+def _show_link(request, person, link):
+    """While email isn't set up (SHOW_INVITE_LINKS), show the leader the link to pass on by hand."""
+    if settings.SHOW_INVITE_LINKS:
+        messages.info(request, f"Email may not be set up yet: send {person.email} this one-time link yourself: {link}")
+
+
 @role_required("leader")
 @require_http_methods(["GET", "POST"])
 def people(request):
@@ -132,7 +139,7 @@ def people(request):
             with transaction.atomic():
                 user = account_services.create_account(created_by=request.user, email=email, name=name,
                                                        role=role, **judge_fields)
-                account_services.invite(user, by=request.user)
+                link = account_services.invite(user, by=request.user)
         except ValidationError:
             messages.error(request, "Enter a valid email address.")
         except BusinessRuleError as error:
@@ -140,6 +147,7 @@ def people(request):
         else:
             messages.success(request, f"{user.display_name} ({user.get_role_display()}) added. "
                                       f"An email with a set-your-password link was sent to {user.email}.")
+            _show_link(request, user, link)
         return redirect("dashboard:people")
 
     users = User.objects.order_by("role", "name", "email")
@@ -169,8 +177,9 @@ def person_action(request, pk):
         elif action == "invite":
             if person.role == User.Role.APPLICANT:
                 raise BusinessRuleError("Applicants reset their own password from the login page.")
-            account_services.invite(person, by=request.user)
+            link = account_services.invite(person, by=request.user)
             messages.success(request, f"A new set-your-password link was sent to {person.email}.")
+            _show_link(request, person, link)
         else:
             raise BusinessRuleError("Unknown action.")
     except BusinessRuleError as error:

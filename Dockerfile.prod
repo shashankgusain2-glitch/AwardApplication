@@ -24,7 +24,6 @@ RUN SECRET_KEY=build-only-not-a-secret-0123456789abcdef ALLOWED_HOSTS=localhost 
 USER app
 EXPOSE 8000
 
-# Migrations run as a separate release step (see docs/Deployment.md), not on every start.
-CMD ["gunicorn", "config.wsgi:application", \
-     "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "60", \
-     "--access-logfile", "-", "--error-logfile", "-"]
+# deploy/start.sh: Gunicorn on $PORT (set by Render / Railway, default 8000); with
+# RUN_MIGRATIONS_ON_START=true it applies migrations first (see docs/Deployment.md).
+CMD ["sh", "deploy/start.sh"]
