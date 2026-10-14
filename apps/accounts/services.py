@@ -8,6 +8,8 @@ from django.utils import timezone
 
 from apps.audit.services import record
 from apps.core.services import BusinessRuleError
+from apps.notifications.models import Notification
+from apps.notifications.services import notify
 
 from .models import ApplicantProfile, JudgeProfile, User
 
@@ -65,6 +67,10 @@ def verify_organisation(profile, *, by, approve, note=""):
     profile.verification_note = note
     profile.save()
     record(by, "verify", profile, changes={"from": before, "to": profile.verification_status, "note": note})
+    from django.urls import reverse
+    message = (f"{profile.organisation_name} is verified. Your applications can now go to judges." if approve
+               else f"{profile.organisation_name} couldn't be verified. {note}".strip())
+    notify(profile.user, message, kind=Notification.Kind.STATUS_CHANGE, link=reverse("entries:organisation"))
     return profile
 
 

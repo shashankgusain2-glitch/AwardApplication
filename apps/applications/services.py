@@ -5,11 +5,14 @@ they never change status or content directly.
 import secrets
 
 from django.db import IntegrityError, transaction
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.audit.services import record
 from apps.core.services import BusinessRuleError
+from apps.notifications.models import Notification
+from apps.notifications.services import notify, notify_role
 
 from .models import Application
 
@@ -126,6 +129,8 @@ def submit(application, *, by):
         set_status(application, S.SUBMITTED, by=by)
     else:
         record(by, "update", application, changes={"resubmitted_after_edit": True})
+    notify(by, f"{application.reference} ({application.award.name}) was submitted. We'll tell you when it moves on.",
+           kind=Notification.Kind.STATUS_CHANGE, link=reverse("entries:status"))
     return application
 
 
@@ -141,6 +146,8 @@ def request_edit(application, *, by, reason):
     application.edit_reason = reason
     application.save(update_fields=["edit_requested", "edit_reason", "updated_at"])
     record(by, "update", application, changes={"edit_requested": reason})
+    notify_role(User.Role.STAFF, f"{application.reference}: the applicant asks to edit it. Reason: {reason}",
+                kind=Notification.Kind.REQUEST, link=reverse("awards:entries"))
     return application
 
 
@@ -154,6 +161,10 @@ def decide_edit(application, *, by, allow):
     application.edit_allowed = allow
     application.save(update_fields=["edit_requested", "edit_allowed", "updated_at"])
     record(by, "update", application, changes={"edit_allowed": allow})
+    answer = "you can now change your application, then submit it again." if allow \
+        else "your request to edit was refused."
+    notify(application.applicant, f"{application.reference}: {answer}",
+           kind=Notification.Kind.STATUS_CHANGE, link=reverse("entries:form", args=[application.award.slug]))
     return application
 
 
@@ -165,7 +176,11 @@ def change_status(application, *, by, new_status, note=""):
         raise BusinessRuleError(f"Can't move an application from {application.status} to {new_status}.")
     if by.role not in allowed_roles:
         raise BusinessRuleError("Your role can't make this change.")
-    return set_status(application, new_status, by=by, note=note)
+    set_status(application, new_status, by=by, note=note)
+    outcome = "approved" if new_status == S.APPROVED else "not successful"
+    notify(application.applicant, f"{application.reference} ({application.award.name}): your application was {outcome}."
+           + (f" Note: {note}" if note else ""), kind=Notification.Kind.STATUS_CHANGE, link=reverse("entries:status"))
+    return application
 
 
 def applicant_home(user):

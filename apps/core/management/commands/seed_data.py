@@ -23,6 +23,7 @@ from apps.awards import services as award_services
 from apps.awards.models import Award, Criterion
 from apps.core import demo_data
 from apps.evaluations import services as evaluations
+from apps.notifications.services import emails_off
 
 DEFAULT_DEMO_PASSWORD = "Awards-Demo-2026"
 
@@ -51,8 +52,11 @@ def question_key(label):
 class Command(BaseCommand):
     help = "Load demo users, awards, reports, assignments and evaluations (safe to re-run)."
 
-    @transaction.atomic
     def handle(self, *args, **options):
+        with emails_off(), transaction.atomic():   # demo data: in-app notifications only, no emails
+            self.load()
+
+    def load(self):
         password = os.environ.get("DEMO_PASSWORD", DEFAULT_DEMO_PASSWORD)
         leader = self.user(*LEADER, User.Role.LEADER, password)
         staff = [self.user(email, name, User.Role.STAFF, password) for email, name in STAFF]

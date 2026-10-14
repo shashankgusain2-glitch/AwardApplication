@@ -18,6 +18,7 @@
           {% url url_name as href %}
           <a href="{{ href }}" {% if request.resolver_match.view_name == url_name %}class="active" aria-current="page"{% endif %}>{{ label }}</a>
         {% endfor %}
+        <a href="{% url 'notifications:inbox' %}" {% if request.resolver_match.app_name == "notifications" %}class="active" aria-current="page"{% endif %}>Notifications{% if unread_notifications %} <span class="badge badge-pending" aria-label="{{ unread_notifications }} unread">{{ unread_notifications }}</span>{% endif %}</a>
       </nav>
       <p class="sidebar-label">Signed in as</p>
       <div class="role-switch">

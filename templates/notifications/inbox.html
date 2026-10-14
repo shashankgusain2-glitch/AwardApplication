@@ -1,0 +1,32 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Notifications{% endblock %}
+{% block heading %}Notifications{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Updates about your work. Each one is also sent to {{ user.email }}.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-head">
+    <h2>{{ unread_notifications }} unread</h2>
+    {% if unread_notifications %}
+      <form method="post" action="{% url 'notifications:read_all' %}">{% csrf_token %}<button class="btn btn-outline btn-sm" type="submit">Mark all as read</button></form>
+    {% endif %}
+  </div>
+  {% for note in notes %}
+    <div class="settings-row">
+      <span>
+        {% if not note.is_read %}<strong>{{ note.message }}</strong>{% else %}{{ note.message }}{% endif %}<br>
+        <span class="muted small">{{ note.get_kind_display }} · {{ note.created_at|date:"j M Y, H:i" }}</span>
+      </span>
+      {% if note.link %}
+        <form method="post" action="{% url 'notifications:open' note.pk %}">{% csrf_token %}<button class="btn btn-outline btn-sm" type="submit">Open</button></form>
+      {% elif not note.is_read %}
+        <form method="post" action="{% url 'notifications:open' note.pk %}">{% csrf_token %}<button class="btn btn-outline btn-sm" type="submit">Mark read</button></form>
+      {% endif %}
+    </div>
+  {% empty %}
+    <p class="muted small" style="margin:0">No notifications yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -6,6 +6,7 @@ reason (every change recorded).
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import transaction
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -16,6 +17,8 @@ from apps.assignments.services import start_review
 from apps.audit.services import record
 from apps.awards.models import Criterion
 from apps.core.services import BusinessRuleError
+from apps.notifications.models import Notification
+from apps.notifications.services import notify, notify_role
 
 from .models import CriterionScore, Evaluation, ScoreChange, ScoreChangeRequest
 
@@ -118,6 +121,9 @@ def request_change(evaluation, *, judge, reason):
         raise BusinessRuleError("You already have a request waiting or approved.")
     req = ScoreChangeRequest.objects.create(evaluation=evaluation, reason=reason)
     record(judge, "update", req, changes={"reason": reason})
+    notify_role(User.Role.STAFF, f"{judge.display_name} asks to change a submitted score on "
+                f"{evaluation.assignment.report.reference}. Reason: {reason}",
+                kind=Notification.Kind.REQUEST, link=reverse("awards:entries"))
     return req
 
 
@@ -132,6 +138,10 @@ def decide_change(change_request, *, by, approve):
     change_request.decided_at = timezone.now()
     change_request.save()
     record(by, "update", change_request, changes={"status": change_request.status})
+    assignment = change_request.evaluation.assignment
+    notify(assignment.judge, f"{assignment.report.reference}: your request to change a score was "
+           + ("allowed. Change it and give a reason." if approve else "refused."),
+           kind=Notification.Kind.STATUS_CHANGE, link=reverse("judging:score", args=[assignment.pk]))
     return change_request
 
 

@@ -13,6 +13,7 @@ urlpatterns = [
     path("judge/", include("apps.judging.urls")),
     path("staff/", include("apps.awards.urls")),
     path("leadership/", include("apps.dashboard.urls")),
+    path("notifications/", include("apps.notifications.urls")),
     path("", include("apps.accounts.urls")),
     path("", include("apps.core.urls")),
 ]

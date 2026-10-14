@@ -4,6 +4,7 @@ reassigning, judges accepting or declining, and staff-recorded conflicts.
 """
 from django.db import transaction
 from django.db.models import Count, Q
+from django.urls import reverse
 
 from apps.accounts.models import ApplicantProfile, User
 from apps.applications.models import Application
@@ -82,7 +83,8 @@ def assign(report, judge, *, by, round=1):
     if report.status == Application.Status.SUBMITTED:
         set_status(report, Application.Status.ASSIGNED, by=by)
     record(by, "assign", assignment, changes={"judge": judge.email, "report": report.reference, "round": round})
-    notify(judge, f"New report to judge: {report.reference}", kind="assignment")
+    notify(judge, f"New report to judge: {report.reference} ({report.award.name}). Accept or decline it.",
+           kind="assignment", link=reverse("judging:assignments"))
     return assignment
 
 
@@ -175,6 +177,9 @@ def decline(assignment, *, judge):
     if not report.assignments.filter(status__in=OPEN_STATUSES + [A.COMPLETED]).exists():
         set_status(report, Application.Status.SUBMITTED, by=judge, note="back to the pool")
     record(judge, "update", assignment, changes={"status": A.DECLINED})
+    if assignment.assigned_by:
+        notify(assignment.assigned_by, f"{judge.display_name} declined {report.reference}. It needs another judge.",
+               kind="request", link=reverse("awards:assign", args=[report.pk]))
     return assignment
 
 

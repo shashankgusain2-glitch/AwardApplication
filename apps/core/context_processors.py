@@ -20,8 +20,13 @@ def _asset_version():
 
 
 def site(request):
-    """Organisation details, portal navigation and asset version, on every page."""
+    """Organisation details, portal navigation, unread notifications and asset version, on every page."""
+    unread = 0
+    if getattr(request, "user", None) is not None and request.user.is_authenticated:
+        from apps.notifications.models import Notification
+        unread = Notification.objects.filter(user=request.user, is_read=False).count()
     return {
+        "unread_notifications": unread,
         "org": demo_data.ORGANISATION,
         "portal_nav": demo_data.PORTAL_NAV,
         "role_labels": demo_data.ROLE_LABELS,
