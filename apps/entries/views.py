@@ -85,6 +85,24 @@ def _sections(application):
     return sections
 
 
+# Session keys (per application): a file that failed to upload, and "highlight the missing
+# required questions" (set by a failed submit, cleared by a successful one).
+_UPLOAD_ERRORS = "upload_errors_{}"
+_CHECK_REQUIRED = "check_required_{}"
+
+
+def _first_section_with(application, keys):
+    """The 1-based number of the first form section that contains any of these question keys."""
+    names = []
+    for q in application.form_version.questions:
+        name = q.get("section") or "Your application"
+        if not names or names[-1] != name:
+            names.append(name)
+        if q["key"] in keys:
+            return len(names)
+    return 1
+
+
 @role_required("applicant")
 def application_form(request, slug=None):
     """
@@ -97,6 +115,7 @@ def application_form(request, slug=None):
         return render(request, "entries/application_pick.html", {
             "role": ROLE, "applications": mine,
             "open_awards": Award.objects.filter(status=Award.Status.OPEN).exclude(id__in=entered),
+            "upcoming_awards": Award.objects.filter(status=Award.Status.UPCOMING).exclude(id__in=entered),
         })
 
     award = get_object_or_404(Award, slug=slug)
@@ -116,14 +135,32 @@ def application_form(request, slug=None):
                 file_keys = {q["key"] for q in application.form_version.questions if q.get("type") == "file"}
                 keys = [k for k in request.POST.getlist("keys") if k not in file_keys]
                 answers = {k: request.POST.get(f"q_{k}", "").strip() for k in keys}
+                upload_errors = {}
                 if services.can_edit(application):
                     services.update(application, by=request.user, content=answers)
                     for key in file_keys:
                         if f"f_{key}" in request.FILES:
-                            files.attach(application, by=request.user, question_key=key,
-                                         upload=request.FILES[f"f_{key}"])
+                            try:
+                                files.attach(application, by=request.user, question_key=key,
+                                             upload=request.FILES[f"f_{key}"])
+                            except BusinessRuleError as error:   # flag that question; keep the other answers
+                                upload_errors[key] = str(error)
+                if upload_errors:
+                    request.session[_UPLOAD_ERRORS.format(application.pk)] = upload_errors
+                    messages.error(request, "Your other answers were saved, but a file couldn't be uploaded. "
+                                            "It's highlighted in red below.")
+                    return redirect(f"{request.path}?section={request.POST.get('section') or '1'}")
                 if action == "submit":
+                    missing = services.missing_required(application)
+                    if missing:
+                        request.session[_CHECK_REQUIRED.format(application.pk)] = True
+                        first = _first_section_with(application, missing)
+                        messages.error(request, f"{len(missing)} required question{'s' if len(missing) != 1 else ''} "
+                                                f"still need{'s' if len(missing) == 1 else ''} an answer. "
+                                                f"They're highlighted in red.")
+                        return redirect(f"{request.path}?section={first}")
                     services.submit(application, by=request.user)
+                    request.session.pop(_CHECK_REQUIRED.format(application.pk), None)
                     messages.success(request, f"{application.reference} submitted. It is now locked.")
                     return redirect("entries:status")
                 messages.success(request, "Saved.")
@@ -137,10 +174,23 @@ def application_form(request, slug=None):
 
     if application is None:
         if award.status != Award.Status.OPEN:
-            raise Http404("This award isn't open")
+            upcoming = award.status == Award.Status.UPCOMING and award.opens_on
+            when = f" It opens on {award.opens_on:%d %b %Y}." if upcoming else ""
+            messages.info(request, f"{award.name} isn't open for applications.{when}")
+            return redirect("entries:form")
         return render(request, "entries/application_start.html", {"role": ROLE, "award": award})
 
     sections = _sections(application)
+    editable = services.can_edit(application)
+    problems = request.session.pop(_UPLOAD_ERRORS.format(application.pk), {}) if editable else {}
+    if editable and request.session.get(_CHECK_REQUIRED.format(application.pk)):
+        # After a failed submit, unanswered required questions stay red until they're answered.
+        for key in services.missing_required(application):
+            problems.setdefault(key, "This question is required. Please answer it before you submit.")
+    for s in sections:
+        for q in s["questions"]:
+            q["problem"] = problems.get(q["key"], "")
+        s["problems"] = sum(1 for q in s["questions"] if q["problem"])
     try:
         index = max(0, min(int(request.GET.get("section", 1)) - 1, len(sections) - 1))
     except ValueError:
@@ -148,10 +198,14 @@ def application_form(request, slug=None):
     done = sum(s["done"] for s in sections)
     total = sum(s["total"] for s in sections) or 1
     return render(request, "entries/application_form.html", {
+        "problem_count": len(problems),
+        "problem_sections": [(n, s) for n, s in enumerate(sections, start=1) if s["problems"]],
         "role": ROLE,
         "award": award,
         "application": application,
-        "editable": services.can_edit(application),
+        "editable": editable,
+        "edit_blocked": services.edit_blocked(application),
+        "edit_request": application.requests.filter(kind="edit").first(),
         "sections": sections,
         "current": sections[index] if sections else {"name": "", "questions": []},
         "current_index": index + 1,
@@ -198,7 +252,8 @@ def application_status(request):
     applications = services.visible_to(request.user).select_related("award", "form_version").order_by("-updated_at")
     return render(request, "entries/application_status.html", {
         "role": ROLE,
-        "rows": [{"application": a, "timeline": _timeline(a)} for a in applications],
+        "rows": [{"application": a, "timeline": _timeline(a), "can_reevaluate": services.can_request_reevaluation(a),
+                  "requests": list(a.requests.select_related("staff_by", "decided_by"))} for a in applications],
     })
 
 
@@ -212,3 +267,18 @@ def delete_draft(request, pk):
         application.delete()   # soft delete
         messages.success(request, f"Draft {application.reference} deleted.")
     return redirect("entries:dashboard")
+
+
+@role_required("applicant")
+@require_POST
+def request_reevaluation(request, pk):
+    """Ask once, after the result, for fresh judges to score the application again."""
+    application = get_object_or_404(services.visible_to(request.user), pk=pk)
+    try:
+        services.request_reevaluation(application, by=request.user, reason=request.POST.get("reason", ""))
+    except BusinessRuleError as error:
+        messages.error(request, str(error))
+    else:
+        messages.success(request, f"{application.reference}: your request for a re-evaluation was sent to the "
+                                  f"programme staff. You'll get a notification when they decide.")
+    return redirect("entries:status")

@@ -28,6 +28,7 @@
     {% for section in sections %}
       <p class="eyebrow" style="margin-top:1rem">{{ section.name }}</p>
       {% for q in section.questions %}
+        {% ifchanged q.subsection %}{% if q.subsection %}<p class="small" style="margin:.75rem 0 0"><strong>{{ q.subsection }}</strong></p>{% endif %}{% endifchanged %}
         <div class="settings-row" style="display:block">
           <p class="muted small" style="margin:0 0 .25rem">{{ q.label }}</p>
           {% if q.hidden %}<span class="hidden-value">🔒 Hidden for blind judging</span>
@@ -80,7 +81,7 @@
         </div>
       {% elif change_request.status == "approved" %}
         <div class="card">
-          <h3 style="margin-top:0">Staff allowed you to change your scores</h3>
+          <h3 style="margin-top:0">Leadership confirmed: you can change your scores</h3>{% if change_request.note %}<p class="small">Note: “{{ change_request.note }}”</p>{% endif %}
           <div class="field"><label for="reason">Reason for the change (recorded)</label><input id="reason" name="reason" type="text" required></div>
           <div class="row"><button class="btn btn-primary" name="action" value="change">Save the change</button></div>
         </div>
@@ -89,10 +90,17 @@
 
     {% if submitted and change_request.status != "approved" %}
       <div class="card">
-        {% if change_request.status == "requested" %}
-          <p class="small" style="margin:0"><strong>Change requested</strong> on {{ change_request.created_at|date:"j M Y" }}: “{{ change_request.reason }}”. Waiting for staff.</p>
+        {% if change_request.status == "requested" or change_request.status == "staff_approved" %}
+          <p class="small" style="margin:0"><strong>Change requested</strong> on {{ change_request.created_at|date:"j M Y" }}: “{{ change_request.reason }}”.</p>
+          <ol class="request-steps small">
+            <li class="done">You asked</li>
+            <li class="{% if change_request.staff_at %}done{% else %}current{% endif %}">Programme staff check it</li>
+            <li class="{% if change_request.status == 'staff_approved' %}current{% endif %}">Leadership confirms it</li>
+          </ol>
+        {% elif changes_closed %}
+          <p class="small" style="margin:0"><strong>Submitted{% if evaluation.submitted_at %} on {{ evaluation.submitted_at|date:"j M Y" }}{% endif %}.</strong> {{ changes_closed }}</p>
         {% else %}
-          <p class="small" style="margin:0 0 .5rem"><strong>Submitted{% if evaluation.submitted_at %} on {{ evaluation.submitted_at|date:"j M Y" }}{% endif %}.</strong> To change a score, ask the programme staff first.{% if change_request.status == "declined" %} Your last request was refused.{% endif %}</p>
+          <p class="small" style="margin:0 0 .5rem"><strong>Submitted{% if evaluation.submitted_at %} on {{ evaluation.submitted_at|date:"j M Y" }}{% endif %}.</strong> To change a score, ask first: the programme staff check it, then leadership confirms it.{% if change_request.status == "declined" %} Your last request was refused{% if change_request.note %}: “{{ change_request.note }}”{% endif %}.{% endif %}</p>
           <form method="post" class="row">
             {% csrf_token %}<input type="hidden" name="action" value="request_change">
             <input name="reason" type="text" placeholder="Why do you need to change it?" required style="flex:1">

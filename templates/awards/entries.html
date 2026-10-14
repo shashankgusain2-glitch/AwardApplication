@@ -1,4 +1,5 @@
 {% extends "portal_base.html" %}
+{% load ui %}
 
 {% block title %}Entries{% endblock %}
 {% block heading %}Entries{% endblock %}
@@ -6,8 +7,18 @@
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-{% if to_verify or edit_requests or score_requests %}
-<div class="grid grid-3" style="align-items:start;margin-bottom:1.5rem">
+{% if staff_requests or leader_requests or to_verify %}
+<div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(260px,1fr);align-items:start;margin-bottom:1.5rem">
+  <div class="card" {% if staff_requests %}style="border-left:4px solid var(--warning)"{% endif %}>
+    <h2 style="font-size:1.05rem">Requests waiting for staff ({{ staff_requests|length }})</h2>
+    <p class="muted small" style="margin:0 0 .5rem">Applicants asking to edit a submitted report or for a re-evaluation, and judges asking to change a submitted score. Check each one: <strong>Pass to leadership</strong> sends it to a leader to confirm (nothing changes until they do), or <strong>Refuse</strong> it with a note.</p>
+    {% for row in staff_requests %}{% include "partials/request_row.html" with step="staff" %}{% empty %}<p class="muted small" style="margin:0">None waiting.</p>{% endfor %}
+    {% if leader_requests %}
+      <details style="margin-top:.75rem"><summary class="small"><strong>Waiting for leadership to confirm ({{ leader_requests|length }})</strong></summary>
+        {% for row in leader_requests %}{% include "partials/request_row.html" with step="" %}{% endfor %}
+      </details>
+    {% endif %}
+  </div>
   <div class="card">
     <h2 style="font-size:1.05rem">Organisations to verify ({{ to_verify|length }})</h2>
     {% for p in to_verify %}
@@ -18,34 +29,6 @@
           {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
           <button class="btn btn-success btn-sm" name="decision" value="approve" {% if not p.gstin %}disabled title="Needs a GSTIN first"{% endif %}>Verify</button>
           <button class="btn btn-outline btn-sm" name="decision" value="reject">Reject</button>
-        </form>
-      </div>
-    {% empty %}<p class="muted small" style="margin:0">None waiting.</p>{% endfor %}
-  </div>
-  <div class="card">
-    <h2 style="font-size:1.05rem">Applicants asking to edit ({{ edit_requests|length }})</h2>
-    {% for app in edit_requests %}
-      <div class="settings-row" style="display:block">
-        <strong>{{ app.reference }}</strong> · {{ app.award.name }}<br>
-        <span class="muted small">“{{ app.edit_reason }}”</span>
-        <form method="post" action="{% url 'awards:decide_edit' app.pk %}" class="row" style="margin-top:.4rem">
-          {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button class="btn btn-success btn-sm" name="decision" value="allow">Allow</button>
-          <button class="btn btn-outline btn-sm" name="decision" value="refuse">Refuse</button>
-        </form>
-      </div>
-    {% empty %}<p class="muted small" style="margin:0">None waiting.</p>{% endfor %}
-  </div>
-  <div class="card">
-    <h2 style="font-size:1.05rem">Judges asking to change a score ({{ score_requests|length }})</h2>
-    {% for r in score_requests %}
-      <div class="settings-row" style="display:block">
-        <strong>{{ r.evaluation.assignment.report.reference }}</strong> · {{ r.evaluation.assignment.judge.display_name }}<br>
-        <span class="muted small">“{{ r.reason }}”</span>
-        <form method="post" action="{% url 'awards:decide_score_change' r.pk %}" class="row" style="margin-top:.4rem">
-          {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button class="btn btn-success btn-sm" name="decision" value="approve">Allow</button>
-          <button class="btn btn-outline btn-sm" name="decision" value="refuse">Refuse</button>
         </form>
       </div>
     {% empty %}<p class="muted small" style="margin:0">None waiting.</p>{% endfor %}
@@ -65,7 +48,7 @@
   </form>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Reference</th><th>Organisation</th><th>Award</th><th>Submitted</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Reference</th><th>Organisation</th><th>Award</th><th>Submitted</th><th>Status</th><th>Judged</th><th></th></tr></thead>
       <tbody>
         {% for r in reports %}
           <tr>
@@ -74,6 +57,7 @@
             <td class="small">{{ r.award.name }}</td>
             <td class="muted small">{{ r.submitted_at|date:"j M Y"|default:"—" }}</td>
             <td><span class="badge badge-{{ r.status }}">{{ r.get_status_display }}</span></td>
+            <td>{% if r.status != "draft" and r.status != "rejected" %}{% judged_bar r %}{% else %}<span class="muted small">—</span>{% endif %}</td>
             <td class="row">
               {% if r.status in "submitted assigned in_review" %}<a class="btn btn-primary btn-sm" href="{% url 'awards:assign' r.pk %}">Judges</a>{% endif %}
               {% if r.status == "submitted" %}
@@ -85,7 +69,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="6" class="muted small">No applications match.</td></tr>
+          <tr><td colspan="7" class="muted small">No applications match.</td></tr>
         {% endfor %}
       </tbody>
     </table>

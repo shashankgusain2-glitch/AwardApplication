@@ -9,9 +9,12 @@
 <div class="grid grid-4" style="margin-bottom:1.5rem">
   <div class="kpi"><span>Organisations to verify</span><strong>{{ to_verify|length }}</strong></div>
   <div class="kpi"><span>Reports needing judges</span><strong>{{ needing_judges|length }}</strong></div>
-  <div class="kpi"><span>Judge score-change requests</span><strong>{{ score_requests }}</strong></div>
-  <div class="kpi"><span>Applicant edit requests</span><strong>{{ edit_requests }}</strong></div>
+  <div class="kpi"><span>Requests for you to check</span><strong>{{ staff_requests }}</strong></div>
+  <div class="kpi"><span>Waiting for leadership</span><strong>{{ leader_requests }}</strong></div>
 </div>
+{% if staff_requests %}
+  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>{{ staff_requests }} request{{ staff_requests|pluralize }} waiting for staff</strong>Applicant edits, re-evaluations or judges' score changes. Check them on <a href="{% url 'awards:entries' %}">Entries</a>; leadership then confirms.</div></div>
+{% endif %}
 
 <div class="card" style="margin-bottom:1.5rem">
   <div class="card-head"><h2>Awards</h2><span class="row"><a class="btn btn-primary btn-sm" href="{% url 'awards:award_new' %}">+ New award</a><a class="btn btn-outline btn-sm" href="{% url 'awards:award_list' %}">Manage awards</a></span></div>

@@ -22,20 +22,22 @@
     <div class="card-head"><h2>Company details</h2></div>
     <div class="form-grid">
       {% include "entries/_field.html" with name="organisation_name" label="Registered name *" value=values.organisation_name error=errors.organisation_name %}
-      <div class="field">
+      <div class="field{% if errors.gstin %} field-invalid{% endif %}">
         <label for="f-gstin">GSTIN</label>
-        <input id="f-gstin" name="gstin" type="text" maxlength="15" value="{{ values.gstin }}" {% if gstin_locked %}readonly{% endif %}>
-        {% if errors.gstin %}<p class="hint field-error">{{ errors.gstin }}</p>{% else %}<p class="hint">15 characters, like 27ABCDE1234F1Z5. Locked once verified.</p>{% endif %}
+        <input id="f-gstin" name="gstin" {% if errors.gstin %}aria-invalid="true" aria-describedby="err-gstin"{% endif %} type="text" maxlength="15" value="{{ values.gstin }}" {% if gstin_locked %}readonly{% endif %}>
+        {% if errors.gstin %}<p class="hint field-error" id="err-gstin">⚠ {{ errors.gstin }}</p>{% else %}<p class="hint">15 characters, like 27ABCDE1234F1Z5. Locked once verified.</p>{% endif %}
       </div>
       {% include "entries/_field.html" with name="holder_pan" label="PAN of authorised person" value=values.holder_pan error=errors.holder_pan %}
       {% include "entries/_field.html" with name="sector" label="Sector" value=values.sector error=errors.sector %}
-      <div class="field">
+      <div class="field{% if errors.organisation_size %} field-invalid{% endif %}">
         <label for="f-size">Size</label>
-        <select id="f-size" name="organisation_size"><option value="">Choose…</option>{% for v, l in sizes %}<option value="{{ v }}" {% if values.organisation_size == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+        <select id="f-size" name="organisation_size"{% if errors.organisation_size %} aria-invalid="true"{% endif %}><option value="">Choose…</option>{% for v, l in sizes %}<option value="{{ v }}" {% if values.organisation_size == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+        {% if errors.organisation_size %}<p class="hint field-error">⚠ {{ errors.organisation_size }}</p>{% endif %}
       </div>
-      <div class="field">
+      <div class="field{% if errors.annual_turnover_band %} field-invalid{% endif %}">
         <label for="f-turnover">Annual turnover</label>
-        <select id="f-turnover" name="annual_turnover_band"><option value="">Choose…</option>{% for v, l in turnovers %}<option value="{{ v }}" {% if values.annual_turnover_band == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+        <select id="f-turnover" name="annual_turnover_band"{% if errors.annual_turnover_band %} aria-invalid="true"{% endif %}><option value="">Choose…</option>{% for v, l in turnovers %}<option value="{{ v }}" {% if values.annual_turnover_band == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+        {% if errors.annual_turnover_band %}<p class="hint field-error">⚠ {{ errors.annual_turnover_band }}</p>{% endif %}
       </div>
       {% include "entries/_field.html" with name="established_year" label="Year established" value=values.established_year error=errors.established_year %}
       {% include "entries/_field.html" with name="website" label="Website" value=values.website error=errors.website %}

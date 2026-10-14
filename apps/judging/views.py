@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.accounts.permissions import role_required
+from apps.applications.models import Application
 from apps.assignments import services as assignment_services
 from apps.assignments.models import JudgeAssignment
 from apps.core.services import BusinessRuleError
@@ -132,5 +133,8 @@ def score(request, pk=None):
         "submitted": submitted,
         "can_grade": assignment.status in (JudgeAssignment.Status.PENDING, JudgeAssignment.Status.IN_REVIEW),
         "change_request": change_request,
+        "changes_closed": (evaluation_services.REPLACED if assignment.status == JudgeAssignment.Status.SUPERSEDED
+                           else evaluation_services.RESULT_DECIDED if assignment.report.status in (
+                               Application.Status.APPROVED, Application.Status.REJECTED) else ""),
         "history": evaluation.score_changes.select_related("criterion", "changed_by") if evaluation else [],
     })

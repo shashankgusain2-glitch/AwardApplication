@@ -1,0 +1,28 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Requests to confirm{% endblock %}
+{% block heading %}Requests to confirm{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Changes asked for after submitting. Programme staff have checked each one; nothing happens until a leader confirms it.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+<div class="callout callout-info" style="margin-bottom:1.5rem">
+  <div><strong>What confirming does</strong>
+    <b>Edit the submitted report</b>: the applicant can change their answers and submit again (only possible before any judge starts).
+    <b>Re-evaluate the result</b>: the first judges' scores are kept as history, new judges score the report, and the result is decided again.
+    <b>Change a submitted score</b>: the judge can change their scores; every change is recorded with a reason.
+  </div>
+</div>
+
+<div class="card" {% if rows %}style="border-left:4px solid var(--warning)"{% endif %}>
+  <h2 style="font-size:1.05rem">Waiting for you ({{ rows|length }})</h2>
+  {% for row in rows %}{% include "partials/request_row.html" with step="leader" %}{% empty %}<p class="muted small" style="margin:0">Nothing to confirm.</p>{% endfor %}
+</div>
+
+{% if with_staff %}
+  <details class="card" style="margin-top:1.5rem">
+    <summary><strong>Still with staff ({{ with_staff|length }})</strong> <span class="muted small">They'll come here once checked.</span></summary>
+    {% for row in with_staff %}{% include "partials/request_row.html" with step="" %}{% endfor %}
+  </details>
+{% endif %}
+{% endblock %}

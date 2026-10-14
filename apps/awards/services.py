@@ -128,7 +128,7 @@ QUESTION_TYPES = {"text": "Short text", "textarea": "Long text", "file": "File"}
 def questions_from_editor(rows):
     """
     Turn the form-builder rows into a question list for a new version.
-    rows: [{key, label, type, section, required, identifying, remove}] in order. Rows marked
+    rows: [{key, label, type, section, subsection, required, identifying, remove}] in order. Rows marked
     remove, and new rows left blank, are dropped. Existing questions keep their key, so answers
     in applications on older versions stay linked; new questions get a key made from the label.
     """
@@ -150,6 +150,7 @@ def questions_from_editor(rows):
         keys.add(key)
         questions.append({"key": key, "label": label, "type": row["type"],
                           "section": (row.get("section") or "").strip() or "Questions",
+                          "subsection": (row.get("subsection") or "").strip(),
                           "required": bool(row.get("required")), "identifying": bool(row.get("identifying"))})
     return questions
 
@@ -157,6 +158,7 @@ def questions_from_editor(rows):
 # --- Award administration (staff create and run any award) -----------------------
 
 ROUND_KINDS = dict(AwardRound.Kind.choices)
+MAX_ROUNDS = 2                                     # e.g. desk review, then a site visit or live round
 
 
 def _unique_slug(name, exclude_pk=None):
@@ -179,8 +181,8 @@ def _check_award_fields(*, name, judges_per_report, opens_on, closes_on, rounds,
         raise BusinessRuleError("The closing date can't be before the opening date.")
     if not rounds:
         raise BusinessRuleError("An award needs at least one judging round.")
-    if len(rounds) > 5:
-        raise BusinessRuleError("An award can have at most 5 rounds.")
+    if len(rounds) > MAX_ROUNDS:
+        raise BusinessRuleError(f"An award can have at most {MAX_ROUNDS} rounds.")
     if any(kind not in ROUND_KINDS for kind in rounds):
         raise BusinessRuleError("Each round must be a desk review, site visit or live presentation.")
     if blind_judging and "desk" not in rounds:
@@ -230,10 +232,16 @@ def update_award(award, *, by, rounds, **fields):
 
 
 def ready_to_open(award):
-    """What is missing before applicants can apply. An empty list means ready."""
+    """What is missing before applicants can apply: only the form. An empty list means ready."""
     problems = []
     if award.current_form is None:
         problems.append("Publish the application form (Form builder → Edit questions).")
+    return problems
+
+
+def ready_to_judge(award):
+    """What is missing before judges can be assigned: criteria for every round and a panel."""
+    problems = []
     for r in award.rounds.all():
         total = sum(award.criteria.filter(round_number=r.number).values_list("weight", flat=True))
         if total != 100:
@@ -241,6 +249,30 @@ def ready_to_open(award):
     if not award.judge_panel.exists():
         problems.append("Choose at least one judge for the panel.")
     return problems
+
+
+def apply_date_rules(today=None):
+    """
+    Open and close awards by their dates, so staff don't have to remember to:
+      Upcoming → Open    on the opening date, if the form is published and it hasn't closed yet
+      Open     → Closed  the day after the closing date
+    An award with no opening date stays Upcoming until staff open it. Each change is audited
+    (no user: the system did it). Cheap when nothing is due: two small queries.
+    """
+    today = today or timezone.localdate()
+    due_to_open = (Award.objects.filter(status=Award.Status.UPCOMING, opens_on__lte=today)
+                   .exclude(closes_on__lt=today).filter(form_versions__published_at__isnull=False).distinct())
+    due_to_close = Award.objects.filter(status=Award.Status.OPEN, closes_on__lt=today)
+    changed = []
+    for awards, status, reason in ((due_to_open, Award.Status.OPEN, "opening date reached"),
+                                   (due_to_close, Award.Status.CLOSED, "closing date passed")):
+        for award in awards:
+            before = award.status
+            award.status = status
+            award.save(update_fields=["status", "updated_at"])
+            record(None, "status_change", award, changes={"from": before, "to": status, "automatic": reason})
+            changed.append(award)
+    return changed
 
 
 @transaction.atomic
@@ -251,6 +283,12 @@ def set_status(award, *, by, status):
         problems = ready_to_open(award)
         if problems:
             raise BusinessRuleError("Not ready to open: " + " ".join(problems))
+        if award.closes_on and award.closes_on < timezone.localdate():
+            raise BusinessRuleError("The closing date has passed. Move the closing date later first.")
+    if status == Award.Status.JUDGING:
+        problems = ready_to_judge(award)
+        if problems:
+            raise BusinessRuleError("Not ready for judging: " + " ".join(problems))
     before = award.status
     award.status = status
     award.save(update_fields=["status", "updated_at"])

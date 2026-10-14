@@ -51,6 +51,8 @@ def test_staff_settings_change_the_public_page_for_everyone(staff_client, client
 
 @pytest.mark.django_db
 def test_settings_for_one_award_do_not_change_the_other(staff_client, client):
+    from apps.awards.services import get_or_create_from_demo
+    get_or_create_from_demo("business-excellence")
     _post(staff_client, blind="on", judges_per_entry="4")
     be_page = client.get(reverse("core:award_detail", args=["business-excellence"])).content.decode()
     assert "3 jury members read and score" in be_page

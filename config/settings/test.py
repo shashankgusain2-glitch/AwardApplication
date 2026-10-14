@@ -21,3 +21,6 @@ SECRET_KEY = "test-only-secret-key-long-enough-for-hs256-0123456789"
 LOGGING = {"version": 1, "disable_existing_loggers": False,
            "handlers": {"null": {"class": "logging.NullHandler"}},
            "root": {"handlers": ["null"]}}
+
+# Open and close awards by their dates on every request, so tests see the change at once.
+AWARD_DATE_RULES_EVERY = 0

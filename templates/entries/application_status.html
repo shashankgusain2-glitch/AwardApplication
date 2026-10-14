@@ -26,6 +26,43 @@
           <li class="{{ step.state }}"><span class="dot"></span><strong>{{ step.label }}</strong><span class="muted small">{{ step.date|date:"j M Y"|default:"" }}</span></li>
         {% endfor %}
       </ol>
+
+      {% for req in row.requests %}
+        <div class="callout {% if req.status == 'approved' %}callout-success{% elif req.status == 'declined' %}callout-warning{% else %}callout-info{% endif %}" style="margin-top:1rem">
+          <div><strong>{{ req.get_kind_display }} · {{ req.get_status_display }}</strong>
+            Asked {{ req.created_at|date:"j M Y" }}: “{{ req.reason }}”
+            <ol class="request-steps small">
+              <li class="done">You asked</li>
+              <li class="{% if req.staff_at %}done{% elif req.status == 'requested' %}current{% endif %}">Programme staff check it{% if req.staff_at %} ({{ req.staff_at|date:"j M Y" }}){% endif %}</li>
+              <li class="{% if req.status == 'approved' %}done{% elif req.status == 'staff_approved' %}current{% endif %}">Leadership confirms it{% if req.status == 'approved' %} ({{ req.decided_at|date:"j M Y" }}){% endif %}</li>
+            </ol>
+            {% if req.status == "approved" and req.kind == "reevaluation" %}
+              {% if app.status == "approved" or app.status == "rejected" %}New judges scored your application and the result above is the new decision.{% else %}New judges are scoring your application; then the result will be decided again.{% endif %}
+              Previous result: {{ app.reevaluation_previous_result|capfirst }}.
+            {% elif req.status == "approved" and req.kind == "edit" %}
+              {% if app.edit_allowed %}You can now <a href="{% url 'entries:form' app.award.slug %}">change your answers</a>, then submit again.{% else %}You changed it and submitted it again.{% endif %}
+            {% elif req.status == "declined" %}
+              {% if req.kind == "reevaluation" %}Your result stays as it is.{% else %}Your report stays as you submitted it.{% endif %}
+            {% endif %}
+            {% if req.note %}<br>Note: “{{ req.note }}”{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+
+      {% if row.can_reevaluate %}
+        <details class="faq" style="margin-top:1rem">
+          <summary>Not happy with the result? Ask for a re-evaluation</summary>
+          <form method="post" action="{% url 'entries:request_reevaluation' app.pk %}" class="stack" style="margin-top:.75rem">
+            {% csrf_token %}
+            <p class="muted small" style="margin:0">The programme staff check your request, then leadership confirms it. If confirmed, new judges (not the ones who scored it before) score your application again, and the result is decided again. You can ask only once.</p>
+            <div class="field" style="margin:0">
+              <label for="reeval-{{ app.pk }}">Why should it be re-evaluated? *</label>
+              <textarea id="reeval-{{ app.pk }}" name="reason" required placeholder="For example: evidence the judges may have missed, or a criterion that was misunderstood."></textarea>
+            </div>
+            <div><button class="btn btn-primary btn-sm" type="submit">Send request</button></div>
+          </form>
+        </details>
+      {% endif %}
     </div>
     {% endwith %}
   {% empty %}

@@ -14,7 +14,7 @@ from apps.core.services import BusinessRuleError
 from apps.notifications.models import Notification
 from apps.notifications.services import notify, notify_role
 
-from .models import Application
+from .models import ApplicantRequest, Application
 
 S = Application.Status
 
@@ -109,14 +109,25 @@ def update(application, *, by, content=None, title=None):
     return application
 
 
+def missing_required(application):
+    """Keys of the required questions that have no answer yet (a file question counts once uploaded)."""
+    uploaded = set(application.attachments.values_list("question_key", flat=True))
+    return {q["key"] for q in application.form_version.questions
+            if q.get("required") and not str(application.content.get(q["key"], "")).strip()
+            and q["key"] not in uploaded}
+
+
 @transaction.atomic
 def submit(application, *, by):
     if application.applicant_id != by.id:
         raise BusinessRuleError("You can only submit your own application.")
     if not can_edit(application):
         raise BusinessRuleError("This application is already submitted.")
-    missing = [q["label"] for q in application.form_version.questions
-               if q.get("required") and not str(application.content.get(q["key"], "")).strip()]
+    award = application.award
+    if application.status == S.DRAFT and award.status != award.Status.OPEN:
+        closed = f" (it closed on {award.closes_on:%d %b %Y})" if award.closes_on else ""
+        raise BusinessRuleError(f"{award.name} isn't taking applications any more{closed}.")
+    missing = [q["label"] for q in application.form_version.questions if q["key"] in missing_required(application)]
     if missing:
         raise BusinessRuleError(f"Answer the required questions first: {', '.join(missing[:3])}.")
     first_time = application.status == S.DRAFT
@@ -134,37 +145,159 @@ def submit(application, *, by):
     return application
 
 
+# --- Requests after submitting: staff check them, then a leader confirms (apps.core.approvals) ---
+
+K = ApplicantRequest.Kind
+R = Application.Reevaluation
+
+
+def judging_started(application):
+    """A judge has started or finished scoring this report (in its current judging)."""
+    from apps.assignments.models import JudgeAssignment
+    return application.assignments.filter(status__in=[JudgeAssignment.Status.IN_REVIEW,
+                                                      JudgeAssignment.Status.COMPLETED]).exists()
+
+
+def open_request(application, kind):
+    return application.requests.filter(kind=kind, status__in=[ApplicantRequest.Status.REQUESTED,
+                                                              ApplicantRequest.Status.STAFF_APPROVED]).first()
+
+
+def edit_blocked(application):
+    """Why the applicant can't ask to edit now ("" = they can). Edits are only possible before judging starts."""
+    if application.status == S.DRAFT:
+        return "Drafts can be changed without asking."
+    if application.status not in (S.SUBMITTED, S.ASSIGNED) or judging_started(application):
+        return ("Judging has started, so the report can't be edited any more. "
+                "Once the result is out, you can ask for a re-evaluation.")
+    if application.edit_allowed:
+        return "You're already allowed to change it."
+    return ""
+
+
+def _what(application, kind):
+    label = "Edit after submitting" if kind == K.EDIT else "Re-evaluation of the result"
+    return f"{application.reference} ({application.award.name}) · {label}"
+
+
+def _ask(application, *, by, kind, reason):
+    if not reason.strip():
+        raise BusinessRuleError("Give a reason." if kind == K.EDIT
+                                else "Tell us why you're asking for a re-evaluation.")
+    if open_request(application, kind):
+        raise BusinessRuleError("You already have a request waiting for a decision.")
+    req = ApplicantRequest.objects.create(application=application, kind=kind, requested_by=by, reason=reason.strip())
+    record(by, "create", req, changes={"kind": kind, "reason": reason.strip()})
+    notify_role(User.Role.STAFF, f"{_what(application, kind)}: the applicant asks. Reason: {reason.strip()} "
+                f"Check it, then it goes to leadership to confirm.",
+                kind=Notification.Kind.REQUEST, link=reverse("awards:entries"))
+    return req
+
+
 @transaction.atomic
 def request_edit(application, *, by, reason):
+    """Ask to change a submitted report. Only before judging starts."""
     if application.applicant_id != by.id:
         raise BusinessRuleError("You can only ask about your own application.")
-    if application.status == S.DRAFT:
-        raise BusinessRuleError("Drafts can be changed without asking.")
-    if not reason.strip():
-        raise BusinessRuleError("Give a reason.")
+    blocked = edit_blocked(application)
+    if blocked:
+        raise BusinessRuleError(blocked)
+    _ask(application, by=by, kind=K.EDIT, reason=reason)
     application.edit_requested = True
-    application.edit_reason = reason
+    application.edit_reason = reason.strip()
     application.save(update_fields=["edit_requested", "edit_reason", "updated_at"])
-    record(by, "update", application, changes={"edit_requested": reason})
-    notify_role(User.Role.STAFF, f"{application.reference}: the applicant asks to edit it. Reason: {reason}",
-                kind=Notification.Kind.REQUEST, link=reverse("awards:entries"))
+    return application
+
+
+def can_request_reevaluation(application):
+    """Once the result is out (approved or rejected), and only once per application."""
+    return application.status in (S.APPROVED, S.REJECTED) and not application.reevaluation_status
+
+
+@transaction.atomic
+def request_reevaluation(application, *, by, reason):
+    if application.applicant_id != by.id:
+        raise BusinessRuleError("You can only ask about your own application.")
+    if application.status not in (S.APPROVED, S.REJECTED):
+        raise BusinessRuleError("You can ask for a re-evaluation once the result is out.")
+    if application.reevaluation_status:
+        raise BusinessRuleError("You have already asked for a re-evaluation of this application.")
+    _ask(application, by=by, kind=K.REEVALUATION, reason=reason)
+    application.reevaluation_status = R.REQUESTED
+    application.reevaluation_previous_result = application.status
+    application.save(update_fields=["reevaluation_status", "reevaluation_previous_result", "updated_at"])
     return application
 
 
 @transaction.atomic
-def decide_edit(application, *, by, allow):
-    if by.role not in (User.Role.STAFF, User.Role.LEADER):
-        raise BusinessRuleError("Only staff or leaders can allow changes.")
-    if not application.edit_requested:
+def decide_request(req, *, by, approve, note=""):
+    """
+    The next confirmation step on an applicant's request (staff check, then a leader confirms).
+    Each yes re-checks that the request still makes sense; only the leader's yes applies it.
+    """
+    from apps.core import approvals
+
+    application = req.application
+    if approve:   # still allowed? (judging may have started, or the result changed, since they asked)
+        if req.kind == K.EDIT and edit_blocked(application):
+            raise BusinessRuleError(f"{application.reference}: judging has started, so it can't be edited any "
+                                    f"more. Refuse this request; the applicant can ask for a re-evaluation "
+                                    f"after the result.")
+        if req.kind == K.REEVALUATION and application.status not in (S.APPROVED, S.REJECTED):
+            raise BusinessRuleError(f"{application.reference} has no final result to re-evaluate any more.")
+    status = approvals.step(req, by=by, approve=approve, note=note)
+    if req.kind == K.EDIT:
+        if status == ApplicantRequest.Status.APPROVED:
+            application.edit_allowed = True
+        if status in (ApplicantRequest.Status.APPROVED, ApplicantRequest.Status.DECLINED):
+            application.edit_requested = False
+            application.save(update_fields=["edit_requested", "edit_allowed", "updated_at"])
+    elif status == ApplicantRequest.Status.APPROVED:
+        _start_reevaluation(application, by)
+    elif status == ApplicantRequest.Status.DECLINED:
+        application.reevaluation_status = R.REFUSED
+        application.save(update_fields=["reevaluation_status", "updated_at"])
+    link = reverse("entries:form", args=[application.award.slug]) if req.kind == K.EDIT else reverse("entries:status")
+    effect = ("You can now change your application, then submit it again." if req.kind == K.EDIT else
+              "New judges will score your application, then the result will be decided again.")
+    approvals.tell(req, requester=req.requested_by, what=_what(application, req.kind), link=link, effect=effect)
+    return req
+
+
+def _start_reevaluation(application, by):
+    """The first judges' work becomes 'Replaced' (kept, no longer counted); fresh judges score it again."""
+    from apps.assignments.models import JudgeAssignment
+
+    application.reevaluation_status = R.ALLOWED
+    application.save(update_fields=["reevaluation_status", "updated_at"])
+    for assignment in application.assignments.exclude(status__in=[JudgeAssignment.Status.DECLINED,
+                                                                  JudgeAssignment.Status.SUPERSEDED]):
+        before = assignment.status
+        assignment.status = JudgeAssignment.Status.SUPERSEDED
+        assignment.save(update_fields=["status", "updated_at"])
+        record(by, "update", assignment, changes={"status": {"from": before, "to": assignment.status},
+                                                  "why": "re-evaluation confirmed"})
+    set_status(application, S.SUBMITTED, by=by,
+               note=f"re-evaluation confirmed; was {application.reevaluation_previous_result}")
+
+
+def decide_edit(application, *, by, allow, note=""):
+    """The next step on the application's open edit request (the API's decide-edit)."""
+    req = open_request(application, K.EDIT)
+    if req is None:
         raise BusinessRuleError("The applicant hasn't asked to change this application.")
-    application.edit_requested = False
-    application.edit_allowed = allow
-    application.save(update_fields=["edit_requested", "edit_allowed", "updated_at"])
-    record(by, "update", application, changes={"edit_allowed": allow})
-    answer = "you can now change your application, then submit it again." if allow \
-        else "your request to edit was refused."
-    notify(application.applicant, f"{application.reference}: {answer}",
-           kind=Notification.Kind.STATUS_CHANGE, link=reverse("entries:form", args=[application.award.slug]))
+    decide_request(req, by=by, approve=allow, note=note)
+    application.refresh_from_db()
+    return application
+
+
+def decide_reevaluation(application, *, by, allow, note=""):
+    """The next step on the application's open re-evaluation request (the API's decide-reevaluation)."""
+    req = open_request(application, K.REEVALUATION)
+    if req is None:
+        raise BusinessRuleError("There's no re-evaluation request waiting for this application.")
+    decide_request(req, by=by, approve=allow, note=note)
+    application.refresh_from_db()
     return application
 
 

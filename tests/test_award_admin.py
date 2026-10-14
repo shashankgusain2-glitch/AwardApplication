@@ -117,6 +117,7 @@ def test_staff_set_up_a_third_award_and_it_runs_end_to_end(seeded):
     ({"rounds": []}, "at least one judging round"),
     ({"rounds": ["site"], "blind_judging": True}, "needs a desk review round"),
     ({"rounds": ["teleport"]}, "desk review, site visit or live presentation"),
+    ({"rounds": ["desk", "site", "live"]}, "at most 2 rounds"),
     ({"entry_fee": -5}, "can't be negative"),
 ])
 def test_bad_award_settings_are_refused(changes, message):
@@ -131,6 +132,15 @@ def test_bad_award_settings_are_refused(changes, message):
 def test_closing_before_opening_is_refused(staff_client):
     response = staff_client.post(reverse("awards:award_new"), {**AWARD, "closes_on": "2026-10-01"}, follow=True)
     assert "be before the opening date" in response.content.decode()
+    assert not Award.objects.filter(name=AWARD["name"]).exists()
+
+
+@pytest.mark.django_db
+def test_award_form_offers_at_most_two_rounds(staff_client):
+    page = staff_client.get(reverse("awards:award_new")).content.decode()
+    assert 'name="round1"' in page and 'name="round2"' in page and 'name="round3"' not in page
+    response = staff_client.post(reverse("awards:award_new"), {**AWARD, "round3": "live"}, follow=True)
+    assert "at most 2 rounds" in response.content.decode()
     assert not Award.objects.filter(name=AWARD["name"]).exists()
 
 
@@ -177,6 +187,7 @@ def test_a_round_with_judges_cannot_be_removed(world_scored):
     from .factories import ApplicationFactory
     award = world_scored
     award_services.set_rounds(award, ["desk", "site"])
+    award.criteria.create(round_number=2, key="on_site", label="On site", weight=100)
     report = ApplicationFactory(award=award, status="in_review")
     judge = JudgeFactory(awards=[award])
     assignments.assign(report, judge, by=StaffFactory(), round=2)

@@ -83,6 +83,12 @@ def test_score_change_needs_staff_permission_reason_and_is_recorded(world, as_us
                             format="json").json()["data"]
     as_user(world["staff"]).post(f"/api/v1/score-change-requests/{req['id']}/decide/", {"approve": True},
                                  format="json")
+    too_soon = judge_client.post(f"/api/v1/evaluations/{ev['id']}/change-scores/",
+                                 {"scores": {"results": 5}, "reason": "Too soon"}, format="json")
+    assert too_soon.status_code == 400                                    # staff alone isn't enough
+    confirmed = as_user(LeaderFactory()).post(f"/api/v1/score-change-requests/{req['id']}/decide/",
+                                              {"approve": True, "note": "Agreed"}, format="json")
+    assert confirmed.json()["data"]["status"] == "approved"
     changed = judge_client.post(f"/api/v1/evaluations/{ev['id']}/change-scores/",
                                 {"scores": {"results": 5}, "reason": "Results cover one plant only"}, format="json")
     assert changed.status_code == 200

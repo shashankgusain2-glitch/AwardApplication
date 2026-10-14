@@ -6,7 +6,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
-from apps.core.models import AppendOnlyQuerySet, TimeStampedModel
+from apps.core.models import AppendOnlyQuerySet, TimeStampedModel, TwoStepApproval
 
 SCORE_RANGE = Q(score__gte=1, score__lte=10)
 
@@ -52,21 +52,18 @@ class CriterionScore(models.Model):
         return f"{self.criterion.key}: {self.score}"
 
 
-class ScoreChangeRequest(TimeStampedModel):
-    """A judge asks staff for permission to change a submitted evaluation."""
+class ScoreChangeRequest(TwoStepApproval):
+    """A judge asks to change a submitted evaluation: staff check it, then a leader confirms it."""
 
     class Status(models.TextChoices):
-        REQUESTED = "requested", "Waiting for staff"
-        APPROVED = "approved", "Approved"
-        DECLINED = "declined", "Declined"
+        REQUESTED = TwoStepApproval.WAITING_STAFF, "Waiting for staff"
+        STAFF_APPROVED = TwoStepApproval.WAITING_LEADER, "Waiting for leadership"
+        APPROVED = TwoStepApproval.APPROVED, "Approved"
+        DECLINED = TwoStepApproval.REFUSED, "Refused"
         USED = "used", "Change made"
 
     evaluation = models.ForeignKey(Evaluation, on_delete=models.CASCADE, related_name="change_requests")
-    reason = models.TextField()
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.REQUESTED, db_index=True)
-    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
-                                   on_delete=models.SET_NULL, related_name="+")
-    decided_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]

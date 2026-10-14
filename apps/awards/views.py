@@ -19,11 +19,9 @@ from apps.assignments import services as assignment_services
 from apps.assignments.models import ConflictOfInterest
 from apps.awards import services as award_services
 from apps.awards.models import Award
+from apps.core import approvals, overview
 from apps.core import demo_data as d
-from apps.core import overview
 from apps.core.services import BusinessRuleError
-from apps.evaluations import services as evaluation_services
-from apps.evaluations.models import ScoreChangeRequest
 
 ROLE = "staff"
 
@@ -148,11 +146,13 @@ def form_edit(request, slug):
     """
     award = get_object_or_404(Award, slug=slug)
     current = award.current_form
-    blank = {"key": "", "label": "", "type": "textarea", "section": "", "required": True, "identifying": False}
+    blank = {"key": "", "label": "", "type": "textarea", "section": "", "subsection": "",
+             "required": True, "identifying": False}
     if request.method == "POST":
         count = min(int(request.POST.get("rows", "0")) if request.POST.get("rows", "").isdigit() else 0, 300)
         rows = [{"key": request.POST.get(f"q-{n}-key", ""), "label": request.POST.get(f"q-{n}-label", ""),
                  "type": request.POST.get(f"q-{n}-type", ""), "section": request.POST.get(f"q-{n}-section", ""),
+                 "subsection": request.POST.get(f"q-{n}-subsection", ""),
                  "required": request.POST.get(f"q-{n}-required") == "on",
                  "identifying": request.POST.get(f"q-{n}-identifying") == "on",
                  "remove": request.POST.get(f"q-{n}-remove") == "on"} for n in range(count)]
@@ -161,16 +161,26 @@ def form_edit(request, slug):
                 award, award_services.questions_from_editor(rows), request.user)
         except BusinessRuleError as error:
             messages.error(request, str(error))
-            return render(request, "awards/form_edit.html", {
-                "role": ROLE, "award": award, "current": current, "rows": rows,
-                "types": award_services.QUESTION_TYPES})
+            return _form_edit_page(request, award, current, rows)
         messages.success(request, f"Version {version.version} published. New applications use it; "
                                   f"applications already started keep their own version.")
         return redirect("awards:form_builder", slug=award.slug)
-    rows = [{**blank, **q} for q in (current.questions if current else [])]
-    rows += [dict(blank, section=rows[-1]["section"] if rows else "") for _ in range(3)]   # room for new questions
+    rows = [{**blank, **q} for q in (current.questions if current else [])] or [dict(blank, section="Questions")]
+    return _form_edit_page(request, award, current, rows)
+
+
+def _form_edit_page(request, award, current, rows):
+    """One card per section in the editor; each row keeps its position n (the q-<n>-* field names)."""
+    sections = []
+    for n, row in enumerate(rows):
+        name = row.get("section") or ""
+        if not sections or sections[-1]["name"] != name:
+            sections.append({"name": name, "rows": []})
+        sections[-1]["rows"].append({**row, "n": n})
     return render(request, "awards/form_edit.html", {
-        "role": ROLE, "award": award, "current": current, "rows": rows, "types": award_services.QUESTION_TYPES})
+        "role": ROLE, "award": award, "current": current, "sections": sections, "row_count": len(rows),
+        "subcategories": sorted({row["subsection"].strip() for row in rows if (row.get("subsection") or "").strip()}),
+        "blank": {"key": "", "type": "textarea", "required": True}, "types": award_services.QUESTION_TYPES})
 
 
 # --- Award administration: any number of awards, set up without code ------------
@@ -212,7 +222,7 @@ def _parse_award_form(post):
     if fields["applicant_type"] not in Award.ApplicantType.values:
         errors.append("Choose who applies from the list.")
     rounds = []
-    for n in range(1, 6):
+    for n in range(1, award_services.MAX_ROUNDS + 2):   # one past the limit, so extras are refused
         kind = post.get(f"round{n}", "")
         if not kind:
             break                                  # rounds are numbered with no gaps
@@ -222,7 +232,8 @@ def _parse_award_form(post):
 
 def _award_form_page(request, award, values, rounds):
     return render(request, "awards/award_form.html", {
-        "role": ROLE, "award": award, "values": values, "rounds": rounds + [""] * (5 - len(rounds)),
+        "role": ROLE, "award": award, "values": values,
+        "rounds": rounds + [""] * (award_services.MAX_ROUNDS - len(rounds)),
         "round_kinds": award_services.ROUND_KINDS, "applicant_types": Award.ApplicantType.choices,
     })
 
@@ -232,7 +243,8 @@ def award_list(request):
     awards = Award.objects.prefetch_related("rounds", "judge_panel").annotate(entries=Count("applications"))
     return render(request, "awards/award_list.html", {
         "role": ROLE,
-        "rows": [{"award": a, "problems": award_services.ready_to_open(a)} for a in awards],
+        "rows": [{"award": a, "problems": award_services.ready_to_open(a) + award_services.ready_to_judge(a)}
+                 for a in awards],
     })
 
 
@@ -363,10 +375,8 @@ def entries(request):
         "filters": filters,
         "to_verify": ApplicantProfile.objects.filter(verification_status=ApplicantProfile.Verification.PENDING)
                                              .select_related("user"),
-        "edit_requests": Application.objects.filter(edit_requested=True).select_related("award"),
-        "score_requests": ScoreChangeRequest.objects.filter(status=ScoreChangeRequest.Status.REQUESTED)
-                                                    .select_related("evaluation__assignment__judge",
-                                                                    "evaluation__assignment__report"),
+        "staff_requests": approvals.waiting(approvals.T.WAITING_STAFF),
+        "leader_requests": approvals.waiting(approvals.T.WAITING_LEADER),
     })
 
 
@@ -398,25 +408,6 @@ def verify_organisation(request, pk):
     return _decide(request, lambda: account_services.verify_organisation(
         profile, by=request.user, approve=approve, note=request.POST.get("note", "")),
         f"{profile.organisation_name}: {'verified' if approve else 'not verified'}.")
-
-
-@role_required("staff")
-@require_POST
-def decide_edit(request, pk):
-    report = get_object_or_404(application_services.visible_to(request.user), pk=pk)
-    allow = request.POST.get("decision") == "allow"
-    return _decide(request, lambda: application_services.decide_edit(report, by=request.user, allow=allow),
-                   f"{report.reference}: edit {'allowed' if allow else 'refused'}.")
-
-
-@role_required("staff")
-@require_POST
-def decide_score_change(request, pk):
-    change_request = get_object_or_404(ScoreChangeRequest, pk=pk)
-    approve = request.POST.get("decision") == "approve"
-    return _decide(request, lambda: evaluation_services.decide_change(change_request, by=request.user,
-                                                                      approve=approve),
-                   f"Score change {'allowed' if approve else 'refused'}.")
 
 
 @role_required("staff")

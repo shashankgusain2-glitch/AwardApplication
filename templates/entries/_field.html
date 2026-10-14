@@ -1,5 +1,5 @@
-<div class="field">
+<div class="field{% if error %} field-invalid{% endif %}">
   <label for="f-{{ name }}">{{ label }}</label>
-  <input id="f-{{ name }}" name="{{ name }}" type="text" value="{{ value|default_if_none:'' }}">
-  {% if error %}<p class="hint field-error">{{ error }}</p>{% endif %}
+  <input id="f-{{ name }}" name="{{ name }}" type="text" value="{{ value|default_if_none:'' }}"{% if error %} aria-invalid="true" aria-describedby="err-{{ name }}"{% endif %}>
+  {% if error %}<p class="hint field-error" id="err-{{ name }}">⚠ {{ error }}</p>{% endif %}
 </div>

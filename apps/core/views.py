@@ -1,11 +1,18 @@
+from django.contrib import messages
 from django.http import Http404
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
+
+from apps.accounts.permissions import role_required
 
 from . import demo_data as d
+from . import public_awards
+from .models import TwoStepApproval as T
+from .services import BusinessRuleError
 
 
 def home(request):
-    featured = [a for a in d.all_awards(request) if a["status"] in ("Open", "Closing soon")][:3]
+    featured = [a for a in public_awards.all_awards() if a["can_apply"]][:3]
     return render(request, "core/home.html", {
         "stats": d.STATS,
         "featured": featured,
@@ -25,20 +32,57 @@ def about(request):
 
 def award_list(request):
     sector = request.GET.get("sector", "")
-    awards = [a for a in d.all_awards(request) if not sector or a["sector"] == sector]
+    every = public_awards.all_awards()
     return render(request, "core/awards.html", {
-        "awards": awards,
-        "sectors": d.SECTORS,
+        "awards": [a for a in every if not sector or a["sector"] == sector],
+        "sectors": public_awards.sectors(every),
         "active_sector": sector,
     })
 
 
 def award_detail(request, slug):
-    award = d.get_award(slug, request)
+    award = public_awards.get_award(slug)
     if award is None:
         raise Http404("Award not found")
     return render(request, "core/award_detail.html", {
         "award": award,
-        "details": d.award_details(award),
+        "details": public_awards.details(award),
     })
 
+
+@role_required("staff", "leader")
+@require_POST
+def decide_request(request, type, pk):
+    """
+    One button for every request made after submitting (applicant edit, re-evaluation, judge
+    score change). Staff take the first step (pass to leadership / refuse); a leader takes the
+    last (confirm / refuse). The services check whose turn it is.
+    """
+    from apps.applications import services as applications
+    from apps.applications.models import ApplicantRequest
+    from apps.evaluations import services as evaluations
+    from apps.evaluations.models import ScoreChangeRequest
+
+    approve = request.POST.get("decision") == "approve"
+    note = request.POST.get("note", "")
+    try:
+        if type == "applicant":
+            req = get_object_or_404(ApplicantRequest, pk=pk)
+            applications.decide_request(req, by=request.user, approve=approve, note=note)
+            reference = req.application.reference
+        elif type == "score":
+            req = get_object_or_404(ScoreChangeRequest, pk=pk)
+            evaluations.decide_change(req, by=request.user, approve=approve, note=note)
+            reference = req.evaluation.assignment.report.reference
+        else:
+            raise Http404("Unknown request")
+    except BusinessRuleError as error:
+        messages.error(request, str(error))
+    else:
+        outcome = {T.WAITING_LEADER: "passed to leadership to confirm", T.APPROVED: "confirmed: it takes effect now",
+                   T.REFUSED: "refused"}[req.status]
+        messages.success(request, f"{reference}: {req.get_kind_display() if type == 'applicant' else 'score change'} "
+                                  f"request {outcome}. The person who asked has been told.")
+    target = request.POST.get("next", "")
+    return redirect(target if target.startswith(("/staff/", "/leadership/")) else
+                    ("dashboard:requests" if request.user.role == "leader" else "awards:entries"))

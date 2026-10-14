@@ -593,6 +593,7 @@ PORTAL_NAV = {
         ("Overview", "dashboard:overview"),
         ("All applications", "dashboard:review"),
         ("Approve results", "dashboard:results"),
+        ("Requests to confirm", "dashboard:requests"),
         ("People", "dashboard:people"),
         ("Audit log", "dashboard:audit"),
     ],

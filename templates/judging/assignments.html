@@ -1,4 +1,5 @@
 {% extends "portal_base.html" %}
+{% load ui %}
 
 {% block title %}My assignments{% endblock %}
 {% block heading %}My assignments{% endblock %}
@@ -28,6 +29,7 @@
           <p class="small" style="margin:.35rem 0 0">Applicant:
             {% if view.applicant %}<strong>{{ view.applicant }}</strong>{% else %}<span class="hidden-value">Hidden for blind judging</span>{% endif %}
           </p>
+          {% if a.status == "in_review" or a.status == "completed" %}<div style="margin-top:.6rem;max-width:320px">{% judged_bar a "judged by you" %}</div>{% endif %}
         </div>
         {% if a.status == "pending" %}
           <form method="post" action="{% url 'judging:respond' a.pk %}" class="row">

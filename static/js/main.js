@@ -69,3 +69,13 @@
     });
   });
 })();
+
+/* Missing or wrong answers: bring the first highlighted field into view and put the cursor in it. */
+(function () {
+  "use strict";
+  var first = document.querySelector(".field-invalid");
+  if (!first) return;
+  first.scrollIntoView({ block: "center" });
+  var input = first.querySelector("input:not([type=hidden]), textarea, select");
+  if (input) input.focus({ preventScroll: true });
+})();

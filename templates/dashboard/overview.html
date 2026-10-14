@@ -6,11 +6,14 @@
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
+{% if leader_requests %}
+  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>{{ leader_requests }} request{{ leader_requests|pluralize }} waiting for your confirmation</strong>Checked by staff. <a href="{% url 'dashboard:requests' %}">Confirm or refuse them</a>.</div></div>
+{% endif %}
 <div class="grid grid-4" style="margin-bottom:1.5rem">
   <div class="kpi"><span>Reports submitted</span><strong>{{ total }}</strong></div>
   <div class="kpi"><span>Under evaluation</span><strong>{{ evaluating }}</strong></div>
   <div class="kpi"><span>Scored, waiting for approval</span><strong>{{ awaiting_approval }}</strong></div>
-  <div class="kpi"><span>Score-change requests open</span><strong>{{ score_requests }}</strong></div>
+  <div class="kpi"><span>Requests to confirm</span><strong>{{ leader_requests }}</strong></div>
 </div>
 
 <div class="card">

@@ -10,6 +10,8 @@ from apps.assignments.models import JudgeAssignment
 from apps.awards.models import Award
 from apps.evaluations.models import ScoreChangeRequest
 
+from . import approvals
+
 S = Application.Status
 UNDER_EVALUATION = [S.ASSIGNED, S.IN_REVIEW]
 
@@ -26,7 +28,8 @@ def _per_award():
         rejected=Count("applications", filter=Q(applications__status=S.REJECTED, applications__is_deleted=False)),
     )
     for award in awards:
-        live = JudgeAssignment.objects.filter(report__award=award).exclude(status=JudgeAssignment.Status.DECLINED)
+        live = JudgeAssignment.objects.filter(report__award=award).exclude(
+            status__in=[JudgeAssignment.Status.DECLINED, JudgeAssignment.Status.SUPERSEDED])
         total, done = live.count(), live.filter(status=JudgeAssignment.Status.COMPLETED).count()
         rows.append({
             "award": award,
@@ -58,8 +61,8 @@ def staff_home():
         "to_verify": ApplicantProfile.objects.filter(verification_status=ApplicantProfile.Verification.PENDING)
                                              .select_related("user"),
         "needing_judges": needing_judges(),
-        "score_requests": ScoreChangeRequest.objects.filter(status=ScoreChangeRequest.Status.REQUESTED).count(),
-        "edit_requests": Application.objects.filter(edit_requested=True).count(),
+        "staff_requests": len(approvals.waiting(approvals.T.WAITING_STAFF)),
+        "leader_requests": len(approvals.waiting(approvals.T.WAITING_LEADER)),
         "awards": _per_award(),
     }
 
@@ -71,7 +74,7 @@ def leader_overview():
         "evaluating": reports.filter(status__in=UNDER_EVALUATION).count(),
         "awaiting_approval": reports.filter(status=S.SCORED).count(),
         "decided": reports.filter(status__in=[S.APPROVED, S.REJECTED]).count(),
-        "score_requests": ScoreChangeRequest.objects.filter(status=ScoreChangeRequest.Status.REQUESTED).count(),
+        "leader_requests": len(approvals.waiting(approvals.T.WAITING_LEADER)),
         "awards": _per_award(),
     }
 

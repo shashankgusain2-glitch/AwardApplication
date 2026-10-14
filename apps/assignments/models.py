@@ -15,6 +15,7 @@ class JudgeAssignment(TimeStampedModel):
         IN_REVIEW = "in_review", "In review"
         COMPLETED = "completed", "Completed"
         DECLINED = "declined", "Declined"
+        SUPERSEDED = "superseded", "Replaced (re-evaluation)"   # kept as history; doesn't count any more
 
     # The judge must have role=judge, be on the award's panel, have no conflict
     # and be under their workload limit: checked in assignments.services.

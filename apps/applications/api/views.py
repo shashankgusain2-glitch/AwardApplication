@@ -27,6 +27,7 @@ from .serializers import (
     AttachmentUploadSerializer,
     DecideSerializer,
     ReasonSerializer,
+    ReevaluationDecisionSerializer,
     StatusChangeSerializer,
 )
 
@@ -59,9 +60,10 @@ class ApplicationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixin
         return services.visible_to(self.request.user).prefetch_related("attachments")
 
     def get_permissions(self):
-        if self.action in ("create", "update", "partial_update", "destroy", "submit", "request_edit", "attachments"):
+        if self.action in (("create", "update", "partial_update", "destroy", "submit", "request_edit", "attachments",
+                           "request_reevaluation")):
             return [IsApplicant()]
-        if self.action in ("decide_edit", "change_status", "eligible_judges"):
+        if self.action in ("decide_edit", "decide_reevaluation", "change_status", "eligible_judges"):
             return [IsStaffOrLeader()]
         return [ApplicantStaffOrLeader()]
 
@@ -110,6 +112,24 @@ class ApplicationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixin
         serializer = DecideSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         app = services.decide_edit(self.get_object(), by=request.user, **serializer.validated_data)
+        return Response(ApplicationSerializer(app).data)
+
+    @extend_schema(request=ReasonSerializer, responses=ApplicationSerializer)
+    @action(detail=True, methods=["post"], url_path="request-reevaluation")
+    def request_reevaluation(self, request, pk=None):
+        """Applicant: once the result is out, ask once for fresh judges to score it again."""
+        serializer = ReasonSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        app = services.request_reevaluation(self.get_object(), by=request.user, **serializer.validated_data)
+        return Response(ApplicationSerializer(app).data)
+
+    @extend_schema(request=ReevaluationDecisionSerializer, responses=ApplicationSerializer)
+    @action(detail=True, methods=["post"], url_path="decide-reevaluation")
+    def decide_reevaluation(self, request, pk=None):
+        """Staff: confirm (fresh judges score it again) or refuse a re-evaluation request."""
+        serializer = ReevaluationDecisionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        app = services.decide_reevaluation(self.get_object(), by=request.user, **serializer.validated_data)
         return Response(ApplicationSerializer(app).data)
 
     @extend_schema(request=StatusChangeSerializer, responses=ApplicationSerializer)

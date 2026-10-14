@@ -80,7 +80,8 @@ class FormVersion(TimeStampedModel):
     Once published it is read-only: changing questions means publishing a
     new version. Each application keeps the version it was answered on.
 
-    questions: [{"key", "label", "type", "required", "identifying", "section"}]
+    questions: [{"key", "label", "type", "required", "identifying", "section", "subsection"}]
+    ("subsection" is optional: an older version without it still reads correctly)
     """
 
     award = models.ForeignKey(Award, on_delete=models.PROTECT, related_name="form_versions")

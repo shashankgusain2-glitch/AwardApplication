@@ -60,7 +60,9 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.awards.middleware.AwardDateRulesMiddleware",   # opens and closes awards by their dates
 ]
+AWARD_DATE_RULES_EVERY = env.int("AWARD_DATE_RULES_EVERY", default=60)   # seconds between date checks
 
 ROOT_URLCONF = "config.urls"
 

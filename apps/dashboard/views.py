@@ -28,7 +28,7 @@ from apps.core.services import BusinessRuleError
 from apps.evaluations.models import Evaluation
 
 ROLE = "leader"
-SUBMITTED = Q(assignments__evaluation__status=Evaluation.Status.SUBMITTED)
+SUBMITTED = Q(assignments__evaluation__status=Evaluation.Status.SUBMITTED) & ~Q(assignments__status="superseded")
 
 
 def _with_scores(reports):
@@ -210,4 +210,15 @@ def audit(request):
         "role": ROLE, "page": page, "filters": filters, "actions": AuditLog.Action.choices,
         "entities": AuditLog.objects.order_by().values_list("entity", flat=True).distinct(),
         "querystring": urlencode({k: v for k, v in filters.items() if v}),
+    })
+
+
+@role_required("leader")
+def requests_to_confirm(request):
+    """Requests staff have checked, waiting for a leader's final confirmation (or refusal)."""
+    from apps.core import approvals
+    return render(request, "dashboard/requests.html", {
+        "role": ROLE,
+        "rows": approvals.waiting(approvals.T.WAITING_LEADER),
+        "with_staff": approvals.waiting(approvals.T.WAITING_STAFF),
     })

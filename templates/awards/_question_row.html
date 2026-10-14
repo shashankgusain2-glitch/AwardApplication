@@ -1,0 +1,19 @@
+<tr data-question{% if q.key %} data-existing{% endif %}>
+  <td class="muted small"><span data-number>{% if n != "__n__" %}{{ n|add:1 }}{% endif %}</span>{% if not q.key %}<br><span class="badge badge-draft">new</span>{% endif %}
+    <input type="hidden" name="q-{{ n }}-key" value="{{ q.key }}">
+    <input type="hidden" name="q-{{ n }}-section" value="{{ q.section }}" data-row-section></td>
+  <td><input name="q-{{ n }}-subsection" type="text" value="{{ q.subsection }}" list="subcategory-names" placeholder="None" aria-label="Subcategory"></td>
+  <td><input name="q-{{ n }}-label" type="text" value="{{ q.label }}" placeholder="{% if not q.key %}Type the question…{% endif %}" aria-label="Question"></td>
+  <td><select name="q-{{ n }}-type" aria-label="Type of question" style="min-width:8.5rem">{% for v, l in types.items %}<option value="{{ v }}" {% if q.type == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></td>
+  <td><input name="q-{{ n }}-required" type="checkbox" {% if q.required %}checked{% endif %} aria-label="Required"></td>
+  <td><input name="q-{{ n }}-identifying" type="checkbox" {% if q.identifying %}checked{% endif %} aria-label="Hide in blind judging"></td>
+  <td style="white-space:nowrap">
+    <button type="button" class="btn btn-outline btn-sm" data-move="up" title="Move up" aria-label="Move up" hidden>↑</button>
+    <button type="button" class="btn btn-outline btn-sm" data-move="down" title="Move down" aria-label="Move down" hidden>↓</button>
+    {% if q.key %}
+      <label class="small"><input name="q-{{ n }}-remove" type="checkbox" {% if q.remove %}checked{% endif %} data-remove-existing> Remove</label>
+    {% else %}
+      <button type="button" class="btn btn-danger btn-sm" data-remove-new title="Remove this question" aria-label="Remove this question" hidden>✕</button>
+    {% endif %}
+  </td>
+</tr>

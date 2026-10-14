@@ -30,4 +30,17 @@
     <p class="muted small">No other awards are open right now.</p>
   {% endfor %}
 </div>
+
+{% if upcoming_awards %}
+  <h2 style="font-size:1.2rem;margin-top:2rem">Opening soon</h2>
+  <div class="grid grid-3">
+    {% for award in upcoming_awards %}
+      <div class="card">
+        <h3>{{ award.name }}</h3>
+        <p class="muted small">{{ award.summary|truncatechars:120 }}</p>
+        <span class="badge badge-upcoming">{% if award.opens_on %}Opens {{ award.opens_on|date:"j M Y" }}{% else %}Opening date to be announced{% endif %}</span>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
 {% endblock %}

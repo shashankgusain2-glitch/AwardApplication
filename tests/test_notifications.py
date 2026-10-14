@@ -66,9 +66,13 @@ def test_submit_edit_request_and_decision_reach_the_right_people():
     assert "was submitted" in Notification.objects.filter(user=applicant).first().message
 
     application_services.request_edit(app, by=applicant, reason="Wrong figure")
-    assert "asks to edit" in Notification.objects.get(user=staff).message
+    assert "the applicant asks" in Notification.objects.get(user=staff).message
+    leader = LeaderFactory()
     application_services.decide_edit(app, by=staff, allow=True)
-    assert "you can now change" in Notification.objects.filter(user=applicant).first().message
+    assert "passed it to leadership" in Notification.objects.filter(user=applicant).first().message
+    assert "waiting for a leader to confirm" in Notification.objects.get(user=leader).message
+    application_services.decide_edit(app, by=leader, allow=True)
+    assert "approved by leadership" in Notification.objects.filter(user=applicant).first().message
 
 
 @pytest.mark.django_db
@@ -92,7 +96,9 @@ def test_score_change_request_and_decision():
     request = evaluation_services.request_change(evaluation, judge=world["judge_a"], reason="Misread")
     assert Notification.objects.filter(user=world["staff"], kind="request").exists()
     evaluation_services.decide_change(request, by=world["staff"], approve=True)
-    assert "allowed" in Notification.objects.filter(user=world["judge_a"]).first().message
+    assert "passed it to leadership" in Notification.objects.filter(user=world["judge_a"]).first().message
+    evaluation_services.decide_change(request, by=LeaderFactory(), approve=True)
+    assert "approved by leadership" in Notification.objects.filter(user=world["judge_a"]).first().message
 
 
 @pytest.mark.django_db

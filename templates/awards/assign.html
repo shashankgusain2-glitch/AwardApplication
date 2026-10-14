@@ -1,4 +1,5 @@
 {% extends "portal_base.html" %}
+{% load ui %}
 
 {% block title %}Assign judges{% endblock %}
 {% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'awards:assign' %}">Assign judges</a> / {{ report.reference }}</p>{% endblock %}
@@ -54,8 +55,9 @@
   <div class="stack">
     <div class="card">
       <h2 style="font-size:1.1rem">Assigned so far</h2>
+      {% if current %}<div style="margin-bottom:.5rem">{% judged_bar report "of the report judged" %}</div>{% endif %}
       {% for a in current %}
-        <div class="settings-row"><span><strong>{{ a.judge.display_name }}</strong><br><span class="muted small">Round {{ a.round }} · assigned {{ a.assigned_at|date:"j M Y" }}</span></span><span class="badge badge-{{ a.status }}">{{ a.get_status_display }}</span></div>
+        <div class="settings-row"><span><strong>{{ a.judge.display_name }}</strong><br><span class="muted small">Round {{ a.round }} · assigned {{ a.assigned_at|date:"j M Y" }}</span></span><span class="row" style="gap:.5rem">{% if a.status == "in_review" or a.status == "completed" %}{% judged_bar a "" %}{% endif %}<span class="badge badge-{{ a.status }}">{{ a.get_status_display }}</span></span></div>
       {% empty %}<p class="muted small" style="margin:0">No judges yet. Needs {{ needed }}.</p>{% endfor %}
     </div>
     {% if next_reports %}

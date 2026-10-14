@@ -156,7 +156,9 @@ def test_applicant_cannot_submit_with_missing_answers(seeded):
     applicant.post(reverse("entries:form", args=["kaizen"]), {"action": "start", "title": "Half done"})
     response = applicant.post(reverse("entries:form", args=["kaizen"]), {"section": "1", "action": "submit"},
                               follow=True)
-    assert "Answer the required questions first" in response.content.decode()
+    page = response.content.decode()
+    assert "still need an answer. They&#x27;re highlighted in red." in page
+    assert "field-invalid" in page and "This question is required" in page
     assert Application.objects.get(applicant__email=NEW["email"]).status == "draft"
 
 

@@ -17,12 +17,21 @@
       <button class="btn btn-outline btn-sm" type="submit">Change</button>
     </form>
   </div>
-  {% with problems=award|ready_problems %}
+  {% with problems=award|ready_problems judging=award|judging_problems %}
     {% if problems %}
-      <p class="small" style="margin:.75rem 0 0"><strong>Before it can open:</strong></p>
+      <p class="small" style="margin:.75rem 0 0"><strong>Before applicants can apply:</strong></p>
       <ul class="small" style="margin:.25rem 0 0">{% for p in problems %}<li>{{ p }}</li>{% endfor %}</ul>
+    {% elif award.status == "upcoming" %}
+      <p class="small" style="margin:.75rem 0 0">✓ Ready for applicants.
+        {% if award.opens_on %}It opens by itself on <strong>{{ award.opens_on|date:"j M Y" }}</strong>, or choose Open now.{% else %}It has no opening date, so choose Open when you're ready.{% endif %}</p>
+    {% elif award.status == "open" %}
+      <p class="small" style="margin:.75rem 0 0">✓ Open: applicants can apply{% if award.closes_on %} until <strong>{{ award.closes_on|date:"j M Y" }}</strong>. It closes by itself after that date{% endif %}.</p>
+    {% endif %}
+    {% if judging %}
+      <p class="small" style="margin:.75rem 0 0"><strong>Before judges can be assigned</strong> (applicants can already apply without these):</p>
+      <ul class="small" style="margin:.25rem 0 0">{% for p in judging %}<li>{{ p }}</li>{% endfor %}</ul>
     {% else %}
-      <p class="small" style="margin:.75rem 0 0">✓ Ready to open: it has a form, criteria that add up to 100 in every round, and judges.</p>
+      <p class="small" style="margin:.5rem 0 0">✓ Ready for judging: criteria add up to 100 in every round, and the panel has judges.</p>
     {% endif %}
   {% endwith %}
 </div>

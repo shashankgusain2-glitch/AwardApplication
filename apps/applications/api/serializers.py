@@ -1,7 +1,7 @@
 from django.urls import reverse
 from rest_framework import serializers
 
-from apps.applications.models import Application, Attachment
+from apps.applications.models import ApplicantRequest, Application, Attachment
 from apps.awards.models import Award
 
 
@@ -23,6 +23,17 @@ class AttachmentUploadSerializer(serializers.Serializer):
     file = serializers.FileField(help_text="PDF, JPG or PNG, up to 10 MB")
 
 
+REEVALUATION_FIELDS = ["reevaluation_status", "reevaluation_previous_result", "requests"]
+
+
+class ApplicantRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ApplicantRequest
+        fields = ["id", "kind", "reason", "status", "staff_at", "staff_note", "decided_at", "decision_note",
+                  "created_at"]
+        read_only_fields = fields
+
+
 class ApplicationSerializer(serializers.ModelSerializer):
     applicant_email = serializers.EmailField(source="applicant.email", read_only=True)
     applicant_name = serializers.CharField(source="applicant.display_name", read_only=True)
@@ -30,15 +41,16 @@ class ApplicationSerializer(serializers.ModelSerializer):
     award_slug = serializers.SlugField(source="award.slug", read_only=True)
     form_version_number = serializers.IntegerField(source="form_version.version", read_only=True)
     attachments = AttachmentSerializer(many=True, read_only=True)
+    requests = ApplicantRequestSerializer(many=True, read_only=True)
 
     class Meta:
         model = Application
         fields = ["id", "reference", "applicant_email", "applicant_name", "award_slug", "award_name",
                   "form_version_number", "title", "content",
                   "status", "submitted_at", "edit_requested", "edit_allowed", "edit_reason", "attachments",
-                  "created_at", "updated_at"]
+                  *REEVALUATION_FIELDS, "created_at", "updated_at"]
         read_only_fields = ["id", "reference", "status", "submitted_at", "edit_requested", "edit_allowed",
-                            "edit_reason", "created_at", "updated_at"]
+                            "edit_reason", *REEVALUATION_FIELDS, "created_at", "updated_at"]
 
 
 class ApplicationCreateSerializer(serializers.Serializer):
@@ -57,6 +69,11 @@ class ReasonSerializer(serializers.Serializer):
 
 class DecideSerializer(serializers.Serializer):
     allow = serializers.BooleanField()
+    note = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class ReevaluationDecisionSerializer(DecideSerializer):
+    note = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class StatusChangeSerializer(serializers.Serializer):

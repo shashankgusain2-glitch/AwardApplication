@@ -28,6 +28,7 @@
           {% for section in sections %}
             <tr><td colspan="4" style="background:var(--bg)"><strong class="small">{{ forloop.counter }}. {{ section.name }}</strong></td></tr>
             {% for q in section.questions %}
+              {% ifchanged q.subsection %}{% if q.subsection %}<tr><td colspan="4" class="small" style="padding-left:1.25rem"><strong>{{ q.subsection }}</strong></td></tr>{% endif %}{% endifchanged %}
               <tr>
                 <td>{{ q.label }}<br><span class="muted small"><code>{{ q.key }}</code></span></td>
                 <td><span class="muted small">{% if q.type == "textarea" %}Long text{% elif q.type == "file" %}File{% else %}Short text{% endif %}</span></td>

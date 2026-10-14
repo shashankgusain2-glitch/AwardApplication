@@ -1,0 +1,24 @@
+{# One request made after submitting, with the buttons for whoever's turn it is. #}
+{# row: from apps.core.approvals.waiting(); step: "staff" or "leader" (or "" for read-only). #}
+{% with req=row.request %}
+<div class="settings-row" style="display:block">
+  <div class="row" style="gap:.5rem;margin-bottom:.25rem">
+    <span class="badge badge-{% if row.kind == 'score' %}judging{% elif row.kind == 'edit' %}draft{% else %}results{% endif %}">{{ row.label }}</span>
+    <strong>{{ row.reference }}</strong><span class="muted small">· {{ row.award }} · report: {{ row.report_status|lower }}</span>
+  </div>
+  <p class="small" style="margin:0">{{ row.who_role }} <strong>{{ row.who }}</strong> asked {{ req.created_at|date:"j M Y" }}: “{{ req.reason }}”</p>
+  {% if req.staff_by %}<p class="small" style="margin:.2rem 0 0">✓ Checked by staff ({{ req.staff_by.display_name }}, {{ req.staff_at|date:"j M Y" }}){% if req.staff_note %}: “{{ req.staff_note }}”{% endif %}</p>{% endif %}
+  {% if step %}
+    <form method="post" action="{% url 'core:decide_request' row.type req.pk %}" class="row" style="margin-top:.5rem">
+      {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <input name="note" type="text" placeholder="{% if step == 'staff' %}Note (for leadership and the person who asked){% else %}Note to the person who asked (optional){% endif %}" style="flex:1;min-width:220px" aria-label="Note">
+      {% if step == "staff" %}
+        <button class="btn btn-success btn-sm" name="decision" value="approve">Pass to leadership</button>
+      {% else %}
+        <button class="btn btn-success btn-sm" name="decision" value="approve">Confirm</button>
+      {% endif %}
+      <button class="btn btn-outline btn-sm" name="decision" value="refuse">Refuse</button>
+    </form>
+  {% endif %}
+</div>
+{% endwith %}

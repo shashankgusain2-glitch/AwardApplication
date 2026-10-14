@@ -58,9 +58,10 @@ class ChangeRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ScoreChangeRequest
-        fields = ["id", "evaluation", "evaluation_report", "judge_email", "reason", "status", "decided_at",
-                  "created_at"]
-        read_only_fields = ["id", "status", "decided_at", "created_at", "evaluation"]
+        fields = ["id", "evaluation", "evaluation_report", "judge_email", "reason", "status", "staff_at", "staff_note",
+                  "decided_at", "decision_note", "created_at"]
+        read_only_fields = ["id", "status", "staff_at", "staff_note", "decided_at", "decision_note", "created_at",
+                            "evaluation"]
 
 
 class ChangeScoresSerializer(serializers.Serializer):
@@ -74,3 +75,4 @@ class ChangeReasonSerializer(serializers.Serializer):
 
 class ChangeDecisionSerializer(serializers.Serializer):
     approve = serializers.BooleanField()
+    note = serializers.CharField(required=False, allow_blank=True, default="")

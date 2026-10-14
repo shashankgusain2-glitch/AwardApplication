@@ -22,7 +22,8 @@ def _editor_post(award, change):
     data = {"rows": str(len(rows))}
     for n, q in enumerate(rows):
         data.update({f"q-{n}-key": q.get("key", ""), f"q-{n}-label": q.get("label", ""),
-                     f"q-{n}-type": q.get("type", "text"), f"q-{n}-section": q.get("section", "")})
+                     f"q-{n}-type": q.get("type", "text"), f"q-{n}-section": q.get("section", ""),
+                     f"q-{n}-subsection": q.get("subsection", "")})
         for flag in ("required", "identifying", "remove"):
             if q.get(flag):
                 data[f"q-{n}-{flag}"] = "on"
@@ -111,3 +112,40 @@ def test_editor_rejects_a_question_without_text_and_only_staff_can_publish(seede
 
     judge = seeded_client("judge")
     assert judge.post(reverse("awards:form_edit", args=[award.slug]), {"rows": "0"}).status_code == 403
+
+
+@pytest.mark.django_db
+def test_staff_add_many_questions_and_subcategories_in_one_version(seeded):
+    award = Application.objects.filter(award__slug="kaizen").first().award
+    old_count = len(award.current_form.questions)
+
+    def change(rows):
+        for n in range(1, 6):   # more than the old three blank rows
+            rows.append({"label": f"Safety question {n}", "type": "text", "section": "Safety",
+                         "subsection": "Before the change" if n <= 3 else "After the change"})
+    assert _publish(award, change).status_code == 302
+    award.refresh_from_db()
+    new = award.current_form.questions[old_count:]
+    assert [q["subsection"] for q in new] == ["Before the change"] * 3 + ["After the change"] * 2
+    assert {q["section"] for q in new} == {"Safety"}
+
+    editor = seeded_client("staff").get(reverse("awards:form_edit", args=[award.slug])).content.decode()
+    assert 'value="Safety"' in editor and 'value="After the change"' in editor
+
+    builder = seeded_client("staff").get(reverse("awards:form_builder", args=[award.slug])).content.decode()
+    assert "Before the change" in builder and "After the change" in builder
+
+
+@pytest.mark.django_db
+def test_version_without_subcategories_still_opens_after_they_are_added(seeded):
+    application = Application.objects.get(applicant__email=ACCOUNTS["applicant"], award__slug="kaizen")
+    first = application.form_version.questions[0]
+
+    def change(rows):
+        rows[0]["subsection"] = "A brand new subcategory"
+    _publish(application.award, change)
+    application.refresh_from_db()
+    assert application.form_version.version == 1 and "subsection" not in application.form_version.questions[0]
+
+    page = seeded_client("applicant").get(reverse("entries:form", args=["kaizen"]), {"section": 1}).content.decode()
+    assert first["label"] in page and "A brand new subcategory" not in page

@@ -279,3 +279,25 @@ button[disabled] { opacity: .7; cursor: progress; }
 
 /* Form field errors (real forms, step 3.5) */
 .field-error { color: #b42318; }
+
+/* "How much is judged" bar ({% judged_bar %}) */
+.judged-bar { display: flex; align-items: center; gap: .5rem; min-width: 150px; }
+.judged-bar .progress { flex: 1; min-width: 70px; }
+.judged-bar .small { white-space: nowrap; }
+
+/* Answers that are missing or wrong: red box, red outline on the input, message underneath */
+.callout-danger { background: var(--danger-soft); color: #7f1d1d; border-left: 4px solid var(--danger); }
+.callout-danger a { color: #7f1d1d; font-weight: 600; }
+.card.field-invalid { border-color: var(--danger) !important; box-shadow: 0 0 0 1px var(--danger); background: #fffafa; }
+.field-invalid > label { color: var(--danger); }
+.field-invalid input, .field-invalid textarea, .field-invalid select,
+input[aria-invalid="true"], textarea[aria-invalid="true"], select[aria-invalid="true"] {
+  border-color: var(--danger); background: var(--danger-soft);
+}
+.badge-superseded { background: var(--bg); color: var(--muted); border: 1px dashed var(--border); }
+/* The two confirmations a request needs (staff, then leadership) */
+.request-steps { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; list-style: none; padding: 0; margin: .5rem 0; }
+.request-steps li::before { content: "○ "; }
+.request-steps li.done::before { content: "✓ "; color: var(--success); }
+.request-steps li.current { font-weight: 700; }
+.request-steps li.current::before { content: "● "; color: var(--warning); }

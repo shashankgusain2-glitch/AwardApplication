@@ -18,11 +18,43 @@ from apps.audit.services import record
 from apps.awards.models import Criterion
 from apps.core.services import BusinessRuleError
 from apps.notifications.models import Notification
-from apps.notifications.services import notify, notify_role
+from apps.notifications.services import notify_role
 
 from .models import CriterionScore, Evaluation, ScoreChange, ScoreChangeRequest
 
 A = JudgeAssignment.Status
+REPLACED = ("This report is being re-evaluated by other judges, so your scores are kept as they were "
+            "and can't change.")
+
+
+def assignment_progress(assignment):
+    """How much of the report this judge has judged, 0-100 (submitted = 100; declined = 0)."""
+    if assignment.status in (A.DECLINED, A.SUPERSEDED):
+        return 0
+    evaluation = Evaluation.objects.filter(assignment=assignment).first()
+    if evaluation and evaluation.status == Evaluation.Status.SUBMITTED:
+        return 100
+    needed = Criterion.objects.filter(award_id=assignment.report.award_id, round_number=assignment.round).count()
+    if not needed or not evaluation:
+        return 0
+    return round(min(evaluation.scores.count(), needed) * 100 / needed)
+
+
+def report_progress(report):
+    """
+    How much of a report has been judged in its current round, 0-100, across all its judges:
+    scores given ÷ (judges the award needs × criteria in the round). Judges still to be
+    assigned count as nothing done yet, so 2 of 3 judges finished = 67%.
+    """
+    if report.status in (Application.Status.SCORED, Application.Status.APPROVED):
+        return 100
+    assignments = [a for a in report.assignments.all() if a.status not in (A.DECLINED, A.SUPERSEDED)]
+    if not assignments:
+        return 0
+    current = max(a.round for a in assignments)
+    in_round = [a for a in assignments if a.round == current]
+    slots = max(report.award.judges_per_report, len(in_round))
+    return round(sum(assignment_progress(a) for a in in_round) / slots)
 
 
 def visible_to(user):
@@ -72,8 +104,10 @@ def save(assignment, *, judge, scores, feedback=None, submit=False):
     scores: {criterion_key: score} or {criterion_key: {"score": 8, "comment": "..."}}
     """
     _own(assignment, judge)
-    if assignment.status in (A.DECLINED,):
+    if assignment.status == A.DECLINED:
         raise BusinessRuleError("This assignment was declined.")
+    if assignment.status == A.SUPERSEDED:
+        raise BusinessRuleError(REPLACED)
     if assignment.status == A.PENDING:
         start_review(assignment, judge=judge)
     evaluation, _ = Evaluation.objects.get_or_create(assignment=assignment)
@@ -110,38 +144,57 @@ def _maybe_mark_scored(report, by):
         set_status(report, Application.Status.SCORED, by=by, note="all judges submitted")
 
 
+RESULT_DECIDED = ("The result for this report has already been decided, so scores can't change any more. "
+                  "The applicant can ask for a re-evaluation instead.")
+
+
+def _result_decided(report):
+    return report.status in (Application.Status.APPROVED, Application.Status.REJECTED)
+
+
 @transaction.atomic
 def request_change(evaluation, *, judge, reason):
+    """A judge asks to change a submitted evaluation: staff check it, then a leader confirms it."""
     _own(evaluation.assignment, judge)
+    if evaluation.assignment.status == A.SUPERSEDED:
+        raise BusinessRuleError(REPLACED)
     if evaluation.status != Evaluation.Status.SUBMITTED:
         raise BusinessRuleError("Only submitted evaluations need permission to change.")
+    if _result_decided(evaluation.assignment.report):
+        raise BusinessRuleError(RESULT_DECIDED)
     if not reason.strip():
         raise BusinessRuleError("Give a reason for the change.")
-    if evaluation.change_requests.filter(status__in=["requested", "approved"]).exists():
+    if evaluation.change_requests.filter(status__in=[ScoreChangeRequest.Status.REQUESTED,
+                                                     ScoreChangeRequest.Status.STAFF_APPROVED,
+                                                     ScoreChangeRequest.Status.APPROVED]).exists():
         raise BusinessRuleError("You already have a request waiting or approved.")
-    req = ScoreChangeRequest.objects.create(evaluation=evaluation, reason=reason)
-    record(judge, "update", req, changes={"reason": reason})
-    notify_role(User.Role.STAFF, f"{judge.display_name} asks to change a submitted score on "
-                f"{evaluation.assignment.report.reference}. Reason: {reason}",
+    req = ScoreChangeRequest.objects.create(evaluation=evaluation, reason=reason.strip())
+    record(judge, "update", req, changes={"reason": reason.strip()})
+    notify_role(User.Role.STAFF, f"{_what(evaluation.assignment)}: {judge.display_name} asks. "
+                f"Reason: {reason.strip()} Check it, then it goes to leadership to confirm.",
                 kind=Notification.Kind.REQUEST, link=reverse("awards:entries"))
     return req
 
 
+def _what(assignment):
+    report = assignment.report
+    return f"{report.reference} ({report.award.name}) · Score change by {assignment.judge.display_name}"
+
+
 @transaction.atomic
-def decide_change(change_request, *, by, approve):
-    if by.role not in (User.Role.STAFF, User.Role.LEADER):
-        raise BusinessRuleError("Only staff or leaders can allow score changes.")
-    if change_request.status != ScoreChangeRequest.Status.REQUESTED:
-        raise BusinessRuleError("This request has already been decided.")
-    change_request.status = ScoreChangeRequest.Status.APPROVED if approve else ScoreChangeRequest.Status.DECLINED
-    change_request.decided_by = by
-    change_request.decided_at = timezone.now()
-    change_request.save()
-    record(by, "update", change_request, changes={"status": change_request.status})
+def decide_change(change_request, *, by, approve, note=""):
+    """The next step: staff check it, then a leader confirms. Only the leader's yes lets the judge change."""
+    from apps.core import approvals
+
     assignment = change_request.evaluation.assignment
-    notify(assignment.judge, f"{assignment.report.reference}: your request to change a score was "
-           + ("allowed. Change it and give a reason." if approve else "refused."),
-           kind=Notification.Kind.STATUS_CHANGE, link=reverse("judging:score", args=[assignment.pk]))
+    if approve and _result_decided(assignment.report):
+        raise BusinessRuleError(f"{assignment.report.reference}: {RESULT_DECIDED} Refuse this request.")
+    if approve and assignment.status == A.SUPERSEDED:
+        raise BusinessRuleError(f"{assignment.report.reference}: {REPLACED} Refuse this request.")
+    approvals.step(change_request, by=by, approve=approve, note=note)
+    approvals.tell(change_request, requester=assignment.judge, what=_what(assignment),
+                   link=reverse("judging:score", args=[assignment.pk]),
+                   effect="You can now change your scores; give a reason for each change (it is recorded).")
     return change_request
 
 
@@ -150,9 +203,13 @@ def change_scores(evaluation, *, judge, scores, reason):
     """Change submitted scores. Needs an approved request and a reason.   [Rule 3]"""
     assignment = evaluation.assignment
     _own(assignment, judge)
+    if assignment.status == A.SUPERSEDED:
+        raise BusinessRuleError(REPLACED)
+    if _result_decided(assignment.report):
+        raise BusinessRuleError(RESULT_DECIDED)
     approved = evaluation.change_requests.filter(status=ScoreChangeRequest.Status.APPROVED).first()
     if approved is None:
-        raise BusinessRuleError("Ask staff for permission before changing a submitted evaluation.")
+        raise BusinessRuleError("Ask for permission (staff, then leadership) before changing a submitted evaluation.")
     if not reason.strip():
         raise BusinessRuleError("Give a reason for the change.")
     criteria = _clean_scores(assignment, scores)

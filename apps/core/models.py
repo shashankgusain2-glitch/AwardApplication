@@ -1,6 +1,7 @@
 """
 Shared building blocks used by every other app.
 """
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -13,6 +14,42 @@ class TimeStampedModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+class TwoStepApproval(TimeStampedModel):
+    """
+    A request that needs two confirmations: staff check it first, then a leader confirms it.
+    Only the leader's confirmation takes effect (see apps.core.approvals). Each step keeps
+    who decided, when, and an optional note to the person who asked.
+    """
+    WAITING_STAFF = "requested"
+    WAITING_LEADER = "staff_approved"
+    APPROVED = "approved"
+    REFUSED = "declined"
+    STAGES = [(WAITING_STAFF, "Waiting for staff"), (WAITING_LEADER, "Waiting for leadership"),
+              (APPROVED, "Approved"), (REFUSED, "Refused")]
+
+    reason = models.TextField()
+    staff_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                 on_delete=models.SET_NULL, related_name="+")
+    staff_at = models.DateTimeField(null=True, blank=True)
+    staff_note = models.TextField(blank=True, default="")
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                   on_delete=models.SET_NULL, related_name="+")
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decision_note = models.TextField(blank=True, default="")
+
+    class Meta:
+        abstract = True
+
+    @property
+    def waiting(self):
+        return self.status in (self.WAITING_STAFF, self.WAITING_LEADER)
+
+    @property
+    def note(self):
+        """The note to show the person who asked: the leader's, else staff's."""
+        return self.decision_note or self.staff_note
 
 
 class AppendOnlyQuerySet(models.QuerySet):

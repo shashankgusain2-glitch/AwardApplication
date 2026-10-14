@@ -37,10 +37,10 @@ def test_page_loads(client_for, name):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("slug", [a["slug"] for a in demo_data.AWARDS])
-def test_award_detail_loads(client, slug):
-    response = client.get(reverse("core:award_detail", args=[slug]))
-    assert response.status_code == 200
+def test_award_detail_loads_for_every_award(client, seeded):
+    from apps.awards.models import Award
+    for slug in Award.objects.values_list("slug", flat=True):
+        assert client.get(reverse("core:award_detail", args=[slug])).status_code == 200
 
 
 # --- The skeleton on real data (roadmap step 3.5) ------------------------------------
@@ -106,7 +106,7 @@ def test_unknown_assignment_and_award_return_404(seeded):
 
 
 @pytest.mark.django_db
-def test_kaizen_shows_its_own_criteria(client):
+def test_kaizen_shows_its_own_criteria(client, seeded):
     page = client.get(reverse("core:award_detail", args=["kaizen"])).content.decode()
     assert "Root cause found" in page
     assert "Leadership and strategy" not in page
@@ -119,7 +119,7 @@ def test_unknown_award_returns_404(client):
 
 
 @pytest.mark.django_db
-def test_sector_filter_shows_only_that_sector(client):
+def test_sector_filter_shows_only_that_sector(client, seeded):
     response = client.get(reverse("core:awards"), {"sector": "Shop-floor"})
     assert b"Kaizen Competition" in response.content
     assert b"Energy Efficiency Award" not in response.content

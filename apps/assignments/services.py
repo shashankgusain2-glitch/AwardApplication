@@ -71,6 +71,10 @@ def assign(report, judge, *, by, round=1):
         raise BusinessRuleError(f"{judge} isn't a judge.")
     if report.status not in ASSIGNABLE:
         raise BusinessRuleError("Only submitted reports can be assigned to judges.")
+    from apps.awards.services import ready_to_judge
+    missing = ready_to_judge(report.award)
+    if missing:
+        raise BusinessRuleError(f"{report.award.name} isn't ready for judging: " + " ".join(missing))
     profile = _profile(report)
     if not profile or profile.verification_status != ApplicantProfile.Verification.VERIFIED:
         raise BusinessRuleError("Staff must verify the applicant's organisation before assigning judges.")
@@ -92,8 +96,8 @@ def assign(report, judge, *, by, round=1):
 def reassign(assignment, new_judge, *, by):
     """Move an unfinished assignment to another judge; the old one is kept as declined."""
     _check_can_assign(by)
-    if assignment.status == A.COMPLETED:
-        raise BusinessRuleError("A completed evaluation can't be reassigned.")
+    if assignment.status in (A.COMPLETED, A.SUPERSEDED):
+        raise BusinessRuleError("A completed or replaced evaluation can't be reassigned.")
     old_judge = assignment.judge
     assignment.status = A.DECLINED
     assignment.save(update_fields=["status", "updated_at"])
@@ -118,8 +122,8 @@ def bulk_assign(pairs, *, by, round=1):
 
 
 def judges_still_needed(report, round=1):
-    """How many more judges this report needs in this round (declined ones don't count)."""
-    have = report.assignments.filter(round=round).exclude(status=A.DECLINED).count()
+    """How many more judges this report needs in this round (declined and replaced ones don't count)."""
+    have = report.assignments.filter(round=round).exclude(status__in=[A.DECLINED, A.SUPERSEDED]).count()
     return max(report.award.judges_per_report - have, 0)
 
 
@@ -157,6 +161,9 @@ def start_review(assignment, *, judge):
         return assignment
     if assignment.status != A.PENDING:
         raise BusinessRuleError("This assignment can't be started.")
+    if assignment.report.edit_allowed:
+        raise BusinessRuleError("The applicant has been allowed to change this report. You can start "
+                                "grading once they submit it again.")
     assignment.status = A.IN_REVIEW
     assignment.save(update_fields=["status", "updated_at"])
     if assignment.report.status == Application.Status.ASSIGNED:
@@ -234,6 +241,7 @@ def report_for_judge(assignment):
         "blind": blind,
         "applicant": None if blind else report.applicant.display_name,
         "answers": [{"key": q["key"], "label": q["label"], "section": q.get("section", ""),
+                     "subsection": q.get("subsection", ""),
                      "type": q.get("type", "text"), "value": value(q), "hidden": q["key"] in hidden,
                      "attachment_id": uploaded.get(q["key"]) if q["key"] not in hidden else None}
                     for q in questions],

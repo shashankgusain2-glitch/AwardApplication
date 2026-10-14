@@ -18,8 +18,9 @@
   <div class="callout callout-success" style="margin-bottom:1.5rem">
     <div>
       <strong>This application was submitted{% if application.submitted_at %} on {{ application.submitted_at|date:"j M Y" }}{% endif %} and is locked</strong>
-      {% if application.edit_requested %}You asked to change it: “{{ application.edit_reason }}”. Staff will reply.
-      {% else %}If something is wrong, ask the programme staff to let you change it.
+      {% if application.edit_requested and edit_request %}You asked to change it: “{{ edit_request.reason }}”. <strong>{{ edit_request.get_status_display }}</strong>: the programme staff check it first, then leadership confirms it.
+      {% elif edit_blocked %}{{ edit_blocked }}
+      {% else %}If something is wrong, you can ask to change it until a judge starts on it. The programme staff check your request, then leadership confirms it.
         <form method="post" class="row" style="margin-top:.5rem">
           {% csrf_token %}<input type="hidden" name="action" value="request_edit"><input type="hidden" name="section" value="{{ current_index }}">
           <input name="reason" type="text" placeholder="What do you need to change, and why?" required style="flex:1">
@@ -29,7 +30,16 @@
     </div>
   </div>
 {% elif application.edit_allowed %}
-  <div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>Staff allowed you to change this application</strong>Make your changes, then submit again.</div></div>
+  <div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>You're allowed to change this application</strong>Leadership confirmed your request. Make your changes, then submit again. Judges can't start on it until you do.</div></div>
+{% endif %}
+
+{% if problem_count and editable %}
+  <div class="callout callout-danger" role="alert" style="margin-bottom:1.5rem">
+    <div><strong>{{ problem_count }} question{{ problem_count|pluralize }} need{{ problem_count|pluralize:"s," }} your attention</strong>
+      They're highlighted in red.
+      {% for n, s in problem_sections %}<a href="?section={{ n }}">{{ s.name }} ({{ s.problems }})</a>{% if not forloop.last %} · {% endif %}{% endfor %}
+    </div>
+  </div>
 {% endif %}
 
 <div class="grid" style="grid-template-columns:260px minmax(0,1fr);align-items:start">
@@ -40,7 +50,7 @@
       {% for s in sections %}
         <a href="?section={{ forloop.counter }}" {% if forloop.counter == current_index %}class="active" aria-current="step"{% endif %}>
           <span>{{ forloop.counter }}. {{ s.name }}</span>
-          <span class="muted small">{% if s.done == s.total %}✓{% else %}{{ s.done }}/{{ s.total }}{% endif %}</span>
+          {% if s.problems %}<span class="small field-error"><strong>⚠ {{ s.problems }} to fix</strong></span>{% else %}<span class="muted small">{% if s.done == s.total %}✓{% else %}{{ s.done }}/{{ s.total }}{% endif %}</span>{% endif %}
         </a>
       {% endfor %}
     </nav>
@@ -50,11 +60,12 @@
     {% csrf_token %}
     <input type="hidden" name="section" value="{{ current_index }}">
     {% for q in current.questions %}
+      {% ifchanged q.subsection %}{% if q.subsection %}<h3 class="eyebrow" style="margin:.5rem 0 0">{{ q.subsection }}</h3>{% endif %}{% endifchanged %}
       <input type="hidden" name="keys" value="{{ q.key }}">
-      <div class="card field">
+      <div class="card field{% if q.problem %} field-invalid{% endif %}">
         <label for="q-{{ q.key }}">{{ forloop.counter }}. {{ q.label }}{% if q.required %} <span class="muted">*</span>{% endif %}</label>
         {% if q.type == "textarea" %}
-          <textarea id="q-{{ q.key }}" name="q_{{ q.key }}" {% if not editable %}readonly{% endif %}>{{ q.value }}</textarea>
+          <textarea id="q-{{ q.key }}" name="q_{{ q.key }}" {% if q.problem %}aria-invalid="true" aria-describedby="err-{{ q.key }}"{% endif %} {% if not editable %}readonly{% endif %}>{{ q.value }}</textarea>
         {% elif q.type == "file" %}
           {% if q.attachment %}
             <p class="small" style="margin:0 0 .4rem">📎 <a href="{% url 'applications:download' q.attachment.pk %}">{{ q.attachment.original_name }}</a> <span class="muted">({{ q.attachment.size_bytes|filesizeformat }})</span></p>
@@ -62,12 +73,13 @@
             <p class="small" style="margin:0 0 .4rem">📎 {{ q.value }}</p>
           {% endif %}
           {% if editable %}
-            <input id="q-{{ q.key }}" name="f_{{ q.key }}" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+            <input id="q-{{ q.key }}" name="f_{{ q.key }}" type="file" {% if q.problem %}aria-invalid="true" aria-describedby="err-{{ q.key }}"{% endif %} accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
             <p class="hint">PDF, JPG or PNG, up to 10 MB.{% if q.attachment or q.value %} Choosing a new file replaces the current one.{% endif %} It is saved when you press Save or move to another section.</p>
           {% endif %}
         {% else %}
-          <input id="q-{{ q.key }}" name="q_{{ q.key }}" type="text" value="{{ q.value }}" {% if not editable %}readonly{% endif %}>
+          <input id="q-{{ q.key }}" name="q_{{ q.key }}" type="text" {% if q.problem %}aria-invalid="true" aria-describedby="err-{{ q.key }}"{% endif %} value="{{ q.value }}" {% if not editable %}readonly{% endif %}>
         {% endif %}
+        {% if q.problem %}<p class="hint field-error" id="err-{{ q.key }}" style="font-weight:600">⚠ {{ q.problem }}</p>{% endif %}
         {% if q.identifying and award.blind_judging %}<p class="hint">🔒 Hidden from judges in desk review rounds (blind judging).</p>{% endif %}
       </div>
     {% empty %}

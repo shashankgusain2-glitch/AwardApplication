@@ -40,6 +40,8 @@
             <tbody>
               {% for c in details.criteria %}
                 <tr><td>{{ c.name }}</td><td>{{ c.weight }}%</td><td><div class="progress"><span style="width:{{ c.weight }}%"></span></div></td></tr>
+              {% empty %}
+                <tr><td colspan="3" class="muted small">The scoring criteria will be published before entries open.</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -77,8 +79,9 @@
         <div class="settings-row"><span class="muted">Blind judging</span><strong>{% if award.blind %}Yes, in desk review{% else %}No{% endif %}</strong></div>
         <div class="settings-row"><span class="muted">Jury per entry</span><strong>{{ award.judges_per_entry }}</strong></div>
         <div class="settings-row"><span class="muted">Fee</span><strong>{{ award.fee }}</strong></div>
-        {% if award.status == "Open" or award.status == "Closing soon" %}
-          <a class="btn btn-primary btn-block" style="margin-top:1rem" href="{% url 'accounts:login' %}">Apply now</a>
+        {% if award.can_apply %}
+          <a class="btn btn-primary btn-block" style="margin-top:1rem" href="{% url 'entries:form' award.slug %}">Apply now</a>
+          <p class="hint" style="margin:.5rem 0 0;text-align:center">You'll be asked to log in or create an account first.</p>
         {% else %}
           <button class="btn btn-outline btn-block" style="margin-top:1rem" data-demo="Demo screen: you'll be notified when entries open.">Notify me</button>
         {% endif %}

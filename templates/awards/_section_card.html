@@ -1,0 +1,20 @@
+<div class="card" data-section>
+  <div class="card-head">
+    <div class="field" style="flex:1;margin:0">
+      <label class="small">Section</label>
+      <input type="text" value="{{ section.name }}" placeholder="e.g. Leadership" data-section-name aria-label="Section name">
+    </div>
+    <button type="button" class="btn btn-danger btn-sm" data-remove-section hidden>Remove section</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Subcategory</th><th style="width:34%">Question</th><th>Type</th><th>Required</th><th>Hide in blind judging</th><th></th></tr></thead>
+      <tbody data-rows>
+        {% for q in section.rows %}{% include "awards/_question_row.html" with n=q.n %}{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="row" style="margin-top:.75rem">
+    <button type="button" class="btn btn-outline btn-sm" data-add-question hidden>+ Add question</button>
+  </div>
+</div>
