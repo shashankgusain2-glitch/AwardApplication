@@ -215,6 +215,7 @@ def report_for_judge(assignment):
     blind = award.blind_judging and (round_obj is None or round_obj.kind == "desk")
     questions = report.form_version.questions
     hidden = {q["key"] for q in questions if q.get("identifying")} if blind else set()
+    uploaded = {f.question_key: f.pk for f in report.attachments.all()}
 
     def value(q):
         answer = report.content.get(q["key"], "")
@@ -233,7 +234,8 @@ def report_for_judge(assignment):
         "blind": blind,
         "applicant": None if blind else report.applicant.display_name,
         "answers": [{"key": q["key"], "label": q["label"], "section": q.get("section", ""),
-                     "type": q.get("type", "text"), "value": value(q), "hidden": q["key"] in hidden}
+                     "type": q.get("type", "text"), "value": value(q), "hidden": q["key"] in hidden,
+                     "attachment_id": uploaded.get(q["key"]) if q["key"] not in hidden else None}
                     for q in questions],
     }
 

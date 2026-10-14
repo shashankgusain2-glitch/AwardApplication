@@ -4,14 +4,17 @@ Judges don't use this endpoint: they see reports through their assignments,
 where blind judging is applied (/judge/my-assignments/).
 """
 import django_filters
+from django.http import FileResponse
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
-from rest_framework import mixins, status, viewsets
+from rest_framework import generics, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from apps.accounts.api.serializers import UserSerializer
-from apps.applications import services
+from apps.applications import files, services
 from apps.applications.models import Application
 from apps.assignments.services import eligible_judges
 from apps.core.api.permissions import HasRole, IsApplicant, IsStaffOrLeader
@@ -20,6 +23,8 @@ from .serializers import (
     ApplicationCreateSerializer,
     ApplicationSerializer,
     ApplicationUpdateSerializer,
+    AttachmentSerializer,
+    AttachmentUploadSerializer,
     DecideSerializer,
     ReasonSerializer,
     StatusChangeSerializer,
@@ -54,7 +59,7 @@ class ApplicationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixin
         return services.visible_to(self.request.user).prefetch_related("attachments")
 
     def get_permissions(self):
-        if self.action in ("create", "update", "partial_update", "destroy", "submit", "request_edit"):
+        if self.action in ("create", "update", "partial_update", "destroy", "submit", "request_edit", "attachments"):
             return [IsApplicant()]
         if self.action in ("decide_edit", "change_status", "eligible_judges"):
             return [IsStaffOrLeader()]
@@ -126,3 +131,34 @@ class ApplicationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixin
         except ValueError:
             raise ValidationError({"round": ["Round must be a whole number."]}) from None
         return Response(UserSerializer(eligible_judges(self.get_object(), round_number), many=True).data)
+
+    @extend_schema(request={"multipart/form-data": AttachmentUploadSerializer}, responses=AttachmentSerializer)
+    @action(detail=True, methods=["post"], parser_classes=[MultiPartParser])
+    def attachments(self, request, pk=None):
+        """Upload the file for one file question (multipart: question_key, file). Replaces an earlier one."""
+        serializer = AttachmentUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        attachment = files.attach(self.get_object(), by=request.user,
+                                  question_key=serializer.validated_data["question_key"],
+                                  upload=serializer.validated_data["file"])
+        return Response(AttachmentSerializer(attachment).data, status=status.HTTP_201_CREATED)
+
+
+class AttachmentDownloadView(generics.GenericAPIView):
+    """
+    GET /attachments/{id}/download/: the file, for the applicant who owns it, staff, leaders,
+    and judges assigned to that report (blind rounds get a neutral file name). Anyone else: 404.
+    """
+    queryset_model = files.Attachment
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):   # building the API docs: no user
+            return self.queryset_model.objects.none()
+        return files.visible_to(self.request.user)
+
+    @extend_schema(responses={(200, "application/octet-stream"): bytes})
+    def get(self, request, pk):
+        attachment = get_object_or_404(self.get_queryset(), pk=pk)
+        return FileResponse(attachment.file.open("rb"), as_attachment=True,
+                            filename=files.download_name(attachment, request.user),
+                            content_type=attachment.content_type)

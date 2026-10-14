@@ -15,7 +15,7 @@ from rest_framework.exceptions import ValidationError
 from apps.accounts import services as account_services
 from apps.accounts.models import ApplicantProfile
 from apps.accounts.permissions import role_required
-from apps.applications import services
+from apps.applications import files, services
 from apps.applications.models import Application
 from apps.audit.models import AuditLog
 from apps.awards.models import Award
@@ -72,12 +72,13 @@ def organisation(request):
 def _sections(application):
     """The application's form (its own version) grouped into sections, with the saved answers."""
     sections = []
+    uploaded = {f.question_key: f for f in application.attachments.all()}
     for q in application.form_version.questions:
         name = q.get("section") or "Your application"
         if not sections or sections[-1]["name"] != name:
             sections.append({"name": name, "questions": []})
         value = application.content.get(q["key"], "")
-        sections[-1]["questions"].append({**q, "value": value})
+        sections[-1]["questions"].append({**q, "value": value, "attachment": uploaded.get(q["key"])})
     for s in sections:
         s["done"] = sum(1 for q in s["questions"] if str(q["value"]).strip())
         s["total"] = len(s["questions"])
@@ -112,10 +113,15 @@ def application_form(request, slug=None):
             if application is None:
                 raise Http404("No application for this award")
             if action in ("save", "submit"):
-                keys = request.POST.getlist("keys")
+                file_keys = {q["key"] for q in application.form_version.questions if q.get("type") == "file"}
+                keys = [k for k in request.POST.getlist("keys") if k not in file_keys]
                 answers = {k: request.POST.get(f"q_{k}", "").strip() for k in keys}
                 if services.can_edit(application):
                     services.update(application, by=request.user, content=answers)
+                    for key in file_keys:
+                        if f"f_{key}" in request.FILES:
+                            files.attach(application, by=request.user, question_key=key,
+                                         upload=request.FILES[f"f_{key}"])
                 if action == "submit":
                     services.submit(application, by=request.user)
                     messages.success(request, f"{application.reference} submitted. It is now locked.")

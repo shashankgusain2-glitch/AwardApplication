@@ -19,6 +19,8 @@
 - [x] CI: lint, migration check and tests on every push
 - [x] Rule 4 form-version editor (staff publish questions as a new version)
 - [x] Production setup in the repo: Gunicorn, WhiteNoise, `Dockerfile.prod`, Nginx, Sentry, S3 option, SMTP settings, CI production-image check ([docs/Deployment.md](docs/Deployment.md))
+- [x] R2 Document upload (PDF/JPG/PNG, 10 MB, permission-checked downloads, neutral names for blind judges)
+- [x] R4 Notifications by email and a Notifications page
 - [ ] Deployed anywhere
 
 ---
@@ -29,9 +31,9 @@
 |---|---|---|---|---|---|---|
 | **R0 · Wrap up Phase 3** | Close the roadmap's Phase 3 | 1-hour quick review; 3.6 feature slices; 3.7 validation pass; 3.8 cleanup; replace the skipped Rule 2 and Rule 3 placeholder tests | 14 | Week 1 | none | Roadmap steps 3.6–3.8 ticked; 0 skipped rule tests |
 | **R1 · Award administration** | Run more than 2 programmes without code | Screens to create and edit awards, rounds, criteria (weights must add up to 100), dates and the judge panel; settings screen for any award, not just the 2 demo ones | 10 | Week 1–2 | R0 | Staff create a third award end to end in the browser |
-| **R2 · Document upload** | Applicants upload evidence | Upload on file questions (type and size checks, 10 MB limit already in the model); storage in `MEDIA_ROOT` locally and S3-compatible in production; download links for staff; blind view keeps file names hidden; virus or type scan | 8 | Week 2 | Media storage decision (§4) | A PDF uploaded by an applicant opens for the assigned judge with its name hidden on blind awards |
+| ✅ **R2 · Document upload** (done 14 Oct; virus scan and S3 bucket still to set up) | Applicants upload evidence | Upload on file questions (type and size checks, 10 MB limit already in the model); storage in `MEDIA_ROOT` locally and S3-compatible in production; download links for staff; blind view keeps file names hidden; virus or type scan | 8 | Week 2 | Media storage decision (§4) | A PDF uploaded by an applicant opens for the assigned judge with its name hidden on blind awards |
 | **R3 · Judging criteria and scoring rules** | Rules per award | Criteria editor per round; scoring guidance text; tie and spread rules (for example, flag a spread of 2 or more, already shown to leaders); round-2 shortlisting from round-1 scores | 8 | Week 2 | R1 | A Business Excellence report moves from desk review to live presentation by rule |
-| **R4 · Notifications** | People know what changed | Notification bell and list on the web (the API exists); email through SMTP or SES for assignment, verification, edit decision and result; email templates; per-user opt-out | 6 | Week 2–3 | Email service (§4) | A judge gets an email and an in-app note when assigned |
+| ✅ **R4 · Notifications** (done 14 Oct, except per-user opt-out; needs an SMTP account in production) | People know what changed | Notification bell and list on the web (the API exists); email through SMTP or SES for assignment, verification, edit decision and result; email templates; per-user opt-out | 6 | Week 2–3 | Email service (§4) | A judge gets an email and an in-app note when assigned |
 | **R5 · Account and admin tools** | No `/admin/` needed for daily work | Leader screen to create, deactivate and reactivate staff, judge and leader accounts (the API exists); invite email with a set-password link; audit-log viewer with filters (who, what, when) | 8 | Week 3 | R4 (invite email) | A leader adds a judge from the portal; the action shows in the audit viewer |
 | **R6 · Dashboards, reports, search, export** | Leaders and staff can report | Charts per award; search and filter everywhere; export lists to **CSV** and results to **PDF**; publish results to applicants | 10 | Week 3 | R3 | A leader downloads the approved results as CSV and PDF |
 | **R7 · Password and account self-service** | Fewer support requests | Password reset by email (the web flow exists; needs a real email backend); change password; optional two-factor login for staff and leaders | 4 | Week 3 | R4 | Reset email arrives in production and works once |
