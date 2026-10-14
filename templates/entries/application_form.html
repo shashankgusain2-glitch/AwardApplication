@@ -46,7 +46,7 @@
     </nav>
   </aside>
 
-  <form method="post" class="stack">
+  <form method="post" class="stack" enctype="multipart/form-data">
     {% csrf_token %}
     <input type="hidden" name="section" value="{{ current_index }}">
     {% for q in current.questions %}
@@ -56,8 +56,15 @@
         {% if q.type == "textarea" %}
           <textarea id="q-{{ q.key }}" name="q_{{ q.key }}" {% if not editable %}readonly{% endif %}>{{ q.value }}</textarea>
         {% elif q.type == "file" %}
-          <input id="q-{{ q.key }}" name="q_{{ q.key }}" type="text" value="{{ q.value }}" placeholder="File name" {% if not editable %}readonly{% endif %}>
-          <p class="hint">File upload comes in a later step. For now, type the file's name.</p>
+          {% if q.attachment %}
+            <p class="small" style="margin:0 0 .4rem">📎 <a href="{% url 'applications:download' q.attachment.pk %}">{{ q.attachment.original_name }}</a> <span class="muted">({{ q.attachment.size_bytes|filesizeformat }})</span></p>
+          {% elif q.value %}
+            <p class="small" style="margin:0 0 .4rem">📎 {{ q.value }}</p>
+          {% endif %}
+          {% if editable %}
+            <input id="q-{{ q.key }}" name="f_{{ q.key }}" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+            <p class="hint">PDF, JPG or PNG, up to 10 MB.{% if q.attachment or q.value %} Choosing a new file replaces the current one.{% endif %} It is saved when you press Save or move to another section.</p>
+          {% endif %}
         {% else %}
           <input id="q-{{ q.key }}" name="q_{{ q.key }}" type="text" value="{{ q.value }}" {% if not editable %}readonly{% endif %}>
         {% endif %}

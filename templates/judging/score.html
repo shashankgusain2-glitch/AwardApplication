@@ -31,6 +31,7 @@
         <div class="settings-row" style="display:block">
           <p class="muted small" style="margin:0 0 .25rem">{{ q.label }}</p>
           {% if q.hidden %}<span class="hidden-value">🔒 Hidden for blind judging</span>
+          {% elif q.attachment_id %}<p style="margin:0">📎 <a href="{% url 'applications:download' q.attachment_id %}">{{ q.value }}</a></p>
           {% elif q.value %}<p style="margin:0">{% if q.type == "file" %}📎 {% endif %}{{ q.value }}</p>
           {% else %}<p class="muted small" style="margin:0"><em>Not answered</em></p>{% endif %}
         </div>

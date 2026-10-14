@@ -11,7 +11,7 @@ from apps.accounts.api.views import (
                                      RegisterView,
                                      UserViewSet,
 )
-from apps.applications.api.views import ApplicationViewSet
+from apps.applications.api.views import ApplicationViewSet, AttachmentDownloadView
 from apps.assignments.api.views import AssignmentViewSet, ConflictViewSet, MyAssignmentsView
 from apps.awards.api.views import AwardViewSet
 from apps.core.api.views import DashboardSummaryView, HealthView, LookupsView
@@ -43,6 +43,7 @@ urlpatterns = [
     path("judge/my-assignments/", MyAssignmentsView.as_view(), name="my-assignments"),
     path("dashboard/summary/", DashboardSummaryView.as_view(), name="dashboard-summary"),
     path("lookups/", LookupsView.as_view(), name="lookups"),
+    path("attachments/<int:pk>/download/", AttachmentDownloadView.as_view(), name="attachment-download"),
     path("health/", HealthView.as_view(), name="health"),
     path("", include(router.urls)),
 ]

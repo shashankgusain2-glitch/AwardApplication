@@ -122,6 +122,8 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_TIMEOUT = 10
+# Links in notification emails start with this (no trailing slash)
+SITE_URL = env("SITE_URL", default="http://localhost:8000")
 
 # --- Web login (server-rendered pages) ---------------------------------------
 # Log in with email + password. Passwords are stored hashed (salted

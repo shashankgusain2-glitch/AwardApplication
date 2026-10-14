@@ -4,6 +4,7 @@ reassigning, judges accepting or declining, and staff-recorded conflicts.
 """
 from django.db import transaction
 from django.db.models import Count, Q
+from django.urls import reverse
 
 from apps.accounts.models import ApplicantProfile, User
 from apps.applications.models import Application
@@ -82,7 +83,8 @@ def assign(report, judge, *, by, round=1):
     if report.status == Application.Status.SUBMITTED:
         set_status(report, Application.Status.ASSIGNED, by=by)
     record(by, "assign", assignment, changes={"judge": judge.email, "report": report.reference, "round": round})
-    notify(judge, f"New report to judge: {report.reference}", kind="assignment")
+    notify(judge, f"New report to judge: {report.reference} ({report.award.name}). Accept or decline it.",
+           kind="assignment", link=reverse("judging:assignments"))
     return assignment
 
 
@@ -175,6 +177,9 @@ def decline(assignment, *, judge):
     if not report.assignments.filter(status__in=OPEN_STATUSES + [A.COMPLETED]).exists():
         set_status(report, Application.Status.SUBMITTED, by=judge, note="back to the pool")
     record(judge, "update", assignment, changes={"status": A.DECLINED})
+    if assignment.assigned_by:
+        notify(assignment.assigned_by, f"{judge.display_name} declined {report.reference}. It needs another judge.",
+               kind="request", link=reverse("awards:assign", args=[report.pk]))
     return assignment
 
 
@@ -210,6 +215,7 @@ def report_for_judge(assignment):
     blind = award.blind_judging and (round_obj is None or round_obj.kind == "desk")
     questions = report.form_version.questions
     hidden = {q["key"] for q in questions if q.get("identifying")} if blind else set()
+    uploaded = {f.question_key: f.pk for f in report.attachments.all()}
 
     def value(q):
         answer = report.content.get(q["key"], "")
@@ -228,7 +234,8 @@ def report_for_judge(assignment):
         "blind": blind,
         "applicant": None if blind else report.applicant.display_name,
         "answers": [{"key": q["key"], "label": q["label"], "section": q.get("section", ""),
-                     "type": q.get("type", "text"), "value": value(q), "hidden": q["key"] in hidden}
+                     "type": q.get("type", "text"), "value": value(q), "hidden": q["key"] in hidden,
+                     "attachment_id": uploaded.get(q["key"]) if q["key"] not in hidden else None}
                     for q in questions],
     }
 

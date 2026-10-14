@@ -1,3 +1,4 @@
+from django.urls import reverse
 from rest_framework import serializers
 
 from apps.applications.models import Application, Attachment
@@ -5,10 +6,21 @@ from apps.awards.models import Award
 
 
 class AttachmentSerializer(serializers.ModelSerializer):
+    """The file itself is never linked directly: download_url checks who is asking."""
+    download_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Attachment
-        fields = ["id", "question_key", "file", "original_name", "size_bytes", "content_type", "created_at"]
+        fields = ["id", "question_key", "original_name", "size_bytes", "content_type", "download_url", "created_at"]
         read_only_fields = fields
+
+    def get_download_url(self, obj) -> str:
+        return reverse("api:attachment-download", args=[obj.pk])
+
+
+class AttachmentUploadSerializer(serializers.Serializer):
+    question_key = serializers.CharField(max_length=50, help_text="Key of a question of type 'file'")
+    file = serializers.FileField(help_text="PDF, JPG or PNG, up to 10 MB")
 
 
 class ApplicationSerializer(serializers.ModelSerializer):

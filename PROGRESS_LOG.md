@@ -2,7 +2,7 @@
 
 > **Snapshot:** 14 Oct 2026 · `main` at `8477b62` ("steps 3.4 and 3.5").
 > Written from the code, settings, migrations, tests and git history. Where your summary and the code differ, the code wins and the difference is flagged with ⚠️.
-> **Since that snapshot** (branch `feature/form-editor-and-prod-setup`): the staff **form-version editor** with 6 real Rule 4 tests, and the **production setup** (Gunicorn, WhiteNoise, `Dockerfile.prod`, Nginx, Sentry, S3 option, SMTP settings, CI production-image check). Full suite: **272 passed, 8 skipped**.
+> **Since that snapshot** (branch `feature/form-editor-and-prod-setup`): the staff **form-version editor** with 6 real Rule 4 tests, and the **production setup** (Gunicorn, WhiteNoise, `Dockerfile.prod`, Nginx, Sentry, S3 option, SMTP settings, CI production-image check). Then **email notifications (R4)** and **document upload (R2)**. Full suite: **298 passed, 8 skipped**.
 
 ---
 
@@ -101,7 +101,7 @@ All models are in PostgreSQL, created by migrations. Shared base classes: `TimeS
 | **FormVersion** (awards) | version, questions (JSON), published_at | FK Award (PROTECT) | unique (award, version); **cannot be changed once published** (enforced in `save()`) |
 | **Criterion** (awards) | round_number, key, label, weight, order | FK Award | unique (award, round, key); weight 1–100 |
 | **Application / "report"** (applications, soft delete) | reference, title, content (JSON answers), status (draft → submitted → assigned → in_review → scored → approved/rejected), submitted_at, edit_requested / allowed / reason | FK User (applicant), Award, FormVersion (all PROTECT) | one per applicant per award (non-deleted); submitted ⇒ has a date |
-| **Attachment** (applications) | file, original_name, size, content_type | FK Application | ≤10 MB. ⚠️ No upload screen or endpoint yet |
+| **Attachment** (applications) | file, original_name, size, content_type | FK Application | ≤10 MB; PDF/JPG/PNG checked by content (`apps/applications/files.py`) |
 | **JudgeAssignment** (assignments) | round, status (pending / in_review / completed / declined), assigned_by | FK judge, FK report (PROTECT) | unique (judge, report, round); round ≥1 |
 | **ConflictOfInterest** (assignments) | reason, recorded_by | FK judge, FK ApplicantProfile | unique (judge, profile) |
 | **Evaluation** (evaluations) | status (draft / submitted), total_score, feedback, submitted_at | 1–1 JudgeAssignment | total 0–10; submitted ⇒ has a date |
@@ -213,7 +213,7 @@ Only questions marked identifying (and file names) mention the organisation.
 
 | Kind | Where | Result |
 |---|---|---|
-| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **272 passed, 8 skipped** (the 8 are the Rule 2/3 placeholders) |
+| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **298 passed, 8 skipped** (the 8 are the Rule 2/3 placeholders) |
 | Postman | `postman/` (collection, environment, `CHECKLIST.md`) | **116 requests, 259 checks, 0 failures** with Newman on fresh seed data; repeatable |
 | End-to-end | `tests/test_web_workflow.py` and a manual browser run | Sign up → organisation → submit → staff verify and assign → both judges grade → scored → leader approves → applicant sees "Approved" |
 | Rules | `tests/rules/` | Rule 1: 8 tests running. ⚠️ Rule 2 and Rule 3 files are **skipped placeholders**, although those behaviours are tested in `tests/api/`. Rule 4: 6 tests running |
@@ -236,6 +236,7 @@ Only questions marked identifying (and file names) mention the organisation.
 | 14 Oct | Step 3.4: API gaps filled, 6 bugs fixed, Postman collection | Roadmap "done when" | `config/api_urls.py`, `postman/`, `tests/api/test_core_api.py` |
 | 14 Oct | Step 3.5: every role's screens on real data; blind leak fixed | Roadmap "done when" | `apps/{entries,judging,awards,dashboard}/`, `templates/`, `tests/test_web_workflow.py` |
 | 14 Oct | Form-version editor and Rule 4 tests | Staff edit questions as a new version | `apps/awards/`, `templates/awards/form_edit.html` |
+| 14 Oct | Email notifications and a Notifications page (R4); document upload with permission-checked downloads (R2) | Applicants can attach evidence; everyone hears about changes | `apps/notifications/`, `apps/applications/files.py`, `tests/test_notifications.py`, `tests/test_uploads.py` |
 | 14 Oct | Production setup: Gunicorn, WhiteNoise, `Dockerfile.prod` (non-root), `docker-compose.prod.yml`, `deploy/nginx.conf`, Sentry, S3 option, SMTP settings, CI production-image job, runbook | Ready to deploy once hosting is chosen | `requirements/prod.txt`, `config/settings/{base,prod}.py`, `docs/Deployment.md`, `.github/workflows/ci.yml` |
 
 ---
@@ -282,8 +283,8 @@ Only questions marked identifying (and file names) mention the organisation.
 | # | Item | Impact |
 |---|---|---|
 | 1 | ~~Form-version editor uncommitted~~ Done | n/a |
-| 2 | **No document upload** (Attachment model only); applicants type file names | Core applicant feature missing |
-| 3 | **Notifications are in-app only**; `notify()` sends no email. No notification screen on the web (API only) | Users miss updates |
+| 2 | ~~No document upload~~ Done (R2): PDF/JPG/PNG uploads with permission-checked downloads. Files are stored locally until an S3 bucket is configured | n/a |
+| 3 | ~~Notifications in-app only~~ Done (R4): email for every notification and a Notifications page. Real delivery needs an SMTP account (development prints emails to the console) | n/a |
 | 4 | **Duplicate review** and the **public marketing pages** use sample content (`apps/core/demo_data.py`) | Not real data |
 | 5 | Award settings screen covers only the 2 demo awards; no screen to create a new award, criteria or rounds | Can't add the other ~78 programmes without admin/code |
 | 6 | No web screen for creating staff, judge or leader accounts (API and `/admin/` only); no audit-log viewer | Admin work needs the API or the admin site |
