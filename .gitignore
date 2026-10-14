@@ -23,3 +23,7 @@ Thumbs.db
 .vscode/
 logs/*
 !logs/.gitkeep
+.env.*
+!.env.example
+!.env.production.example
+staticfiles/

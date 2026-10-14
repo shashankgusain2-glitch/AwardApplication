@@ -1,0 +1,30 @@
+# Production image: Gunicorn, static files collected and served by WhiteNoise,
+# runs as a non-root user. Development keeps using ./Dockerfile (runserver).
+#   docker build -f Dockerfile.prod -t awards-platform .
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DJANGO_SETTINGS_MODULE=config.settings.prod
+
+WORKDIR /app
+
+COPY requirements/ requirements/
+RUN pip install --no-cache-dir -r requirements/prod.txt
+
+COPY . .
+
+# Build-time values only: collectstatic needs settings to load, not real secrets.
+RUN SECRET_KEY=build-only-not-a-secret-0123456789abcdef ALLOWED_HOSTS=localhost \
+        python manage.py collectstatic --noinput \
+    && useradd --create-home --uid 1000 app \
+    && mkdir -p /app/logs /app/media \
+    && chown -R app:app /app/logs /app/media
+
+USER app
+EXPOSE 8000
+
+# Migrations run as a separate release step (see docs/Deployment.md), not on every start.
+CMD ["gunicorn", "config.wsgi:application", \
+     "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "60", \
+     "--access-logfile", "-", "--error-logfile", "-"]
