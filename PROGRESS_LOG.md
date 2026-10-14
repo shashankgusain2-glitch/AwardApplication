@@ -2,7 +2,7 @@
 
 > **Snapshot:** 14 Oct 2026 · `main` at `8477b62` ("steps 3.4 and 3.5").
 > Written from the code, settings, migrations, tests and git history. Where your summary and the code differ, the code wins and the difference is flagged with ⚠️.
-> **Since that snapshot** (branch `feature/form-editor-and-prod-setup`): the staff **form-version editor** with 6 real Rule 4 tests, and the **production setup** (Gunicorn, WhiteNoise, `Dockerfile.prod`, Nginx, Sentry, S3 option, SMTP settings, CI production-image check). Then **email notifications (R4)** and **document upload (R2)**. Full suite: **298 passed, 8 skipped**.
+> **Since that snapshot** (branch `feature/form-editor-and-prod-setup`): the staff **form-version editor** with 6 real Rule 4 tests, and the **production setup** (Gunicorn, WhiteNoise, `Dockerfile.prod`, Nginx, Sentry, S3 option, SMTP settings, CI production-image check). Then **email notifications (R4)** and **document upload (R2)**. Then **award administration (R1)**. Full suite: **314 passed, 8 skipped**.
 
 ---
 
@@ -213,7 +213,7 @@ Only questions marked identifying (and file names) mention the organisation.
 
 | Kind | Where | Result |
 |---|---|---|
-| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **298 passed, 8 skipped** (the 8 are the Rule 2/3 placeholders) |
+| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **314 passed, 8 skipped** (the 8 are the Rule 2/3 placeholders) |
 | Postman | `postman/` (collection, environment, `CHECKLIST.md`) | **116 requests, 259 checks, 0 failures** with Newman on fresh seed data; repeatable |
 | End-to-end | `tests/test_web_workflow.py` and a manual browser run | Sign up → organisation → submit → staff verify and assign → both judges grade → scored → leader approves → applicant sees "Approved" |
 | Rules | `tests/rules/` | Rule 1: 8 tests running. ⚠️ Rule 2 and Rule 3 files are **skipped placeholders**, although those behaviours are tested in `tests/api/`. Rule 4: 6 tests running |
@@ -237,6 +237,8 @@ Only questions marked identifying (and file names) mention the organisation.
 | 14 Oct | Step 3.5: every role's screens on real data; blind leak fixed | Roadmap "done when" | `apps/{entries,judging,awards,dashboard}/`, `templates/`, `tests/test_web_workflow.py` |
 | 14 Oct | Form-version editor and Rule 4 tests | Staff edit questions as a new version | `apps/awards/`, `templates/awards/form_edit.html` |
 | 14 Oct | Email notifications and a Notifications page (R4); document upload with permission-checked downloads (R2) | Applicants can attach evidence; everyone hears about changes | `apps/notifications/`, `apps/applications/files.py`, `tests/test_notifications.py`, `tests/test_uploads.py` |
+| 14 Oct | **R1 Award administration**: an *Awards* menu for staff: create an award (name, dates, who applies, fee, judges per report, blind judging, up to 5 rounds), a scoring-criteria editor (weights must total 100 per round; locked once judges have scored), a judge-panel picker, and status control that refuses to open an award until it has a form, criteria and judges. Rounds with judges can't be removed | Brief: run many programmes with no code; verified in the browser (a third award created and opened) and in `tests/test_award_admin.py` | `apps/awards/services.py`, `apps/awards/views.py`, `apps/awards/urls.py`, `templates/awards/award_*.html`, `_award_steps.html`, `apps/core/templatetags/ui.py` |
+| 14 Oct | Fix: the staff home listed only *submitted* reports as needing judges, so a report short of judges after a decline or a conflict never showed | Bug reported by the user | `apps/core/overview.py`, `templates/awards/staff_home.html` |
 | 14 Oct | Supabase-ready: transaction-pooler setting (`DB_TRANSACTION_POOLER`), S3 path-style option, fixed connection reuse in production (`CONN_MAX_AGE` was set where Django ignores it), Supabase steps in the runbook | Staging on Supabase | `config/settings/{base,prod}.py`, `docs/Deployment.md` |
 | 14 Oct | Production setup: Gunicorn, WhiteNoise, `Dockerfile.prod` (non-root), `docker-compose.prod.yml`, `deploy/nginx.conf`, Sentry, S3 option, SMTP settings, CI production-image job, runbook | Ready to deploy once hosting is chosen | `requirements/prod.txt`, `config/settings/{base,prod}.py`, `docs/Deployment.md`, `.github/workflows/ci.yml` |
 
@@ -287,7 +289,7 @@ Only questions marked identifying (and file names) mention the organisation.
 | 2 | ~~No document upload~~ Done (R2): PDF/JPG/PNG uploads with permission-checked downloads. Files are stored locally until an S3 bucket is configured | n/a |
 | 3 | ~~Notifications in-app only~~ Done (R4): email for every notification and a Notifications page. Real delivery needs an SMTP account (development prints emails to the console) | n/a |
 | 4 | **Duplicate review** and the **public marketing pages** use sample content (`apps/core/demo_data.py`) | Not real data |
-| 5 | Award settings screen covers only the 2 demo awards; no screen to create a new award, criteria or rounds | Can't add the other ~78 programmes without admin/code |
+| 5 | ~~No screen to create awards~~ Done (R1). Remaining: the older *Award settings* screen still edits only the 2 demo awards and overlaps with the new award page (both save to the same tables); merge in R8. New awards don't appear on the public marketing pages yet (they do for applicants) | Two places to edit the demo awards |
 | 6 | No web screen for creating staff, judge or leader accounts (API and `/admin/` only); no audit-log viewer | Admin work needs the API or the admin site |
 | 7 | No search/export to CSV or PDF; no results publication to applicants beyond status | Reporting gap |
 | 8 | `tests/rules/test_rule2_*` and `test_rule3_*` are skipped placeholders (behaviour tested elsewhere) | Misleading test report |

@@ -1,0 +1,49 @@
+{% extends "portal_base.html" %}
+{% load ui %}
+
+{% block title %}Criteria · {{ award.name }}{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'awards:award_list' %}">Awards</a> / {{ award.name }}</p>{% endblock %}
+{% block heading %}Scoring criteria: {{ award.name }}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">What judges score (1–10) in each round, and how much each counts. Weights in every round must add up to 100.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+{% include "awards/_award_steps.html" %}
+
+{% if locked %}
+  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>Locked</strong>Judges have already scored this award, so the criteria can't change: totals would change under their scores.</div></div>
+{% endif %}
+
+<form method="post" class="stack">
+  {% csrf_token %}
+  <input type="hidden" name="rows" value="{{ rows|length }}">
+  {% for r in rounds %}
+    <div class="card">
+      <div class="card-head"><h2>Round {{ r.number }}: {{ r.get_kind_display }}</h2><span class="small {% if totals|get_item:r.number != 100 %}field-error{% endif %}">Total {{ totals|get_item:r.number }} / 100</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:55%">Criterion</th><th>Weight %</th><th>Remove</th></tr></thead>
+          <tbody>
+            {% for c in rows %}{% if c.round_number|stringformat:"s" == r.number|stringformat:"s" %}
+              <tr>
+                <td>
+                  <input type="hidden" name="c-{{ forloop.counter0 }}-round" value="{{ r.number }}">
+                  <input type="hidden" name="c-{{ forloop.counter0 }}-key" value="{{ c.key }}">
+                  <input name="c-{{ forloop.counter0 }}-label" type="text" value="{{ c.label }}" {% if not c.key %}placeholder="Add a criterion…"{% endif %} aria-label="Criterion name" {% if locked %}readonly{% endif %}>
+                </td>
+                <td><input name="c-{{ forloop.counter0 }}-weight" type="number" min="1" max="100" value="{{ c.weight }}" style="width:6rem" aria-label="Weight" {% if locked %}readonly{% endif %}></td>
+                <td>{% if c.key and not locked %}<input name="c-{{ forloop.counter0 }}-remove" type="checkbox" aria-label="Remove {{ c.label }}">{% endif %}</td>
+              </tr>
+            {% endif %}{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% empty %}
+    <div class="card"><p class="muted small" style="margin:0">Add a judging round first (step 1).</p></div>
+  {% endfor %}
+  {% if rounds and not locked %}
+    <div class="row"><button class="btn btn-primary" type="submit">Save criteria</button><span class="hint">Empty rows are ignored. Need more rows? Save, and two new empty rows appear per round.</span></div>
+  {% endif %}
+</form>
+{% endblock %}

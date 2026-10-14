@@ -1,0 +1,53 @@
+{% extends "portal_base.html" %}
+
+{% block title %}{% if award %}{{ award.name }}{% else %}New award{% endif %}{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'awards:award_list' %}">Awards</a> / {% if award %}{{ award.name }}{% else %}New{% endif %}</p>{% endblock %}
+{% block heading %}{% if award %}{{ award.name }}{% else %}New award{% endif %}{% endblock %}
+{% block subheading %}{% if award %}<p style="margin:.25rem 0 0"><span class="badge badge-{{ award.status }}">{{ award.get_status_display }}</span></p>{% endif %}{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+{% if award %}
+  {% include "awards/_award_steps.html" %}
+{% endif %}
+
+<form method="post" class="stack" novalidate>
+  {% csrf_token %}
+  <div class="card">
+    <div class="card-head"><h2>About the award</h2></div>
+    <div class="form-grid">
+      <div class="field"><label for="a-name">Name *</label><input id="a-name" name="name" type="text" maxlength="200" value="{{ values.name|default:'' }}" required></div>
+      <div class="field"><label for="a-sector">Sector</label><input id="a-sector" name="sector" type="text" maxlength="100" value="{{ values.sector|default:'' }}" placeholder="e.g. Manufacturing"></div>
+      <div class="field"><label for="a-opens">Opens on</label><input id="a-opens" name="opens_on" type="date" value="{{ values.opens_on|date:'Y-m-d' }}"></div>
+      <div class="field"><label for="a-closes">Closes on</label><input id="a-closes" name="closes_on" type="date" value="{{ values.closes_on|date:'Y-m-d' }}"></div>
+      <div class="field">
+        <label for="a-type">Who applies</label>
+        <select id="a-type" name="applicant_type">{% for v, l in applicant_types %}<option value="{{ v }}" {% if values.applicant_type == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+      </div>
+      <div class="field"><label for="a-fee">Entry fee (₹, 0 = free)</label><input id="a-fee" name="entry_fee" type="number" min="0" value="{{ values.entry_fee|default_if_none:0 }}"></div>
+    </div>
+    <div class="field" style="margin-top:1rem"><label for="a-summary">Short description (shown to applicants)</label><textarea id="a-summary" name="summary">{{ values.summary|default:'' }}</textarea></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>How it is judged</h2></div>
+    <div class="form-grid">
+      {% for kind in rounds %}
+        <div class="field">
+          <label for="a-round{{ forloop.counter }}">Round {{ forloop.counter }}{% if forloop.first %} *{% endif %}</label>
+          <select id="a-round{{ forloop.counter }}" name="round{{ forloop.counter }}">
+            {% if not forloop.first %}<option value="">No round {{ forloop.counter }}</option>{% endif %}
+            {% for v, l in round_kinds.items %}<option value="{{ v }}" {% if kind == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+          </select>
+        </div>
+      {% endfor %}
+      <div class="field"><label for="a-judges">Judges per report (1–7)</label><input id="a-judges" name="judges_per_report" type="number" min="1" max="7" value="{{ values.judges_per_report|default_if_none:2 }}"></div>
+    </div>
+    <label class="row" style="margin-top:1rem;gap:.5rem"><input type="checkbox" name="blind_judging" {% if values.blind_judging %}checked{% endif %}> <span><strong>Blind judging</strong>: in desk review rounds judges don't see who applied (needs a desk review round).</span></label>
+    <p class="hint">Rounds run in order; leave later rounds empty if not needed. A round that already has judges assigned can't be removed.</p>
+  </div>
+
+  <div class="row"><button class="btn btn-primary" type="submit">{% if award %}Save{% else %}Create award{% endif %}</button>
+    <a class="btn btn-outline" href="{% url 'awards:award_list' %}">Cancel</a></div>
+</form>
+{% endblock %}

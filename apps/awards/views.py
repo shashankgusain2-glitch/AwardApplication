@@ -173,6 +173,172 @@ def form_edit(request, slug):
         "role": ROLE, "award": award, "current": current, "rows": rows, "types": award_services.QUESTION_TYPES})
 
 
+# --- Award administration: any number of awards, set up without code ------------
+
+def _parse_award_form(post):
+    """The award form's fields as Python values. Returns (fields, rounds, errors)."""
+    from datetime import date
+    errors = []
+
+    def day(name, label):
+        raw = post.get(name, "").strip()
+        if not raw:
+            return None
+        try:
+            return date.fromisoformat(raw)
+        except ValueError:
+            errors.append(f"{label}: use a date like 2026-12-15.")
+            return None
+
+    def number(name, label, default):
+        raw = post.get(name, "").strip()
+        if not raw:
+            return default
+        try:
+            return int(raw)
+        except ValueError:
+            errors.append(f"{label} must be a whole number.")
+            return default
+
+    fields = {
+        "name": post.get("name", "").strip(), "sector": post.get("sector", "").strip(),
+        "summary": post.get("summary", "").strip(),
+        "opens_on": day("opens_on", "Opens on"), "closes_on": day("closes_on", "Closes on"),
+        "applicant_type": post.get("applicant_type", Award.ApplicantType.ORGANISATION),
+        "judges_per_report": number("judges_per_report", "Judges per report", 2),
+        "blind_judging": post.get("blind_judging") == "on",
+        "entry_fee": number("entry_fee", "Entry fee", 0),
+    }
+    if fields["applicant_type"] not in Award.ApplicantType.values:
+        errors.append("Choose who applies from the list.")
+    rounds = []
+    for n in range(1, 6):
+        kind = post.get(f"round{n}", "")
+        if not kind:
+            break                                  # rounds are numbered with no gaps
+        rounds.append(kind)
+    return fields, rounds, errors
+
+
+def _award_form_page(request, award, values, rounds):
+    return render(request, "awards/award_form.html", {
+        "role": ROLE, "award": award, "values": values, "rounds": rounds + [""] * (5 - len(rounds)),
+        "round_kinds": award_services.ROUND_KINDS, "applicant_types": Award.ApplicantType.choices,
+    })
+
+
+@role_required("staff")
+def award_list(request):
+    awards = Award.objects.prefetch_related("rounds", "judge_panel").annotate(entries=Count("applications"))
+    return render(request, "awards/award_list.html", {
+        "role": ROLE,
+        "rows": [{"award": a, "problems": award_services.ready_to_open(a)} for a in awards],
+    })
+
+
+@role_required("staff")
+@require_http_methods(["GET", "POST"])
+def award_new(request):
+    if request.method == "POST":
+        fields, rounds, errors = _parse_award_form(request.POST)
+        if not errors:
+            try:
+                award = award_services.create_award(by=request.user, rounds=rounds, **fields)
+            except BusinessRuleError as error:
+                errors.append(str(error))
+            else:
+                messages.success(request, f"{award.name} created. Next: add its questions, criteria and judges, "
+                                          f"then open it.")
+                return redirect("awards:award_edit", slug=award.slug)
+        for error in errors:
+            messages.error(request, error)
+        return _award_form_page(request, None, fields, rounds)
+    return _award_form_page(request, None, {"judges_per_report": 2, "entry_fee": 0}, ["desk"])
+
+
+@role_required("staff")
+@require_http_methods(["GET", "POST"])
+def award_edit(request, slug):
+    award = get_object_or_404(Award, slug=slug)
+    if request.method == "POST":
+        fields, rounds, errors = _parse_award_form(request.POST)
+        if not errors:
+            try:
+                award_services.update_award(award, by=request.user, rounds=rounds, **fields)
+            except BusinessRuleError as error:
+                errors.append(str(error))
+            else:
+                messages.success(request, f"Saved {award.name}.")
+                return redirect("awards:award_edit", slug=award.slug)
+        for error in errors:
+            messages.error(request, error)
+        return _award_form_page(request, award, fields, rounds)
+    values = {f: getattr(award, f) for f in ("name", "sector", "summary", "opens_on", "closes_on", "applicant_type",
+                                              "judges_per_report", "blind_judging", "entry_fee")}
+    return _award_form_page(request, award, values, [r.kind for r in award.rounds.all()])
+
+
+@role_required("staff")
+@require_POST
+def award_status(request, slug):
+    award = get_object_or_404(Award, slug=slug)
+    try:
+        award_services.set_status(award, by=request.user, status=request.POST.get("status", ""))
+        messages.success(request, f"{award.name} is now {award.get_status_display().lower()}.")
+    except BusinessRuleError as error:
+        messages.error(request, str(error))
+    return redirect("awards:award_edit", slug=award.slug)
+
+
+@role_required("staff")
+@require_http_methods(["GET", "POST"])
+def award_criteria(request, slug):
+    award = get_object_or_404(Award, slug=slug)
+    locked = award_services.criteria_locked(award)
+    if request.method == "POST":
+        count = min(int(request.POST["rows"]) if request.POST.get("rows", "").isdigit() else 0, 100)
+        rows = [{"round_number": request.POST.get(f"c-{n}-round", "1"), "key": request.POST.get(f"c-{n}-key", ""),
+                 "label": request.POST.get(f"c-{n}-label", ""), "weight": request.POST.get(f"c-{n}-weight", ""),
+                 "remove": request.POST.get(f"c-{n}-remove") == "on"} for n in range(count)]
+        try:
+            award_services.save_criteria(award, by=request.user, rows=rows)
+        except BusinessRuleError as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, f"Criteria saved for {award.name}.")
+            return redirect("awards:award_criteria", slug=award.slug)
+    else:
+        rows = [{"round_number": c.round_number, "key": c.key, "label": c.label, "weight": c.weight}
+                for c in award.criteria.all()]
+    rounds = list(award.rounds.all())
+    if not locked:
+        rows = list(rows) + [{"round_number": r.number, "key": "", "label": "", "weight": ""}
+                             for r in rounds for _ in range(2)]   # room to add two per round
+    totals = {r.number: sum(int(c["weight"]) for c in rows if str(c["round_number"]) == str(r.number)
+                            and str(c.get("weight", "")).isdigit() and c.get("label") and not c.get("remove"))
+              for r in rounds}
+    return render(request, "awards/award_criteria.html", {
+        "role": ROLE, "award": award, "rows": rows, "rounds": rounds, "totals": totals, "locked": locked,
+    })
+
+
+@role_required("staff")
+@require_http_methods(["GET", "POST"])
+def award_panel(request, slug):
+    award = get_object_or_404(Award, slug=slug)
+    judges = User.objects.filter(role=User.Role.JUDGE).select_related("judge_profile").order_by("name", "email")
+    if request.method == "POST":
+        chosen = list(judges.filter(pk__in=request.POST.getlist("judges"), is_active=True))
+        award_services.set_panel(award, by=request.user, judges=chosen)
+        messages.success(request, f"{award.name}: {len(chosen)} judge{'s' if len(chosen) != 1 else ''} on the panel.")
+        return redirect("awards:award_panel", slug=award.slug)
+    on_panel = set(award.judge_panel.values_list("user_id", flat=True))
+    return render(request, "awards/award_panel.html", {
+        "role": ROLE, "award": award, "on_panel": on_panel,
+        "judges": [{"user": j, "checked": j.pk in on_panel} for j in judges],
+    })
+
+
 @role_required("staff")
 def entries(request):
     """

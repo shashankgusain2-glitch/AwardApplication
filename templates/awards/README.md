@@ -4,6 +4,11 @@
 
 | File | Page |
 |---|---|
+| `award_list.html` | All awards, with readiness and a New award button |
+| `award_form.html` | Create or edit an award (details, dates, rounds, blind judging) |
+| `_award_steps.html` | The set-up checklist (details → form → criteria → panel), what's missing, and the status control |
+| `award_criteria.html` | Scoring criteria per round with live totals |
+| `award_panel.html` | Pick the judges for the award's panel |
 | `staff_home.html` | Real work waiting today: organisations to verify, submitted reports with no judges, open requests, and every award's counts |
 | `settings.html` | **Award settings** for both awards side by side: round types, blind judging, judges per entry, who applies, fee, closing date |
 | `form_builder.html` | An award's published form versions and their questions, which are required and which are hidden in blind judging |

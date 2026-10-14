@@ -154,6 +154,172 @@ def questions_from_editor(rows):
     return questions
 
 
+# --- Award administration (staff create and run any award) -----------------------
+
+ROUND_KINDS = dict(AwardRound.Kind.choices)
+
+
+def _unique_slug(name, exclude_pk=None):
+    from django.utils.text import slugify
+    base = slugify(name)[:50] or "award"
+    slug, n = base, 2
+    while Award.all_objects.filter(slug=slug).exclude(pk=exclude_pk).exists():
+        slug, n = f"{base}-{n}", n + 1
+    return slug
+
+
+def _check_award_fields(*, name, judges_per_report, opens_on, closes_on, rounds, blind_judging, entry_fee):
+    if not (name or "").strip():
+        raise BusinessRuleError("Give the award a name.")
+    if not 1 <= judges_per_report <= 7:
+        raise BusinessRuleError("Judges per report must be from 1 to 7.")
+    if entry_fee < 0:
+        raise BusinessRuleError("The entry fee can't be negative (0 means no fee).")
+    if opens_on and closes_on and closes_on < opens_on:
+        raise BusinessRuleError("The closing date can't be before the opening date.")
+    if not rounds:
+        raise BusinessRuleError("An award needs at least one judging round.")
+    if len(rounds) > 5:
+        raise BusinessRuleError("An award can have at most 5 rounds.")
+    if any(kind not in ROUND_KINDS for kind in rounds):
+        raise BusinessRuleError("Each round must be a desk review, site visit or live presentation.")
+    if blind_judging and "desk" not in rounds:
+        raise BusinessRuleError("Blind judging needs a desk review round: on site visits and live "
+                                "presentations judges meet the applicant.")
+
+
+def _sync_rounds(award, rounds):
+    """Change the rounds, but never remove a round that already has judges assigned."""
+    from apps.assignments.models import JudgeAssignment
+    used = set(JudgeAssignment.objects.filter(report__award=award).values_list("round", flat=True))
+    dropped = {r.number for r in award.rounds.all()} - set(range(1, len(rounds) + 1))
+    if used & dropped:
+        raise BusinessRuleError(f"Round {min(used & dropped)} already has judges assigned, so it can't be removed.")
+    set_rounds(award, rounds)
+
+
+@transaction.atomic
+def create_award(*, by, name, rounds, sector="", summary="", opens_on=None, closes_on=None,
+                 applicant_type=Award.ApplicantType.ORGANISATION, judges_per_report=2, blind_judging=False,
+                 entry_fee=0):
+    """A new award, always starting as Upcoming (open it once it has a form, criteria and judges)."""
+    _check_award_fields(name=name, judges_per_report=judges_per_report, opens_on=opens_on, closes_on=closes_on,
+                        rounds=rounds, blind_judging=blind_judging, entry_fee=entry_fee)
+    award = Award.objects.create(slug=_unique_slug(name), name=name.strip(), sector=sector, summary=summary,
+                                 status=Award.Status.UPCOMING, opens_on=opens_on, closes_on=closes_on,
+                                 applicant_type=applicant_type, judges_per_report=judges_per_report,
+                                 blind_judging=blind_judging, entry_fee=entry_fee)
+    set_rounds(award, rounds)
+    record(by, "create", award, changes={"name": award.name, "rounds": rounds})
+    return award
+
+
+@transaction.atomic
+def update_award(award, *, by, rounds, **fields):
+    _check_award_fields(name=fields["name"], judges_per_report=fields["judges_per_report"],
+                        opens_on=fields.get("opens_on"), closes_on=fields.get("closes_on"), rounds=rounds,
+                        blind_judging=fields["blind_judging"], entry_fee=fields["entry_fee"])
+    before = {k: str(getattr(award, k)) for k in fields}
+    for key, value in fields.items():
+        setattr(award, key, value.strip() if isinstance(value, str) else value)
+    award.save()
+    _sync_rounds(award, rounds)
+    record(by, "update", award, changes={"before": before, "after": {k: str(v) for k, v in fields.items()},
+                                         "rounds": rounds})
+    return award
+
+
+def ready_to_open(award):
+    """What is missing before applicants can apply. An empty list means ready."""
+    problems = []
+    if award.current_form is None:
+        problems.append("Publish the application form (Form builder → Edit questions).")
+    for r in award.rounds.all():
+        total = sum(award.criteria.filter(round_number=r.number).values_list("weight", flat=True))
+        if total != 100:
+            problems.append(f"Round {r.number} criteria weights add up to {total}, not 100.")
+    if not award.judge_panel.exists():
+        problems.append("Choose at least one judge for the panel.")
+    return problems
+
+
+@transaction.atomic
+def set_status(award, *, by, status):
+    if status not in Award.Status.values:
+        raise BusinessRuleError("Unknown award status.")
+    if status == Award.Status.OPEN:
+        problems = ready_to_open(award)
+        if problems:
+            raise BusinessRuleError("Not ready to open: " + " ".join(problems))
+    before = award.status
+    award.status = status
+    award.save(update_fields=["status", "updated_at"])
+    record(by, "status_change", award, changes={"from": before, "to": status})
+    return award
+
+
+def criteria_locked(award):
+    """Criteria can't change once any judge has scored this award: totals would change under them."""
+    from apps.evaluations.models import CriterionScore
+    return CriterionScore.objects.filter(criterion__award=award).exists()
+
+
+@transaction.atomic
+def save_criteria(award, *, by, rows):
+    """
+    Replace the award's criteria. rows: [{round_number, key, label, weight, remove}] in order.
+    Weights must add up to 100 in every round. Locked once judging has started.
+    """
+    from django.utils.text import slugify
+    if criteria_locked(award):
+        raise BusinessRuleError("Judges have already scored this award, so its criteria can't change.")
+    rounds = {r.number for r in award.rounds.all()}
+    kept, totals = [], {}
+    for n, row in enumerate(rows, start=1):
+        label = (row.get("label") or "").strip()
+        if row.get("remove") or not label:
+            continue
+        number = int(row.get("round_number") or 1)
+        if number not in rounds:
+            raise BusinessRuleError(f"Criterion {n}: round {number} doesn't exist for this award.")
+        try:
+            weight = int(row.get("weight"))
+        except (TypeError, ValueError):
+            raise BusinessRuleError(f"Criterion {n} ({label}): the weight must be a whole number.") from None
+        if not 1 <= weight <= 100:
+            raise BusinessRuleError(f"Criterion {n} ({label}): the weight must be from 1 to 100.")
+        key = row.get("key") or slugify(label)[:50]
+        kept.append({"round_number": number, "key": key, "label": label, "weight": weight})
+        totals[number] = totals.get(number, 0) + weight
+    for number in sorted(rounds):
+        if totals.get(number, 0) != 100:
+            raise BusinessRuleError(f"Round {number} weights add up to {totals.get(number, 0)}, not 100.")
+    keys = [(c["round_number"], c["key"]) for c in kept]
+    if len(keys) != len(set(keys)):
+        raise BusinessRuleError("Two criteria in the same round have the same name.")
+    award.criteria.all().delete()
+    for order, c in enumerate(kept):
+        Criterion.objects.create(award=award, order=order, **c)
+    record(by, "update", award, changes={"criteria": [f"R{c['round_number']} {c['label']} {c['weight']}%"
+                                                      for c in kept]})
+    return kept
+
+
+@transaction.atomic
+def set_panel(award, *, by, judges):
+    """The judges who may be assigned this award's reports. Removing a judge keeps their existing assignments."""
+    from apps.accounts.models import JudgeProfile, User
+    judges = [j for j in judges if j.role == User.Role.JUDGE]
+    wanted = {j.pk for j in judges}
+    for profile in JudgeProfile.objects.filter(awards=award).exclude(user_id__in=wanted):
+        profile.awards.remove(award)
+    for judge in judges:
+        profile, _ = JudgeProfile.objects.get_or_create(user=judge)
+        profile.awards.add(award)
+    record(by, "update", award, changes={"panel": sorted(j.email for j in judges)})
+    return judges
+
+
 def check_criteria_weights(award, round_number=1):
     total = sum(Criterion.objects.filter(award=award, round_number=round_number).values_list("weight", flat=True))
     if total != 100:

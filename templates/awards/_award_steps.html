@@ -1,0 +1,28 @@
+{# Set-up checklist and status control for one award (award_form, criteria, panel pages). #}
+{% load ui %}
+<div class="card" style="margin-bottom:1.5rem">
+  <div class="row-between">
+    <nav class="chips" aria-label="Set up this award" style="margin:0">
+      <a class="chip {% if request.resolver_match.url_name == 'award_edit' %}active{% endif %}" href="{% url 'awards:award_edit' award.slug %}">1. Details and rounds</a>
+      <a class="chip" href="{% url 'awards:form_edit' award.slug %}">2. Application form</a>
+      <a class="chip {% if request.resolver_match.url_name == 'award_criteria' %}active{% endif %}" href="{% url 'awards:award_criteria' award.slug %}">3. Scoring criteria</a>
+      <a class="chip {% if request.resolver_match.url_name == 'award_panel' %}active{% endif %}" href="{% url 'awards:award_panel' award.slug %}">4. Judge panel</a>
+    </nav>
+    <form method="post" action="{% url 'awards:award_status' award.slug %}" class="row">
+      {% csrf_token %}
+      <label class="small" for="status-{{ award.slug }}">Status</label>
+      <select id="status-{{ award.slug }}" name="status">
+        {% award_statuses as statuses %}{% for v, l in statuses %}<option value="{{ v }}" {% if award.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-outline btn-sm" type="submit">Change</button>
+    </form>
+  </div>
+  {% with problems=award|ready_problems %}
+    {% if problems %}
+      <p class="small" style="margin:.75rem 0 0"><strong>Before it can open:</strong></p>
+      <ul class="small" style="margin:.25rem 0 0">{% for p in problems %}<li>{{ p }}</li>{% endfor %}</ul>
+    {% else %}
+      <p class="small" style="margin:.75rem 0 0">✓ Ready to open: it has a form, criteria that add up to 100 in every round, and judges.</p>
+    {% endif %}
+  {% endwith %}
+</div>
