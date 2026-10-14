@@ -5,7 +5,7 @@ Run `python manage.py check --deploy` against these settings before every
 release. The runbook is docs/Deployment.md.
 """
 from .base import *  # noqa: F401,F403
-from .base import LOGGING, env
+from .base import DATABASES, DB_TRANSACTION_POOLER, LOGGING, env
 
 DEBUG = False
 SECRET_KEY = env("SECRET_KEY")                 # required: no default in production
@@ -21,7 +21,9 @@ SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=False)   # turn on
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
-CONN_MAX_AGE = env.int("CONN_MAX_AGE", default=60)   # reuse database connections
+# Reuse database connections between requests (a transaction pooler does that job itself).
+DATABASES["default"]["CONN_MAX_AGE"] = 0 if DB_TRANSACTION_POOLER else env.int("CONN_MAX_AGE", default=60)
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 
 # --- Files ------------------------------------------------------------------------
 # Static files: compressed, with hashed names, served by WhiteNoise.
@@ -36,6 +38,7 @@ if AWS_STORAGE_BUCKET_NAME:
     STORAGES["default"] = {"BACKEND": "storages.backends.s3.S3Storage"}
     AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default=None)
     AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL", default=None)     # for DO Spaces, Cloudflare R2…
+    AWS_S3_ADDRESSING_STYLE = env("AWS_S3_ADDRESSING_STYLE", default=None)   # "path" for Supabase Storage
     AWS_DEFAULT_ACL = None                 # private bucket
     AWS_QUERYSTRING_AUTH = True            # signed, expiring download links
     AWS_QUERYSTRING_EXPIRE = 300

@@ -90,8 +90,8 @@
 | Need | Recommendation (hosting not decided) | Notes |
 |---|---|---|
 | App server | **Render** or **Railway** for the simplest start, or a small VPS (DigitalOcean or Lightsail, 2 vCPU / 4 GB) with Docker | Managed platforms handle HTTPS and deploys; a VPS is cheaper but you run Nginx and updates |
-| PostgreSQL | Managed Postgres 16 (Render, Railway, RDS or DO Managed) with daily backups and point-in-time recovery | Don't run the production database in the app container |
-| File/media storage | S3 or an S3-compatible bucket (DO Spaces, Cloudflare R2), **private**, with signed URLs; `django-storages` | Needed for R2 uploads |
+| PostgreSQL | Managed Postgres 16 (**Supabase**, Render, Railway, RDS or DO Managed) with daily backups and point-in-time recovery. Supabase is ready: set `DATABASE_URL`, plus `DB_TRANSACTION_POOLER=True` when using its port-6543 pooler (docs/Deployment.md) | Don't run the production database in the app container |
+| File/media storage | S3 or an S3-compatible bucket (**Supabase Storage**, DO Spaces, Cloudflare R2), **private**; `django-storages` (supported: `AWS_S3_ENDPOINT_URL`, `AWS_S3_ADDRESSING_STYLE=path`) | Needed for R2 uploads |
 | Domain | e.g. `awards.<your-org>.in`; DNS A/CNAME | n/a |
 | SSL/HTTPS | Platform-managed, or Let's Encrypt (certbot) on a VPS | `SECURE_SSL_REDIRECT`, HSTS already in `prod.py` |
 | Email | Amazon SES, Postmark or SendGrid over SMTP; SPF, DKIM and DMARC on the domain | `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend` |

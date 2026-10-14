@@ -86,6 +86,12 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
 }
+# Set DB_TRANSACTION_POOLER=True when DATABASE_URL goes through a transaction-mode pooler
+# (Supabase pooler on port 6543, PgBouncer). Such poolers can't keep server-side cursors
+# open between queries, so Django must not use them. Direct or "session" connections: leave False.
+DB_TRANSACTION_POOLER = env.bool("DB_TRANSACTION_POOLER", default=False)
+if DB_TRANSACTION_POOLER:
+    DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
 
 # Custom user model: set before the first migration; hard to change later.
 AUTH_USER_MODEL = "accounts.User"

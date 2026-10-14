@@ -24,6 +24,38 @@ How to put the Awards Platform on a real server. The full checklists (security, 
 6. Deploy, then add your domain; the platform issues the HTTPS certificate.
 7. Create the first leader account (see "First account" below).
 
+## Option A+: Supabase for the database and files (app on Render or Railway)
+
+Supabase gives you a managed **PostgreSQL** and **file storage**. It does not run the Django app, so the app still goes on Render or Railway (Option A). Use only these two parts of Supabase:
+
+- **Not** Supabase Auth: Django already handles login, roles, JWT and password reset.
+- **Not** its auto-generated API or row-level security: all the rules (blind judging, conflicts, recorded score changes, who sees what) live in the Django code, and browsers must never talk to the database directly.
+
+**1. Database**
+1. Create a project in the **Mumbai (ap-south-1)** region and save the database password in your password manager.
+2. In *Connect*, copy a connection string, then set `DATABASE_URL` to it with `?sslmode=require` on the end:
+   - **Direct or session pooler (port 5432):** use this if your host supports it. Set `DB_TRANSACTION_POOLER=False`.
+   - **Transaction pooler (port 6543):** many cheaper hosts only reach Supabase over IPv4, and this pooler works over IPv4. Set `DB_TRANSACTION_POOLER=True`. The app then turns off server-side cursors and connection reuse, which that pooler needs.
+3. Run `python manage.py migrate --noinput` from the app (release command). Don't create tables in the Supabase dashboard.
+
+**2. File storage (uploads)**
+1. In *Storage*, create a **private** bucket (for example `awards-uploads`). Never make it public: downloads must go through the app's `/files/<id>/` permission check.
+2. In *Storage → Settings*, turn on the S3 connection and create an access key.
+3. Set:
+
+| Variable | Value |
+|---|---|
+| `AWS_STORAGE_BUCKET_NAME` | `awards-uploads` |
+| `AWS_S3_ENDPOINT_URL` | the S3 endpoint shown in Storage → Settings (it ends in `/storage/v1/s3`) |
+| `AWS_S3_REGION_NAME` | your project's region, e.g. `ap-south-1` |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | the access key from step 2 |
+| `AWS_S3_ADDRESSING_STYLE` | `path` |
+
+**3. Plans and backups**
+- The free plan suits a **demo or staging** copy. Free projects can be paused when idle and have limited backups; check Supabase's current plan details.
+- For real applicants, use a paid plan with daily backups, and still test a restore (see FUTURE_GOALS_AND_DEPLOYMENT.md §4.6).
+- Moving away later only means a new `DATABASE_URL` (a `pg_dump` / restore) and new storage keys. No code changes.
+
 ## Option B: one VPS with Docker
 
 ```bash
