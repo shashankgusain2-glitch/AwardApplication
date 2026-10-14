@@ -4,14 +4,27 @@ Production: secrets and hosts must come from the environment; HTTPS only.
 Run `python manage.py check --deploy` against these settings before every
 release. The runbook is docs/Deployment.md.
 """
+from django.core.exceptions import ImproperlyConfigured
+
 from .base import *  # noqa: F401,F403
 from .base import DATABASES, DB_TRANSACTION_POOLER, LOGGING, env
 
 DEBUG = False
 SECRET_KEY = env("SECRET_KEY")                 # required: no default in production
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")      # required
+
+# Hosts: your own domain(s) from ALLOWED_HOSTS, plus the address Render or Railway
+# gives the service (they set these variables themselves).
+PLATFORM_HOSTS = [h for h in (env("RENDER_EXTERNAL_HOSTNAME", default=""),
+                              env("RAILWAY_PUBLIC_DOMAIN", default="")) if h]
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + PLATFORM_HOSTS
+if env("RAILWAY_ENVIRONMENT", default=""):
+    ALLOWED_HOSTS.append("healthcheck.railway.app")   # Railway's health checker uses this host name
+if not ALLOWED_HOSTS:
+    raise ImproperlyConfigured("Set ALLOWED_HOSTS (your domain), or deploy on Render/Railway.")
 
 SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
+# The platform's health check calls the app directly over plain HTTP: don't redirect it.
+SECURE_REDIRECT_EXEMPT = [r"^api/v1/health/$"]
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
@@ -20,7 +33,9 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=False)   # turn on once the domain is settled
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
-CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[]) + [f"https://{h}" for h in PLATFORM_HOSTS]
+# Links in emails: SITE_URL if set, else the platform address.
+SITE_URL = env("SITE_URL", default=f"https://{PLATFORM_HOSTS[0]}" if PLATFORM_HOSTS else "http://localhost:8000")
 # Reuse database connections between requests (a transaction pooler does that job itself).
 DATABASES["default"]["CONN_MAX_AGE"] = 0 if DB_TRANSACTION_POOLER else env.int("CONN_MAX_AGE", default=60)
 DATABASES["default"]["CONN_HEALTH_CHECKS"] = True

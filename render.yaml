@@ -1,0 +1,56 @@
+# Render Blueprint: Render → New → Blueprint → pick this repository.
+# The database and file storage are on Supabase (see docs/Deployment.md),
+# so this file only describes the web service.
+services:
+  - type: web
+    name: awards-platform
+    runtime: docker
+    dockerfilePath: ./Dockerfile.prod
+    region: singapore              # closest Render region to Supabase Mumbai (ap-south-1)
+    plan: free                     # staging; use "starter" or higher for real users (free services sleep when idle)
+    healthCheckPath: /api/v1/health/
+    autoDeploy: true               # deploys every push to the branch below
+    branch: main
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.prod
+      - key: RUN_MIGRATIONS_ON_START # apply migrations on start (free plans have no release step)
+        value: "true"
+      - key: SECRET_KEY              # Render makes a random one
+        generateValue: true
+      - key: JWT_SIGNING_KEY
+        generateValue: true
+      - key: DATABASE_URL            # Supabase session pooler URL, ending ?sslmode=require (you paste it)
+        sync: false
+      - key: DB_TRANSACTION_POOLER
+        value: "False"
+      - key: WEB_CONCURRENCY         # Gunicorn workers; 2 suits the free/starter memory
+        value: "2"
+      - key: SHOW_INVITE_LINKS       # "True" until email works, then "False"
+        value: "True"
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.smtp.EmailBackend
+      - key: EMAIL_HOST              # from your email provider (Brevo, Resend, SendGrid, SES…)
+        sync: false
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      - key: AWS_STORAGE_BUCKET_NAME # Supabase Storage bucket (private) for uploads
+        sync: false
+      - key: AWS_S3_ENDPOINT_URL
+        sync: false
+      - key: AWS_S3_REGION_NAME
+        value: ap-south-1
+      - key: AWS_S3_ADDRESSING_STYLE
+        value: path
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: SENTRY_DSN              # optional; leave empty to skip error tracking
+        sync: false

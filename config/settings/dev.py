@@ -15,3 +15,6 @@ CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[
 # run, so local development allows more per minute. Production keeps the
 # stricter limit from base.py (THROTTLE_LOGIN, 10/minute by default).
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["login"] = env("THROTTLE_LOGIN_DEV", default="60/minute")
+
+# Show set-your-password links to the leader on screen (emails only print to the console here).
+SHOW_INVITE_LINKS = env.bool("SHOW_INVITE_LINKS", default=True)

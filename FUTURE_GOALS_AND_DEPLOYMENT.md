@@ -1,7 +1,7 @@
 # Future Goals and Deployment Plan: Awards Platform
 
 > **Snapshot:** 14 Oct 2026, `main` at `8477b62`. What already exists is in [PROGRESS_LOG.md](PROGRESS_LOG.md).
-> ⚠️ **Not provided yet:** the **target deployment date** and the **hosting preference**. The timeline in §7 counts back from a launch day "**D**" (pick the date and fill it in). Hosting advice in §4 is a recommendation, not a decision.
+> **Hosting chosen (14 Oct 2026):** Supabase (database and files) with Render or Railway (the app); ready-made configs `render.yaml` and `railway.json`, steps in [docs/Deployment.md](docs/Deployment.md). ⚠️ **Not provided yet:** the **target deployment date**. The timeline in §7 counts back from a launch day "**D**" (pick the date and fill it in). Hosting advice in §4 is a recommendation, not a decision.
 > Estimates follow the roadmap style in `docs/RoadmapAndTimelines.md`: hours of focused work, plus a "done when" check.
 
 ---
@@ -24,7 +24,8 @@
 - [x] R1 Award administration: staff create, set up and open any award without code (done 14 Oct 2026)
 - [x] R2 Document upload (PDF/JPG/PNG, 10 MB, permission-checked downloads, neutral names for blind judges)
 - [x] R4 Notifications by email and a Notifications page
-- [ ] Deployed anywhere
+- [x] Deploy configuration for Render, Railway and Supabase, checked by simulating both platforms locally (14 Oct 2026)
+- [ ] Deployed anywhere (needs the account set-up in docs/Deployment.md steps 1–4)
 
 ---
 
