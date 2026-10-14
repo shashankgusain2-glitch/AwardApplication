@@ -55,7 +55,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         from django.conf import settings
         from django.core.management.base import CommandError
-        if settings.SETTINGS_MODULE.endswith(".prod"):
+        if (settings.SETTINGS_MODULE or os.environ.get("DJANGO_SETTINGS_MODULE", "")).endswith(".prod"):
             raise CommandError("seed_data loads DEMO accounts with a shared password. It refuses to run with "
                                "production settings. Create the first leader with createsuperuser instead.")
         with emails_off(), transaction.atomic():   # demo data: in-app notifications only, no emails
