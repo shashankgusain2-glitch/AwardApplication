@@ -122,6 +122,38 @@ def publish_form_version(award, questions, by):
     return version
 
 
+QUESTION_TYPES = {"text": "Short text", "textarea": "Long text", "file": "File"}
+
+
+def questions_from_editor(rows):
+    """
+    Turn the form-builder rows into a question list for a new version.
+    rows: [{key, label, type, section, required, identifying, remove}] in order. Rows marked
+    remove, and new rows left blank, are dropped. Existing questions keep their key, so answers
+    in applications on older versions stay linked; new questions get a key made from the label.
+    """
+    from django.utils.text import slugify
+
+    questions, keys = [], set()
+    for n, row in enumerate(rows, start=1):
+        label = (row.get("label") or "").strip()
+        if row.get("remove") or (not label and not row.get("key")):
+            continue
+        if not label:
+            raise BusinessRuleError(f"Question {n} needs a question text (or tick Remove).")
+        if row.get("type") not in QUESTION_TYPES:
+            raise BusinessRuleError(f"Question {n}: choose short text, long text or file.")
+        key = row.get("key") or slugify(label)[:40].replace("-", "_") or f"question_{n}"
+        base, i = key, 2
+        while key in keys:                       # two new questions with the same text
+            key, i = f"{base}_{i}", i + 1
+        keys.add(key)
+        questions.append({"key": key, "label": label, "type": row["type"],
+                          "section": (row.get("section") or "").strip() or "Questions",
+                          "required": bool(row.get("required")), "identifying": bool(row.get("identifying"))})
+    return questions
+
+
 def check_criteria_weights(award, round_number=1):
     total = sum(Criterion.objects.filter(award=award, round_number=round_number).values_list("weight", flat=True))
     if total != 100:
