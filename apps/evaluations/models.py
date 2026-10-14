@@ -6,7 +6,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
-from apps.core.models import TimeStampedModel
+from apps.core.models import AppendOnlyQuerySet, TimeStampedModel
 
 SCORE_RANGE = Q(score__gte=1, score__lte=10)
 
@@ -87,6 +87,8 @@ class ScoreChange(models.Model):
     changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     request = models.ForeignKey(ScoreChangeRequest, on_delete=models.PROTECT, related_name="changes")
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = AppendOnlyQuerySet.as_manager()   # no bulk update/delete either
 
     class Meta:
         ordering = ["-created_at"]

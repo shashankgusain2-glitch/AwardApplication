@@ -279,7 +279,10 @@ def save_criteria(award, *, by, rows):
         label = (row.get("label") or "").strip()
         if row.get("remove") or not label:
             continue
-        number = int(row.get("round_number") or 1)
+        try:
+            number = int(row.get("round_number") or 1)
+        except (TypeError, ValueError):
+            raise BusinessRuleError(f"Criterion {n} ({label}): unknown round.") from None
         if number not in rounds:
             raise BusinessRuleError(f"Criterion {n}: round {number} doesn't exist for this award.")
         try:
