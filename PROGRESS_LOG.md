@@ -237,6 +237,7 @@ Only questions marked identifying (and file names) mention the organisation.
 | 14 Oct | Step 3.5: every role's screens on real data; blind leak fixed | Roadmap "done when" | `apps/{entries,judging,awards,dashboard}/`, `templates/`, `tests/test_web_workflow.py` |
 | 14 Oct | Form-version editor and Rule 4 tests | Staff edit questions as a new version | `apps/awards/`, `templates/awards/form_edit.html` |
 | 14 Oct | Email notifications and a Notifications page (R4); document upload with permission-checked downloads (R2) | Applicants can attach evidence; everyone hears about changes | `apps/notifications/`, `apps/applications/files.py`, `tests/test_notifications.py`, `tests/test_uploads.py` |
+| 14 Oct | Supabase-ready: transaction-pooler setting (`DB_TRANSACTION_POOLER`), S3 path-style option, fixed connection reuse in production (`CONN_MAX_AGE` was set where Django ignores it), Supabase steps in the runbook | Staging on Supabase | `config/settings/{base,prod}.py`, `docs/Deployment.md` |
 | 14 Oct | Production setup: Gunicorn, WhiteNoise, `Dockerfile.prod` (non-root), `docker-compose.prod.yml`, `deploy/nginx.conf`, Sentry, S3 option, SMTP settings, CI production-image job, runbook | Ready to deploy once hosting is chosen | `requirements/prod.txt`, `config/settings/{base,prod}.py`, `docs/Deployment.md`, `.github/workflows/ci.yml` |
 
 ---
