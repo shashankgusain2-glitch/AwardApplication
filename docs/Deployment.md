@@ -91,6 +91,33 @@ docker compose -f docker-compose.prod.yml run --rm web python manage.py createsu
 ```
 Create every other staff, judge and leader account from that leader account. **Never run `seed_data` in production**, and don't set `DEMO_PASSWORD` there.
 
+## From an empty database to a working site (after launch)
+
+Production starts **empty**: no demo people, no demo awards. `seed_data` refuses to run with production settings. Add the real data through the app:
+
+1. **First leader:** `createsuperuser` (above). Log in at `/login/`; you land on the leadership overview.
+2. **People** (leadership menu): add programme staff, judges and other leaders. Each gets an email with a link to set their password, so the email service must be working first. Applicants sign up themselves on `/signup/`.
+3. **Awards** (staff menu, log in as a staff member): **+ New award**, then follow the four steps on the award page:
+   - details and rounds
+   - application form
+   - scoring criteria (weights add up to 100 per round)
+   - judge panel
+   
+   Then set the status to **Open**. The page lists anything still missing.
+4. Applicants can now see the award on their dashboard and apply. Staff verify each organisation, then assign judges.
+5. Check **Audit log** (leadership menu) to confirm actions are being recorded.
+
+## Backup and restore test (before launch, then monthly)
+
+```bash
+pg_dump --format=custom --no-owner "$DATABASE_URL" > awards-backup.dump
+```
+Restore into a **new, empty** database (never over production), point a copy of the app at it, and log in:
+```bash
+pg_restore --no-owner --dbname "$SCRATCH_DATABASE_URL" awards-backup.dump
+```
+The test passes if you can log in as a leader and the Audit log and applications look right. Note the date in the runbook.
+
 ## Check before going live
 
 ```bash
