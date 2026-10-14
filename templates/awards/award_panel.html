@@ -1,0 +1,34 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Judge panel · {{ award.name }}{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'awards:award_list' %}">Awards</a> / {{ award.name }}</p>{% endblock %}
+{% block heading %}Judge panel: {{ award.name }}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Only judges on the panel can be assigned this award's reports. Conflicts of interest are still checked for every report.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+{% include "awards/_award_steps.html" %}
+
+<form method="post" class="card">
+  {% csrf_token %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th></th><th>Judge</th><th>Expertise</th><th>Priority</th><th>Open reports limit</th></tr></thead>
+      <tbody>
+        {% for j in judges %}
+          <tr>
+            <td><input type="checkbox" name="judges" value="{{ j.user.pk }}" {% if j.checked %}checked{% endif %} {% if not j.user.is_active %}disabled{% endif %} aria-label="{{ j.user.display_name }} on the panel"></td>
+            <td><strong>{{ j.user.display_name }}</strong>{% if not j.user.is_active %} <span class="badge badge-declined">Deactivated</span>{% endif %}<br><span class="muted small">{{ j.user.email }}</span></td>
+            <td class="muted small">{{ j.user.judge_profile.expertise|default:"—" }}</td>
+            <td class="small">{{ j.user.judge_profile.priority|default:"—" }}</td>
+            <td class="small">{{ j.user.judge_profile.max_open_assignments|default:"—" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="muted small">No judge accounts yet. A leader creates them.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if judges %}<div class="row" style="margin-top:1rem"><button class="btn btn-primary" type="submit">Save panel</button><span class="hint">Removing a judge keeps the reports already assigned to them.</span></div>{% endif %}
+</form>
+{% endblock %}

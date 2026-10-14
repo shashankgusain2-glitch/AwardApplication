@@ -8,6 +8,10 @@ Staff run each award from here, with no code changes:
 
 | Page | Address | What staff do |
 |---|---|---|
+| Awards | `/staff/awards/` | Every award with its status, rounds, panel and whether it's ready to open; **+ New award** |
+| | `/staff/awards/new/` · `/staff/awards/<award>/` | Create or edit an award: name, sector, dates, who applies, fee, judges per report, blind judging, up to 5 rounds. A set-up checklist shows what's missing; the status control won't open an award without a form, criteria totalling 100 per round and at least one judge |
+| | `/staff/awards/<award>/criteria/` | Scoring criteria per round (weights total 100); locked once judges have scored |
+| | `/staff/awards/<award>/panel/` | Which judges may be assigned this award's reports |
 | My awards | `/staff/` | Real work waiting today: organisations to verify, reports with no judges yet, open requests, and every award's counts |
 | Award settings | `/staff/settings/` | Set round types (desk review, site visit, live presentation), blind judging, judges per entry, who applies, fee, closing date. **This is where the two awards are made to work differently.** Blind judging is blocked if every round is in person |
 | Form builder | `/staff/form-builder/<award>/` | Each award's published form versions and their questions (which are required, which are hidden in blind judging, how many applications use each version). Published versions are read-only (Rule 4) |

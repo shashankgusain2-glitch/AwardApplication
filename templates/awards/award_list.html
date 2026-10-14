@@ -1,0 +1,36 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Awards{% endblock %}
+{% block heading %}Awards{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Every award programme. Create one, set it up, and open it when it's ready. No code needed.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+<div class="row" style="margin-bottom:1rem"><a class="btn btn-primary" href="{% url 'awards:award_new' %}">+ New award</a></div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Award</th><th>Status</th><th>Rounds</th><th>Judges per report</th><th>Panel</th><th>Entries</th><th>Ready to open?</th><th></th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+          {% with a=row.award %}
+          <tr>
+            <td><strong>{{ a.name }}</strong><br><span class="muted small">{{ a.sector|default:"" }}{% if a.closes_on %} · closes {{ a.closes_on|date:"j M Y" }}{% endif %}</span></td>
+            <td><span class="badge badge-{{ a.status }}">{{ a.get_status_display }}</span>{% if a.blind_judging %} <span class="badge badge-sector">🔒 Blind</span>{% endif %}</td>
+            <td class="small">{% for r in a.rounds.all %}{{ r.get_kind_display }}{% if not forloop.last %} → {% endif %}{% endfor %}</td>
+            <td>{{ a.judges_per_report }}</td>
+            <td>{{ a.judge_panel.all|length }}</td>
+            <td>{{ a.entries }}</td>
+            <td class="small">{% if row.problems %}<span class="muted">{{ row.problems|length }} thing{{ row.problems|length|pluralize }} missing</span>{% else %}✓ Ready{% endif %}</td>
+            <td><a class="btn btn-outline btn-sm" href="{% url 'awards:award_edit' a.slug %}">Set up</a></td>
+          </tr>
+          {% endwith %}
+        {% empty %}
+          <tr><td colspan="8" class="muted small">No awards yet. Create the first one.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

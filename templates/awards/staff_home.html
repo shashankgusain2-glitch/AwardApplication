@@ -14,7 +14,7 @@
 </div>
 
 <div class="card" style="margin-bottom:1.5rem">
-  <div class="card-head"><h2>Awards</h2><a class="btn btn-outline btn-sm" href="{% url 'awards:settings' %}">Award settings</a></div>
+  <div class="card-head"><h2>Awards</h2><span class="row"><a class="btn btn-primary btn-sm" href="{% url 'awards:award_new' %}">+ New award</a><a class="btn btn-outline btn-sm" href="{% url 'awards:award_list' %}">Manage awards</a></span></div>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Award</th><th>Rounds</th><th>Drafts</th><th>Submitted</th><th>Being judged</th><th>Scored</th><th>Judging progress</th></tr></thead>

@@ -582,6 +582,7 @@ PORTAL_NAV = {
     ],
     "staff": [
         ("My awards", "awards:staff_home"),
+        ("Awards", "awards:award_list"),
         ("Award settings", "awards:settings"),
         ("Form builder", "awards:form_builder"),
         ("Entries", "awards:entries"),
