@@ -37,11 +37,27 @@ def _per_award():
     return rows
 
 
+def needing_judges():
+    """
+    Reports that still need judges in round 1: submitted ones with none yet, and ones
+    with too few (a judge declined, or conflicts left too few eligible judges).
+    """
+    from apps.assignments.services import ASSIGNABLE, judges_still_needed
+    rows = []
+    for report in (Application.objects.filter(status__in=ASSIGNABLE)
+                   .select_related("award", "applicant__applicant_profile").order_by("submitted_at")):
+        missing = judges_still_needed(report)
+        if missing:
+            rows.append({"report": report, "missing": missing,
+                         "have": report.award.judges_per_report - missing})
+    return rows
+
+
 def staff_home():
     return {
         "to_verify": ApplicantProfile.objects.filter(verification_status=ApplicantProfile.Verification.PENDING)
                                              .select_related("user"),
-        "unassigned": Application.objects.filter(status=S.SUBMITTED).select_related("award", "applicant"),
+        "needing_judges": needing_judges(),
         "score_requests": ScoreChangeRequest.objects.filter(status=ScoreChangeRequest.Status.REQUESTED).count(),
         "edit_requests": Application.objects.filter(edit_requested=True).count(),
         "awards": _per_award(),

@@ -170,6 +170,7 @@ def test_staff_home_shows_real_work(real, staff_client):
     page = staff_client.get(reverse("awards:staff_home")).content.decode()
     assert "Waiting Org" in page                                  # organisation to verify
     assert unassigned.reference in page                           # submitted, no judges yet
+    assert real["report_a"].reference in page                     # 1 of 2 judges: still needs one
     assert "Business Excellence Award" in page
 
 

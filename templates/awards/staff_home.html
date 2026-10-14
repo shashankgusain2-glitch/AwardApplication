@@ -8,7 +8,7 @@
 {% block content %}
 <div class="grid grid-4" style="margin-bottom:1.5rem">
   <div class="kpi"><span>Organisations to verify</span><strong>{{ to_verify|length }}</strong></div>
-  <div class="kpi"><span>Submitted, no judges yet</span><strong>{{ unassigned|length }}</strong></div>
+  <div class="kpi"><span>Reports needing judges</span><strong>{{ needing_judges|length }}</strong></div>
   <div class="kpi"><span>Judge score-change requests</span><strong>{{ score_requests }}</strong></div>
   <div class="kpi"><span>Applicant edit requests</span><strong>{{ edit_requests }}</strong></div>
 </div>
@@ -41,14 +41,18 @@
   <div class="card">
     <h2 style="font-size:1.1rem">Organisations waiting for verification</h2>
     {% for p in to_verify %}
-      <div class="settings-row"><span><strong>{{ p.organisation_name }}</strong><br><span class="muted small">{{ p.gstin|default:"No GSTIN yet" }} · {{ p.user.email }}</span></span></div>
-    {% empty %}<p class="muted small" style="margin:0">None waiting.</p>{% endfor %}
+      <div class="settings-row"><span><strong>{{ p.organisation_name }}</strong><br><span class="muted small">{{ p.gstin|default:"No GSTIN yet" }} · {{ p.user.email }}</span></span><a class="btn btn-outline btn-sm" href="{% url 'awards:entries' %}">Verify</a></div>
+    {% empty %}<p class="muted small" style="margin:0">None waiting: every organisation is verified.</p>{% endfor %}
   </div>
   <div class="card">
-    <h2 style="font-size:1.1rem">Submitted reports with no judges yet</h2>
-    {% for app in unassigned %}
-      <div class="settings-row"><span><strong>{{ app.reference }}</strong> · {{ app.award.name }}<br><span class="muted small">{{ app.applicant.email }} · submitted {{ app.submitted_at|date:"j M Y" }}</span></span></div>
-    {% empty %}<p class="muted small" style="margin:0">None waiting.</p>{% endfor %}
+    <div class="row-between"><h2 style="font-size:1.1rem;margin:0">Reports that still need judges</h2><a class="small" href="{% url 'awards:assign' %}">All</a></div>
+    {% for row in needing_judges %}
+      <div class="settings-row">
+        <span><strong>{{ row.report.reference }}</strong> · {{ row.report.award.name }}<br>
+          <span class="muted small">{{ row.report.applicant.applicant_profile.organisation_name|default:row.report.applicant.email }} · {{ row.have }} of {{ row.report.award.judges_per_report }} judges</span></span>
+        <a class="btn btn-primary btn-sm" href="{% url 'awards:assign' row.report.pk %}">Assign</a>
+      </div>
+    {% empty %}<p class="muted small" style="margin:0">Every submitted report has its judges.</p>{% endfor %}
   </div>
 </div>
 {% endblock %}
