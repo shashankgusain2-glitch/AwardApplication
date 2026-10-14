@@ -1,0 +1,66 @@
+{% extends "portal_base.html" %}
+
+{% block title %}People{% endblock %}
+{% block heading %}People{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Add programme staff, judges and leaders. Each one gets an email with a link to set their password. Applicants sign up themselves.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+<form method="post" class="card" style="margin-bottom:1.5rem">
+  {% csrf_token %}
+  <div class="card-head"><h2>Add a person</h2></div>
+  <div class="form-grid">
+    <div class="field"><label for="p-name">Name *</label><input id="p-name" name="name" type="text" maxlength="150" required></div>
+    <div class="field"><label for="p-email">Email *</label><input id="p-email" name="email" type="email" required></div>
+    <div class="field"><label for="p-role">Role *</label>
+      <select id="p-role" name="role">{% for v, l in new_roles %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select>
+    </div>
+    <div class="field"><label for="p-expertise">Expertise (judges)</label><input id="p-expertise" name="expertise" type="text" placeholder="e.g. Manufacturing, quality"></div>
+    <div class="field"><label for="p-priority">Priority (judges, 1 = asked first)</label><input id="p-priority" name="priority" type="number" min="1" max="99" value="5"></div>
+    <div class="field"><label for="p-max">Most open reports at once (judges)</label><input id="p-max" name="max_open_assignments" type="number" min="1" value="10"></div>
+  </div>
+  <div class="row" style="margin-top:1rem"><button class="btn btn-primary" type="submit">Add and send invite</button>
+    <span class="hint">Judges are put on award panels from Awards → (award) → Judge panel.</span></div>
+</form>
+
+<div class="card">
+  <form method="get" class="card-head">
+    <div class="row">
+      <input name="q" type="text" placeholder="Name or email…" value="{{ filters.q }}" style="width:220px">
+      <select name="role" style="width:170px"><option value="">Everyone</option>{% for v, l in roles %}<option value="{{ v }}" {% if filters.role == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+      <button class="btn btn-outline btn-sm" type="submit">Filter</button>
+    </div>
+    <span class="muted small">{{ people|length }} shown</span>
+  </form>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Last login</th><th></th></tr></thead>
+      <tbody>
+        {% for p in people %}
+          <tr>
+            <td><strong>{{ p.display_name }}</strong><br><span class="muted small">{{ p.email }}</span></td>
+            <td>{{ p.get_role_display }}</td>
+            <td>{% if not p.is_active %}<span class="badge badge-declined">Deactivated</span>{% elif not p.has_usable_password %}<span class="badge badge-pending">Invited</span>{% else %}<span class="badge badge-approved">Active</span>{% endif %}</td>
+            <td class="small">{{ p.last_login|date:"j M Y"|default:"Never" }}</td>
+            <td>
+              {% if p.pk != user.pk %}
+              <form method="post" action="{% url 'dashboard:person_action' p.pk %}" class="row">
+                {% csrf_token %}
+                {% if p.is_active %}
+                  {% if p.role != "applicant" %}<button class="btn btn-outline btn-sm" name="action" value="invite">Send invite again</button>{% endif %}
+                  <button class="btn btn-outline btn-sm" name="action" value="deactivate" onclick="return confirm('Stop {{ p.display_name|escapejs }} from logging in? Their history is kept.')">Deactivate</button>
+                {% else %}
+                  <button class="btn btn-outline btn-sm" name="action" value="activate">Reactivate</button>
+                {% endif %}
+              </form>
+              {% else %}<span class="muted small">You</span>{% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="muted small">Nobody matches.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -127,6 +127,8 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
         data = dict(serializer.validated_data)
         judge_fields = {k: data.pop(k) for k in ("expertise", "priority", "max_open_assignments") if k in data}
         user = services.create_account(created_by=request.user, **data, **judge_fields)
+        if not data.get("password"):   # no password given: email a set-your-password link
+            services.invite(user, by=request.user)
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
     def perform_update(self, serializer):
