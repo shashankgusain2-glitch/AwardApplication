@@ -11,6 +11,7 @@ Staff run each award from here, with no code changes:
 | My awards | `/staff/` | Real work waiting today: organisations to verify, reports with no judges yet, open requests, and every award's counts |
 | Award settings | `/staff/settings/` | Set round types (desk review, site visit, live presentation), blind judging, judges per entry, who applies, fee, closing date. **This is where the two awards are made to work differently.** Blind judging is blocked if every round is in person |
 | Form builder | `/staff/form-builder/<award>/` | Each award's published form versions and their questions (which are required, which are hidden in blind judging, how many applications use each version). Published versions are read-only (Rule 4) |
+| Edit questions | `/staff/form-builder/<award>/new-version/` | Change, add or remove questions and publish them as the **next version**. The current version never changes; applications already started keep their version (Rule 4) |
 | Entries | `/staff/entries/` | Every application (search and filter by status and award), plus the decisions waiting: **verify organisations**, **allow or refuse edit requests**, **allow or refuse judges' score-change requests**, reject an ineligible report |
 | Assign judges | `/staff/assign/` | Reports that still need judges |
 | | `/staff/assign/<id>/` | The eligible judges for one report, best first (on the panel, no recorded conflict, under their workload limit). Assign the ones ticked, or "fill with the best". Conflicted judges are never offered |

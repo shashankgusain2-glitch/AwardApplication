@@ -1,0 +1,37 @@
+# Production on a single server (VPS): Gunicorn app behind Nginx with HTTPS.
+# The database is a MANAGED PostgreSQL (DATABASE_URL in .env.production), not a container here.
+# On Render / Railway you don't need this file: deploy Dockerfile.prod and set the same variables.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml run --rm web python manage.py migrate --noinput
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    env_file: .env.production
+    restart: unless-stopped
+    expose:
+      - "8000"
+    volumes:
+      - media:/app/media          # only used when no S3 bucket is configured
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  media:

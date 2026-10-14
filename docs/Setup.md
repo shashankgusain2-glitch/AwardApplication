@@ -105,4 +105,6 @@ Import the collection and environment from [postman/](../postman/README.md), set
 
 ## Production notes
 
+Step-by-step deployment: [Deployment.md](Deployment.md).
+
 Use `DJANGO_SETTINGS_MODULE=config.settings.prod`. It **requires** `SECRET_KEY` and `ALLOWED_HOSTS` from the environment, forces HTTPS, secure cookies and HSTS. Set `JWT_SIGNING_KEY` (32+ characters), `CORS_ALLOWED_ORIGINS` for the frontend, and a real `EMAIL_BACKEND`. Never run `seed_data` in production.

@@ -9,6 +9,7 @@ urlpatterns = [
     path("settings/", views.settings, name="settings"),
     path("form-builder/", views.form_builder, name="form_builder"),
     path("form-builder/<slug:slug>/", views.form_builder, name="form_builder"),
+    path("form-builder/<slug:slug>/new-version/", views.form_edit, name="form_edit"),
     path("entries/", views.entries, name="entries"),
     path("duplicates/", views.duplicates, name="duplicates"),
     path("assign/", views.assign, name="assign"),

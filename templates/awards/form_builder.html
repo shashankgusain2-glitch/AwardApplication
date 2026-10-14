@@ -14,7 +14,8 @@
 
 {% if chosen %}
 <div class="callout callout-warning" style="margin-bottom:1.5rem">
-  <div><strong>Version {{ chosen.version }} is published and locked</strong>Published versions never change. Applications always open with the version they were started on, even after a new version is published. (Editing questions into a new version comes with the feature work in step 3.6.)</div>
+  <div><strong>Version {{ chosen.version }} is published and locked</strong>Published versions never change. Applications always open with the version they were started on, even after a new version is published.</div>
+  <a class="btn btn-dark btn-sm" style="margin-left:auto;align-self:center" href="{% url 'awards:form_edit' award.slug %}">Edit questions (new version)</a>
 </div>
 
 <div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(260px,1fr);align-items:start">

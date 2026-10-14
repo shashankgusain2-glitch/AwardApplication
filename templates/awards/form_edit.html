@@ -1,0 +1,45 @@
+{% extends "portal_base.html" %}
+
+{% block title %}New form version{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'awards:form_builder' award.slug %}">Form builder</a> / {{ award.name }}</p>{% endblock %}
+{% block heading %}Edit questions: {{ award.name }}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Change, add or remove questions, then publish. {% if current %}Version {{ current.version }} stays exactly as it is.{% endif %}</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+<div class="callout callout-info" style="margin-bottom:1.5rem">
+  <div><strong>Publishing creates a new version</strong>New applications use the new questions. Applications already started keep the version they began with, so nobody's answers change or disappear.</div>
+</div>
+
+<form method="post" class="stack">
+  {% csrf_token %}
+  <input type="hidden" name="rows" value="{{ rows|length }}">
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Section</th><th style="width:40%">Question</th><th>Type</th><th>Required</th><th>Hide in blind judging</th><th>Remove</th></tr></thead>
+        <tbody>
+          {% for q in rows %}
+            {% with n=forloop.counter0 %}
+            <tr>
+              <td class="muted small">{{ forloop.counter }}{% if not q.key %}<br><span class="badge badge-draft">new</span>{% endif %}<input type="hidden" name="q-{{ n }}-key" value="{{ q.key }}"></td>
+              <td><input name="q-{{ n }}-section" type="text" value="{{ q.section }}" aria-label="Section of question {{ forloop.counter }}"></td>
+              <td><input name="q-{{ n }}-label" type="text" value="{{ q.label }}" placeholder="{% if not q.key %}Add a new question…{% endif %}" aria-label="Question {{ forloop.counter }}"></td>
+              <td><select name="q-{{ n }}-type" aria-label="Type of question {{ forloop.counter }}">{% for v, l in types.items %}<option value="{{ v }}" {% if q.type == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></td>
+              <td><input name="q-{{ n }}-required" type="checkbox" {% if q.required %}checked{% endif %} aria-label="Question {{ forloop.counter }} is required"></td>
+              <td><input name="q-{{ n }}-identifying" type="checkbox" {% if q.identifying %}checked{% endif %} aria-label="Hide question {{ forloop.counter }} in blind judging"></td>
+              <td>{% if q.key %}<input name="q-{{ n }}-remove" type="checkbox" {% if q.remove %}checked{% endif %} aria-label="Remove question {{ forloop.counter }}">{% endif %}</td>
+            </tr>
+            {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="hint" style="margin:.75rem 0 0">Empty "new" rows are ignored. Need more rows? Publish, then edit again.</p>
+  </div>
+  <div class="row">
+    <button class="btn btn-primary" type="submit">Publish as version {% if current %}{{ current.version|add:1 }}{% else %}1{% endif %}</button>
+    <a class="btn btn-outline" href="{% url 'awards:form_builder' award.slug %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

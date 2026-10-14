@@ -25,7 +25,7 @@ pytest
 | **R1 Blind judging** | `tests/rules/test_rule1_blind_judging.py` + `tests/test_award_settings.py` | On the real scoring page and the API (seed data): ✅ identifying answers, the title and uploaded file names hidden on blind awards; ✅ non-blind awards show the organisation; ✅ staff turning blind on/off changes what judges see; ✅ live presentation and site visit rounds are never blind; ✅ removing Round 2 closes its scoring page; ✅ blind is rejected when every round is in person | ✅ Running |
 | **R2 Conflict of interest** | `tests/rules/test_rule2_conflict_of_interest.py` | Staff record conflicts (judges don't declare them); a conflicted judge is never suggested; staff can't force it; conflicts match merged duplicate organisations; a conflict recorded after assignment removes it and reassigns | ⏳ Planned |
 | **R3 Score audit** | `tests/rules/test_rule3_score_audit.py` | Change needs a reason; records who, when, old and new value; records can't be edited or deleted; Leader can't change scores | ⏳ Planned |
-| **R4 Form versions** | `tests/rules/test_rule4_form_versions.py` | Published form can't be edited; edits create a new version; old applications open with their own version; removed questions still show on old applications | ⏳ Planned |
+| **R4 Form versions** | `tests/rules/test_rule4_form_versions.py` | Published versions can't be changed; staff editing questions publish a new version and the old one is untouched; old applications open with their own version; a removed question still shows on old applications; new applications use the new version; empty question text rejected; only staff can publish | ✅ Running |
 
 ## What the tests don't check
 

@@ -140,6 +140,40 @@ def form_builder(request, slug=None):
 
 
 @role_required("staff")
+@require_http_methods(["GET", "POST"])
+def form_edit(request, slug):
+    """
+    Edit the questions and publish them as a NEW version (Rule 4): the current
+    version never changes, and applications already started keep their version.
+    """
+    award = get_object_or_404(Award, slug=slug)
+    current = award.current_form
+    blank = {"key": "", "label": "", "type": "textarea", "section": "", "required": True, "identifying": False}
+    if request.method == "POST":
+        count = min(int(request.POST.get("rows", "0")) if request.POST.get("rows", "").isdigit() else 0, 300)
+        rows = [{"key": request.POST.get(f"q-{n}-key", ""), "label": request.POST.get(f"q-{n}-label", ""),
+                 "type": request.POST.get(f"q-{n}-type", ""), "section": request.POST.get(f"q-{n}-section", ""),
+                 "required": request.POST.get(f"q-{n}-required") == "on",
+                 "identifying": request.POST.get(f"q-{n}-identifying") == "on",
+                 "remove": request.POST.get(f"q-{n}-remove") == "on"} for n in range(count)]
+        try:
+            version = award_services.publish_form_version(
+                award, award_services.questions_from_editor(rows), request.user)
+        except BusinessRuleError as error:
+            messages.error(request, str(error))
+            return render(request, "awards/form_edit.html", {
+                "role": ROLE, "award": award, "current": current, "rows": rows,
+                "types": award_services.QUESTION_TYPES})
+        messages.success(request, f"Version {version.version} published. New applications use it; "
+                                  f"applications already started keep their own version.")
+        return redirect("awards:form_builder", slug=award.slug)
+    rows = [{**blank, **q} for q in (current.questions if current else [])]
+    rows += [dict(blank, section=rows[-1]["section"] if rows else "") for _ in range(3)]   # room for new questions
+    return render(request, "awards/form_edit.html", {
+        "role": ROLE, "award": award, "current": current, "rows": rows, "types": award_services.QUESTION_TYPES})
+
+
+@role_required("staff")
 def entries(request):
     """
     Every application (staff see all), with what needs a decision:
