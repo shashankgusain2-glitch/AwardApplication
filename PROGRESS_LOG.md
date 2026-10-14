@@ -2,7 +2,7 @@
 
 > **Snapshot:** 14 Oct 2026 · `main` at `8477b62` ("steps 3.4 and 3.5").
 > Written from the code, settings, migrations, tests and git history. Where your summary and the code differ, the code wins and the difference is flagged with ⚠️.
-> **Since that snapshot** (branch `feature/form-editor-and-prod-setup`): the staff **form-version editor** with 6 real Rule 4 tests, and the **production setup** (Gunicorn, WhiteNoise, `Dockerfile.prod`, Nginx, Sentry, S3 option, SMTP settings, CI production-image check). Then **email notifications (R4)** and **document upload (R2)**. Then **award administration (R1)** and the **Phase 3 wrap-up (R0)**. Full suite: **328 passed, 1 skipped**.
+> **Since that snapshot** (branch `feature/form-editor-and-prod-setup`): the staff **form-version editor** with 6 real Rule 4 tests, and the **production setup** (Gunicorn, WhiteNoise, `Dockerfile.prod`, Nginx, Sentry, S3 option, SMTP settings, CI production-image check). Then **email notifications (R4)** and **document upload (R2)**. Then **award administration (R1)** , the **Phase 3 wrap-up (R0)** and **people and audit log (R5)**. Full suite: **340 passed, 1 skipped**.
 
 ---
 
@@ -213,7 +213,7 @@ Only questions marked identifying (and file names) mention the organisation.
 
 | Kind | Where | Result |
 |---|---|---|
-| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **328 passed, 1 skipped** (the 1 waits for duplicate detection, R8) |
+| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **340 passed, 1 skipped** (the 1 waits for duplicate detection, R8) |
 | Postman | `postman/` (collection, environment, `CHECKLIST.md`) | **116 requests, 259 checks, 0 failures** with Newman on fresh seed data; repeatable |
 | End-to-end | `tests/test_web_workflow.py` and a manual browser run | Sign up → organisation → submit → staff verify and assign → both judges grade → scored → leader approves → applicant sees "Approved" |
 | Rules | `tests/rules/` | Rule 1: 8 tests running. ⚠️ Rule 2 and Rule 3 files are **skipped placeholders**, although those behaviours are tested in `tests/api/`. Rule 4: 6 tests running |
@@ -237,6 +237,7 @@ Only questions marked identifying (and file names) mention the organisation.
 | 14 Oct | Step 3.5: every role's screens on real data; blind leak fixed | Roadmap "done when" | `apps/{entries,judging,awards,dashboard}/`, `templates/`, `tests/test_web_workflow.py` |
 | 14 Oct | Form-version editor and Rule 4 tests | Staff edit questions as a new version | `apps/awards/`, `templates/awards/form_edit.html` |
 | 14 Oct | Email notifications and a Notifications page (R4); document upload with permission-checked downloads (R2) | Applicants can attach evidence; everyone hears about changes | `apps/notifications/`, `apps/applications/files.py`, `tests/test_notifications.py`, `tests/test_uploads.py` |
+| 14 Oct | **R5 People and audit log**: leaders add staff, judges and leaders from the portal (*People*); each gets an email with a one-time set-your-password link; deactivate, reactivate, resend invite; an *Audit log* page with filters. Accounts created through the API without a password also get the invite | So real people can be added after launch without `/admin/` | `apps/accounts/services.py` (`invite`), `apps/dashboard/views.py`, `templates/dashboard/people.html`, `audit.html`, `tests/test_people_and_audit.py` |
 | 14 Oct | **R0 Phase 3 wrap-up**: real Rule 2 and Rule 3 tests replace the placeholders; junk-input sweep of every web form; `seed_data` refuses to run with production settings; `pip-audit` is clean and now blocks CI | Roadmap 3.6–3.8 and launch safety | `tests/rules/`, `tests/test_bad_input.py`, `apps/core/models.py`, `apps/audit/models.py`, `apps/evaluations/models.py`, `apps/awards/views.py`, `apps/awards/services.py`, `seed_data.py`, `.github/workflows/ci.yml` |
 | 14 Oct | **R1 Award administration**: an *Awards* menu for staff: create an award (name, dates, who applies, fee, judges per report, blind judging, up to 5 rounds), a scoring-criteria editor (weights must total 100 per round; locked once judges have scored), a judge-panel picker, and status control that refuses to open an award until it has a form, criteria and judges. Rounds with judges can't be removed | Brief: run many programmes with no code; verified in the browser (a third award created and opened) and in `tests/test_award_admin.py` | `apps/awards/services.py`, `apps/awards/views.py`, `apps/awards/urls.py`, `templates/awards/award_*.html`, `_award_steps.html`, `apps/core/templatetags/ui.py` |
 | 14 Oct | Fix: the staff home listed only *submitted* reports as needing judges, so a report short of judges after a decline or a conflict never showed | Bug reported by the user | `apps/core/overview.py`, `templates/awards/staff_home.html` |
@@ -293,7 +294,7 @@ Only questions marked identifying (and file names) mention the organisation.
 | 3 | ~~Notifications in-app only~~ Done (R4): email for every notification and a Notifications page. Real delivery needs an SMTP account (development prints emails to the console) | n/a |
 | 4 | **Duplicate review** and the **public marketing pages** use sample content (`apps/core/demo_data.py`) | Not real data |
 | 5 | ~~No screen to create awards~~ Done (R1). Remaining: the older *Award settings* screen still edits only the 2 demo awards and overlaps with the new award page (both save to the same tables); merge in R8. New awards don't appear on the public marketing pages yet (they do for applicants) | Two places to edit the demo awards |
-| 6 | No web screen for creating staff, judge or leader accounts (API and `/admin/` only); no audit-log viewer | Admin work needs the API or the admin site |
+| 6 | ~~No account screen or audit viewer~~ Done (R5). Invites need a real email service in production to arrive | n/a |
 | 7 | No search/export to CSV or PDF; no results publication to applicants beyond status | Reporting gap |
 | 8 | ~~Rule 2/3 placeholder tests~~ Done (real tests). One Rule 2 test (conflicts across merged duplicate organisations) stays skipped until R8 | n/a |
 | 9 | Some N+1 queries (`report_for_judge` per row, per-award counts) | Slow at scale |

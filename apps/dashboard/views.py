@@ -3,14 +3,24 @@ Leadership screens, on the real database. Leaders see everything and
 approve results; they never change scores (that is the judges' job, with
 staff permission: Rule 3).
 """
+from datetime import date
+from urllib.parse import urlencode
+
 from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
+from django.core.validators import validate_email
+from django.db import transaction
 from django.db.models import Avg, Count, Max, Min, Q
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods, require_POST
 
+from apps.accounts import services as account_services
+from apps.accounts.models import User
 from apps.accounts.permissions import role_required
 from apps.applications import services as application_services
 from apps.applications.models import Application
+from apps.audit.models import AuditLog
 from apps.awards.models import Award
 from apps.core import overview as summaries
 from apps.core.services import BusinessRuleError
@@ -87,3 +97,108 @@ def decide(request, pk):
     except BusinessRuleError as error:
         messages.error(request, str(error))
     return redirect("dashboard:results")
+
+
+# --- People: leaders create and manage staff, judge and leader accounts -------------
+
+STAFF_ROLES = [(r, label) for r, label in User.Role.choices if r != User.Role.APPLICANT]   # applicants sign up
+
+
+def _number(raw, default):
+    raw = (raw or "").strip()
+    return int(raw) if raw.isdigit() else default
+
+
+@role_required("leader")
+@require_http_methods(["GET", "POST"])
+def people(request):
+    """Everyone with an account; leaders add staff, judges and leaders (they get an invite email)."""
+    if request.method == "POST":
+        role = request.POST.get("role", "")
+        if role not in dict(STAFF_ROLES):
+            messages.error(request, "Choose staff, judge or leader. Applicants sign up themselves.")
+            return redirect("dashboard:people")
+        email = request.POST.get("email", "").strip().lower()
+        name = request.POST.get("name", "").strip()
+        judge_fields = {}
+        if role == User.Role.JUDGE:
+            judge_fields = {"expertise": request.POST.get("expertise", "").strip(),
+                            "priority": min(max(_number(request.POST.get("priority"), 5), 1), 99),
+                            "max_open_assignments": max(_number(request.POST.get("max_open_assignments"), 10), 1)}
+        try:
+            if not name:
+                raise BusinessRuleError("Give the person's name.")
+            validate_email(email)
+            with transaction.atomic():
+                user = account_services.create_account(created_by=request.user, email=email, name=name,
+                                                       role=role, **judge_fields)
+                account_services.invite(user, by=request.user)
+        except ValidationError:
+            messages.error(request, "Enter a valid email address.")
+        except BusinessRuleError as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, f"{user.display_name} ({user.get_role_display()}) added. "
+                                      f"An email with a set-your-password link was sent to {user.email}.")
+        return redirect("dashboard:people")
+
+    users = User.objects.order_by("role", "name", "email")
+    role, query = request.GET.get("role", ""), request.GET.get("q", "").strip()
+    if role in User.Role.values:
+        users = users.filter(role=role)
+    if query:
+        users = users.filter(Q(email__icontains=query) | Q(name__icontains=query))
+    return render(request, "dashboard/people.html", {
+        "role": ROLE, "people": users[:300], "roles": User.Role.choices, "new_roles": STAFF_ROLES,
+        "filters": {"role": role, "q": query},
+    })
+
+
+@role_required("leader")
+@require_POST
+def person_action(request, pk):
+    person = get_object_or_404(User, pk=pk)
+    action = request.POST.get("action")
+    try:
+        if action == "deactivate":
+            account_services.set_active(person, by=request.user, active=False)
+            messages.success(request, f"{person.display_name} can no longer log in. Their history is kept.")
+        elif action == "activate":
+            account_services.set_active(person, by=request.user, active=True)
+            messages.success(request, f"{person.display_name} can log in again.")
+        elif action == "invite":
+            if person.role == User.Role.APPLICANT:
+                raise BusinessRuleError("Applicants reset their own password from the login page.")
+            account_services.invite(person, by=request.user)
+            messages.success(request, f"A new set-your-password link was sent to {person.email}.")
+        else:
+            raise BusinessRuleError("Unknown action.")
+    except BusinessRuleError as error:
+        messages.error(request, str(error))
+    return redirect("dashboard:people")
+
+
+# --- Audit log viewer -----------------------------------------------------------------
+
+@role_required("leader")
+def audit(request):
+    """Who did what, to which record, and when (read-only: entries can never change)."""
+    entries = AuditLog.objects.select_related("user").order_by("-timestamp")
+    filters = {k: request.GET.get(k, "").strip() for k in ("who", "action", "entity", "since")}
+    if filters["who"]:
+        entries = entries.filter(Q(user__email__icontains=filters["who"]) | Q(user__name__icontains=filters["who"]))
+    if filters["action"] in AuditLog.Action.values:
+        entries = entries.filter(action=filters["action"])
+    if filters["entity"]:
+        entries = entries.filter(entity=filters["entity"])
+    if filters["since"]:
+        try:
+            entries = entries.filter(timestamp__date__gte=date.fromisoformat(filters["since"]))
+        except ValueError:
+            messages.error(request, "Use a date like 2026-10-14.")
+    page = Paginator(entries, 50).get_page(request.GET.get("page"))
+    return render(request, "dashboard/audit.html", {
+        "role": ROLE, "page": page, "filters": filters, "actions": AuditLog.Action.choices,
+        "entities": AuditLog.objects.order_by().values_list("entity", flat=True).distinct(),
+        "querystring": urlencode({k: v for k, v in filters.items() if v}),
+    })

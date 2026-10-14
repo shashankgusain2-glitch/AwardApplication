@@ -52,6 +52,32 @@ def create_account(*, created_by, email, name, role, password=None, **judge_fiel
     return user
 
 
+def invite(user, *, by):
+    """
+    Email a "set your password" link to an account a leader created. It is
+    Django's password-reset link, so it works once and expires
+    (PASSWORD_RESET_TIMEOUT, 3 days by default). Sent after the save commits.
+    """
+    from django.conf import settings
+    from django.contrib.auth.tokens import default_token_generator
+    from django.core.mail import send_mail
+    from django.urls import reverse
+    from django.utils.encoding import force_bytes
+    from django.utils.http import urlsafe_base64_encode
+
+    if not user.is_active:
+        raise BusinessRuleError("This account is deactivated. Reactivate it before sending an invite.")
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    link = settings.SITE_URL.rstrip("/") + reverse("accounts:password_reset_confirm",
+                                                  args=[uid, default_token_generator.make_token(user)])
+    body = (f"Hello {user.display_name},\n\n{by.display_name} created your {user.get_role_display()} account "
+            f"on the Awards Platform.\n\nSet your password here (the link works once and expires in a few days):\n"
+            f"{link}\n\nThen log in with {user.email}.")
+    transaction.on_commit(lambda: send_mail("[Awards Platform] Your account is ready", body, None, [user.email]))
+    record(by, "update", user, changes={"invite_sent": True})
+    return link
+
+
 @transaction.atomic
 def verify_organisation(profile, *, by, approve, note=""):
     """Staff check a new organisation before its reports go to judges (13 Oct meeting)."""

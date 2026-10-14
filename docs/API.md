@@ -25,7 +25,7 @@ Most lists also accept **filters** (e.g. `?status=submitted&award=kaizen`), **se
 | `/auth/register/` | POST | anyone | Applicant sign-up `{email, name, password, organisation_name?}`. Always creates an **applicant** |
 | `/auth/me/` | GET / PATCH | everyone | Who am I (`id, email, name, role`). PATCH changes only `name` |
 | `/users/` | GET | staff, leader | List users (`?role=judge`, `?search=`) |
-| `/users/` | POST | **leader** | Create staff, judge or leader accounts (`{email, name, role, password?, expertise?, priority?, max_open_assignments?}`) |
+| `/users/` | POST | **leader** | Create staff, judge or leader accounts (`{email, name, role, password?, expertise?, priority?, max_open_assignments?}`). Without a password, the person is emailed a set-your-password link |
 | `/users/{id}/` | GET / PATCH | staff, leader / **leader** | Read / change (role, active, name). A leader can't change their own role or deactivate themselves |
 | `/users/{id}/deactivate/` · `/activate/` | POST | **leader** | Turn an account off or on (nothing is deleted). Deactivating blacklists the user's refresh tokens at once |
 | `/users/me/` | GET / PATCH | everyone | Your own account (only `name` can change) |
