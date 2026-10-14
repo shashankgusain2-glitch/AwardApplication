@@ -2,6 +2,8 @@
 from django.conf import settings
 from django.db import models
 
+from apps.core.models import AppendOnlyQuerySet
+
 
 class AuditLog(models.Model):
     class Action(models.TextChoices):
@@ -23,6 +25,8 @@ class AuditLog(models.Model):
     changes = models.JSONField(default=dict, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    objects = AppendOnlyQuerySet.as_manager()   # no bulk update/delete either
 
     class Meta:
         ordering = ["-timestamp"]

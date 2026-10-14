@@ -328,7 +328,7 @@ def award_panel(request, slug):
     award = get_object_or_404(Award, slug=slug)
     judges = User.objects.filter(role=User.Role.JUDGE).select_related("judge_profile").order_by("name", "email")
     if request.method == "POST":
-        chosen = list(judges.filter(pk__in=request.POST.getlist("judges"), is_active=True))
+        chosen = list(judges.filter(pk__in=_ids(request.POST.getlist("judges")), is_active=True))
         award_services.set_panel(award, by=request.user, judges=chosen)
         messages.success(request, f"{award.name}: {len(chosen)} judge{'s' if len(chosen) != 1 else ''} on the panel.")
         return redirect("awards:award_panel", slug=award.slug)
@@ -368,6 +368,11 @@ def entries(request):
                                                     .select_related("evaluation__assignment__judge",
                                                                     "evaluation__assignment__report"),
     })
+
+
+def _ids(values):
+    """Only whole-number ids from a form (anything else is ignored, not a crash)."""
+    return [int(v) for v in values if str(v).isdigit()]
 
 
 def _back(request, default="awards:entries"):
@@ -443,7 +448,7 @@ def assign(request, pk=None):
             if request.POST.get("action") == "auto":
                 made = assignment_services.auto_assign(report, by=request.user)
             else:
-                judges = list(User.objects.filter(pk__in=request.POST.getlist("judges"), role=User.Role.JUDGE))
+                judges = list(User.objects.filter(pk__in=_ids(request.POST.getlist("judges")), role=User.Role.JUDGE))
                 if not judges:
                     raise BusinessRuleError("Choose at least one judge.")
                 made = assignment_services.bulk_assign([(report, j) for j in judges], by=request.user)

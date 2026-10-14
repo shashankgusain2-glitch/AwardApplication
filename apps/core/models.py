@@ -15,6 +15,20 @@ class TimeStampedModel(models.Model):
         abstract = True
 
 
+class AppendOnlyQuerySet(models.QuerySet):
+    """
+    For permanent records (audit log, score changes): rows can be added, never
+    changed or removed, not even in bulk (`.update()` / `.delete()` on a
+    queryset skip the model's own save/delete checks, so they are blocked here).
+    """
+
+    def update(self, **kwargs):
+        raise ValueError(f"{self.model.__name__} records are permanent and can't be changed.")
+
+    def delete(self):
+        raise ValueError(f"{self.model.__name__} records are permanent and can't be deleted.")
+
+
 class SoftDeleteQuerySet(models.QuerySet):
     def delete(self):
         """Soft-delete every row in the queryset."""

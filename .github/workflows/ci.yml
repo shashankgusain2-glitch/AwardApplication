@@ -40,7 +40,6 @@ jobs:
         run: pytest
       - name: Dependency security scan (pip-audit)
         run: pip install pip-audit && pip-audit -r requirements/base.txt -r requirements/prod.txt
-        continue-on-error: true   # report only for now; make it blocking once the list is clean
 
   prod-image:
     # The production image builds, runs as non-root, and passes Django's deployment checks.
