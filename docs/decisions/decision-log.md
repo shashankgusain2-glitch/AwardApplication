@@ -242,3 +242,18 @@ Each decision: the options, the one we picked, why, and what would change our mi
 | Duplicate review | Hide the menu item vs. also refuse the page | **Menu item removed and the page refused (403)** for award managers and leaders; the service refuses them too | A hidden page that still works by URL isn't really removed. Staff on the award decide duplicates; managers still see the *Possible duplicate* badge on Entries |
 | All applications (leaders) | Hide vs. delete | **Deleted** (view, address, template); the overview's "Open review queue" button now opens *Approve results* | Only leaders used it; scored entries are on *Approve results* and decided ones on the *Results board* |
 
+---
+
+## D14. Leaders only hear about what they decide; edit requests stay with staff
+
+**Date:** 16 Oct 2026 · Asked by the user: applicants' edit notifications reached the leader; they should go to staff, only before judging; remove notifications from the leader panel that aren't for leaders, and let a leader open the ones that are and accept or reject there
+
+| Choice | Options | Picked | Why |
+|---|---|---|---|
+| Why leaders still got edit notifications | — | Notifications created under the old staff → leader rule (copied to the live site), plus the D12 fallback for awards without a manager (DemoAward) | Both fixed below |
+| Who is told about an edit request | The award's team vs. staff only | **The award's programme staff only** (its manager only if it has no staff); the manager is told when staff pass it on | The request; staff check first |
+| Award with no manager | A leader confirms (D12) vs. the staff check decides | **The staff check decides**; leaders never take part in edits | The request |
+| A judge starts while an edit request is open | Staff refuse it by hand vs. it closes itself | **It closes itself**: refused with "a judge has started judging", the applicant is told, the staff's reminder is cleared | Edits are only possible before judging |
+| Old notifications | Leave vs. clean | **Data migration** deletes leaders' edit and old-rule re-evaluation notifications, and points their score-change notifications at the request's own page | Runs on the next deploy, so the live site is cleaned too |
+| Opening a leader's notification | The general list vs. the one request | **The one request** (`/leadership/requests/score/<id>/`): reason, staff check, the judge's scores, Confirm / Refuse; "Already decided" once done | The request |
+

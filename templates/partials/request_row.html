@@ -8,6 +8,7 @@
   </div>
   <p class="small" style="margin:0">{{ row.who_role }} <strong>{{ row.who }}</strong> asked {{ req.created_at|date:"j M Y" }}: “{{ req.reason }}”</p>
   {% if req.staff_by %}<p class="small" style="margin:.2rem 0 0">✓ Checked by staff ({{ req.staff_by.display_name }}, {{ req.staff_at|date:"j M Y" }}){% if req.staff_note %}: “{{ req.staff_note }}”{% endif %}{% if req.status == "staff_approved" %} · waiting for {{ row.confirmer_label }}{% endif %}</p>{% elif not step %}<p class="muted small" style="margin:.2rem 0 0">Waiting for programme staff on this award to check it.</p>{% endif %}
+  {% if row.type == "score" and user.role == "leader" %}<p class="small" style="margin:.35rem 0 0"><a href="{% url 'dashboard:request_detail' 'score' req.pk %}">Open: scores and details →</a></p>{% endif %}
   {% if step %}
     <form method="post" action="{% url 'core:decide_request' row.type req.pk %}" class="row" style="margin-top:.5rem">
       {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">

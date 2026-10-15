@@ -1,0 +1,52 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Score change {{ report.reference }}{% endblock %}
+{% block heading %}Score change request{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0"><a href="{% url 'dashboard:requests' %}">Requests to confirm</a> / {{ report.reference }}</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:1.5rem">
+  <div class="row-between">
+    <div>
+      <p class="muted small" style="margin:0">{{ report.award.name }} · {{ report.reference }} · report: {{ report.get_status_display|lower }}</p>
+      <h2 style="font-size:1.1rem;margin:.25rem 0">{{ assignment.judge.display_name }} asks to change their submitted scores</h2>
+    </div>
+    <span class="badge badge-{% if req.status == 'approved' or req.status == 'used' %}approved{% elif req.status == 'declined' %}rejected{% else %}pending{% endif %}">{{ req.stage_label }}</span>
+  </div>
+  <p style="margin:.75rem 0 0">Reason: “{{ req.reason }}”</p>
+  <p class="muted small" style="margin:.25rem 0 0">Asked {{ req.created_at|date:"j M Y, H:i" }}</p>
+  {% if req.staff_by %}<p class="small" style="margin:.5rem 0 0">✓ Checked by staff ({{ req.staff_by.display_name }}, {{ req.staff_at|date:"j M Y" }}){% if req.staff_note %}: “{{ req.staff_note }}”{% endif %}</p>{% endif %}
+</div>
+
+<div class="card" style="margin-bottom:1.5rem">
+  <h2 style="font-size:1.05rem">Scores as submitted (total {{ req.evaluation.total_score }} / 10)</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Criterion</th><th>Round</th><th>Weight</th><th>Score</th><th>Comment</th></tr></thead>
+      <tbody>
+        {% for s in scores %}
+          <tr><td>{{ s.criterion.label }}</td><td class="small">{{ s.criterion.round_number }}</td><td class="small">{{ s.criterion.weight }}%</td><td><strong>{{ s.score }}</strong></td><td class="muted small">{{ s.comment|default:"—" }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted small" style="margin:.5rem 0 0">Confirming lets the judge change these scores themselves; every change is recorded with who, when, the old and new value and a reason.</p>
+</div>
+
+<div class="card">
+  {% if can_decide %}
+    <h2 style="font-size:1.05rem">Your decision</h2>
+    <form method="post" action="{% url 'core:decide_request' 'score' req.pk %}" class="row">
+      {% csrf_token %}<input type="hidden" name="next" value="{% url 'dashboard:requests' %}">
+      <input name="note" type="text" placeholder="Note to the judge (optional)" style="flex:1;min-width:240px" aria-label="Note">
+      <button class="btn btn-success btn-sm" name="decision" value="approve">Confirm</button>
+      <button class="btn btn-outline btn-sm" name="decision" value="refuse">Refuse</button>
+    </form>
+  {% elif req.status == "requested" %}
+    <p class="muted small" style="margin:0">Programme staff haven't checked it yet. It comes to you once they do.</p>
+  {% else %}
+    <p class="muted small" style="margin:0">Already decided{% if req.decided_by %} by {{ req.decided_by.display_name }} on {{ req.decided_at|date:"j M Y" }}{% endif %}{% if req.decision_note %}: “{{ req.decision_note }}”{% endif %}. Nothing more to do.</p>
+  {% endif %}
+</div>
+{% endblock %}

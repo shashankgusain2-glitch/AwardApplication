@@ -6,7 +6,8 @@ Two-step confirmation for requests made after submitting (TwoStepApproval models
       └──staff refuse──▶ refused └──refused──▶ refused
 
 Who gives the final confirmation (confirmer()):
-    an applicant's edit request   the award's manager (a leader only if the award has no active manager)
+    an applicant's edit request   the award's manager; if the award has no active manager, the
+                                  staff check is the final step (leaders are never involved)
     a judge's score change        a leader
 
 Staff on that award check first (the award manager may, only if the award has no staff, and
@@ -40,18 +41,29 @@ def is_edit(request):
 
 
 def confirmer(request):
-    """Who gives the final confirmation: a user (the award manager), or None for any leader."""
+    """Who gives the final confirmation: a user (the award manager), or None (leaders, or staff for an edit)."""
     return award_manager(award_of(request)) if is_edit(request) else None
+
+
+def staff_only(request):
+    """An edit on an award with no active manager: the staff check is the final step."""
+    return is_edit(request) and confirmer(request) is None
 
 
 def confirmer_label(request):
     person = confirmer(request)
-    return f"the award manager ({person.display_name})" if person else "leadership"
+    if person:
+        return f"the award manager ({person.display_name})"
+    return "programme staff" if staff_only(request) else "leadership"
 
 
 def can_confirm(user, request):
     person = confirmer(request)
-    return user.pk == person.pk if person else user.role == User.Role.LEADER
+    if person:
+        return user.pk == person.pk
+    if staff_only(request):
+        return can_check(user, request)
+    return user.role == User.Role.LEADER
 
 
 def can_check(user, request):
@@ -76,9 +88,14 @@ def step(request, *, by, approve, note=""):
             raise BusinessRuleError(f"Programme staff check this request first; it then goes to "
                                     f"{confirmer_label(request)} to confirm.")
         request.staff_by, request.staff_at, request.staff_note = by, now, note
-        request.status = T.WAITING_LEADER if approve else T.REFUSED
         if not approve:
+            request.status = T.REFUSED
             request.decided_by, request.decided_at = by, now
+        elif staff_only(request):                   # no award manager: the staff check decides
+            request.status = T.APPROVED
+            request.decided_by, request.decided_at, request.decision_note = by, now, note
+        else:
+            request.status = T.WAITING_LEADER
     elif request.status == T.WAITING_LEADER:
         if not can_confirm(by, request):
             raise BusinessRuleError(f"Staff have checked this request; it now needs {confirmer_label(request)} "
@@ -132,12 +149,12 @@ def tell(request, *, requester, what, link, effect=""):
                    + (f" Staff note: {request.staff_note}" if request.staff_note else ""))
         if person:
             notify(person, message, kind=Notification.Kind.REQUEST, link=_staff_link())
-        else:
-            notify_role(User.Role.LEADER, message, kind=Notification.Kind.REQUEST, link=_leader_link())
+        elif not is_edit(request):                  # leaders only ever hear about score changes
+            notify_role(User.Role.LEADER, message, kind=Notification.Kind.REQUEST, link=_leader_link(request))
         notify(requester, f"{what}: the programme staff checked your request and passed it to {label} "
                f"to confirm.", kind=Notification.Kind.STATUS_CHANGE, link=link)
     elif request.status == T.APPROVED:
-        by_whom = "the award manager" if person else "leadership"
+        by_whom = "the award manager" if person else "programme staff" if staff_only(request) else "leadership"
         notify(requester, f"{what}: approved by {by_whom}. {effect}{note}".replace("  ", " "),
                kind=Notification.Kind.STATUS_CHANGE, link=link)
         if request.staff_by:
@@ -148,9 +165,11 @@ def tell(request, *, requester, what, link, effect=""):
                link=link)
 
 
-def _leader_link():
+def _leader_link(request):
+    """The leader's page for this one request, with Confirm and Refuse."""
     from django.urls import reverse
-    return reverse("dashboard:requests")
+    kind = "applicant" if hasattr(request, "application") else "score"
+    return reverse("dashboard:request_detail", args=[kind, request.pk])
 
 
 def _staff_link():
@@ -204,8 +223,8 @@ def waiting(status, user=None):
 
 
 def for_leaders(rows):
-    """The rows a leader confirms: score changes, and edits on awards with no active manager."""
-    return [r for r in rows if r["confirmer"] is None]
+    """The rows a leader confirms: judges' score changes (never applicants' edits)."""
+    return [r for r in rows if r["confirmer"] is None and r["kind"] == "score"]
 
 
 def to_confirm(user, rows):

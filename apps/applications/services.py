@@ -13,7 +13,7 @@ from apps.audit.services import record
 from apps.awards.access import awards_for, check_can_work_on
 from apps.core.services import BusinessRuleError
 from apps.notifications.models import Notification
-from apps.notifications.services import notify, notify_team
+from apps.notifications.services import notify
 
 from .models import ApplicantRequest, Application
 
@@ -196,10 +196,45 @@ def _ask(application, *, by, kind, reason):
     if kind == K.REEVALUATION:
         _tell_reevaluation_approver(application, reason.strip())
     else:
-        notify_team(application.award, f"{_what(application, kind)}: the applicant asks. Reason: {reason.strip()} "
-                    f"Check it, then it goes to the award manager to confirm.",
-                    kind=Notification.Kind.REQUEST, link=reverse("awards:entries"))
+        _tell_edit_checkers(application, reason.strip())
     return req
+
+
+def _tell_edit_checkers(application, reason):
+    """An edit request goes to the award's programme staff (its manager only if it has no staff). Never leaders."""
+    award = application.award
+    people = list(award.staff.filter(is_active=True))
+    if not people and award.manager and award.manager.is_active:
+        people = [award.manager]
+    next_step = ("then it goes to the award manager to confirm" if award.manager and award.manager.is_active
+                 else "your check decides it (this award has no manager)")
+    for person in people:
+        notify(person, f"{_what(application, K.EDIT)}: the applicant asks. Reason: {reason} Check it before a "
+               f"judge starts; {next_step}.", kind=Notification.Kind.REQUEST, link=reverse("awards:entries"))
+
+
+def close_edit_requests(application, *, by):
+    """
+    A judge started on the report: edits are only possible before judging, so any open edit
+    request is refused, the applicant is told why, and the staff's reminders are cleared.
+    """
+    from apps.notifications.models import Notification as N
+
+    for req in application.requests.filter(kind=K.EDIT, status__in=[ApplicantRequest.Status.REQUESTED,
+                                                                     ApplicantRequest.Status.STAFF_APPROVED]):
+        req.status = ApplicantRequest.Status.DECLINED
+        req.decided_by, req.decided_at = by, timezone.now()
+        req.decision_note = "A judge has started judging, so the report can't be edited any more."
+        req.save()
+        record(by, "update", req, changes={"status": req.status, "why": "judging started"})
+        notify(req.requested_by, f"{_what(application, K.EDIT)}: closed because a judge has started judging. "
+               f"Once the result is out, you can ask for a re-evaluation.",
+               kind=Notification.Kind.STATUS_CHANGE, link=reverse("entries:status"))
+        N.objects.filter(is_read=False, message__startswith=_what(application, K.EDIT)).exclude(
+            user=req.requested_by).update(is_read=True, read_at=timezone.now())
+    if application.edit_requested:
+        application.edit_requested = False
+        application.save(update_fields=["edit_requested", "updated_at"])
 
 
 def _tell_reevaluation_approver(application, reason):

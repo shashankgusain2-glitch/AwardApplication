@@ -16,4 +16,5 @@ urlpatterns = [
     path("people/<int:pk>/", views.person_action, name="person_action"),
     path("audit/", views.audit, name="audit"),
     path("requests/", views.requests_to_confirm, name="requests"),
+    path("requests/<str:type>/<int:pk>/", views.request_detail, name="request_detail"),
 ]
