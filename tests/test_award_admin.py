@@ -1,10 +1,10 @@
 """
-R1 award administration: staff create and run any award without code.
+R1 award administration: run any award without code.
 
-Done when (FUTURE_GOALS_AND_DEPLOYMENT.md): "Staff create a third award end
-to end in the browser". The first test does that through the web pages on
-the seed data: create → form → criteria → panel → open → an applicant
-applies → staff assign → judges score → a leader approves.
+The first test does it end to end through the web pages on the seed data: a
+leader creates the award and picks its manager → the manager sets it up (form,
+criteria, panel, team) and opens it → an applicant applies → staff on its team
+assign judges → judges score → a leader approves.
 """
 import pytest
 from django.test import Client
@@ -17,7 +17,7 @@ from apps.awards import services as award_services
 from apps.awards.models import Award
 
 from .conftest import ACCOUNTS, seeded_client
-from .factories import AwardFactory, JudgeFactory, StaffFactory
+from .factories import AwardFactory, JudgeFactory, LeaderFactory, StaffFactory
 
 AWARD = {"name": "Energy Efficiency Award", "sector": "Energy", "summary": "Plants that cut energy use.",
          "opens_on": "2026-11-01", "closes_on": "2026-12-31", "applicant_type": "unit",
@@ -33,39 +33,51 @@ def _criteria_post(rows):
 
 
 @pytest.mark.django_db
-def test_staff_set_up_a_third_award_and_it_runs_end_to_end(seeded):
-    staff = seeded_client("staff")
+def test_leader_creates_a_third_award_and_its_team_runs_it_end_to_end(seeded):
+    manager_user = User.objects.get(email=ACCOUNTS["manager"])
+    staff_user = User.objects.get(email="staff2@awards.example")   # only on Kaizen so far
 
-    # 1. Create
-    response = staff.post(reverse("awards:award_new"), AWARD)
+    # 1. A leader creates it and picks its manager; staff can't create awards
+    assert seeded_client("staff").get(reverse("dashboard:award_new")).status_code == 403
+    response = seeded_client("leader").post(reverse("dashboard:award_new"), {**AWARD, "manager": manager_user.pk})
     award = Award.objects.get(name="Energy Efficiency Award")
-    assert response["Location"] == reverse("awards:award_edit", args=[award.slug])
+    assert response["Location"] == reverse("awards:award_team", args=[award.slug])
+    assert award.manager == manager_user and not award.staff.exists()
+
+    # Staff not on its team can't open it
+    staff = seeded_client("staff2")
+    assert staff.get(reverse("awards:award_edit", args=[award.slug])).status_code == 404
+
+    # Its manager sets it up
+    manager = seeded_client("manager")
     assert award.status == "upcoming" and [r.kind for r in award.rounds.all()] == ["desk", "site"]
     assert award.blind_judging and award.applicant_type == "unit"
 
     # It can't open yet, and the page says why
-    staff.post(reverse("awards:award_status", args=[award.slug]), {"status": "open"})
+    manager.post(reverse("awards:award_status", args=[award.slug]), {"status": "open"})
     award.refresh_from_db()
     assert award.status == "upcoming"
-    page = staff.get(reverse("awards:award_edit", args=[award.slug])).content.decode()
+    page = manager.get(reverse("awards:award_edit", args=[award.slug])).content.decode()
     assert "Publish the application form" in page and "Choose at least one judge" in page
 
     # 2. Form  3. Criteria (both rounds = 100)  4. Panel
-    staff.post(reverse("awards:form_edit", args=[award.slug]), {
+    manager.post(reverse("awards:form_edit", args=[award.slug]), {
         "rows": "2",
         "q-0-key": "", "q-0-label": "Plant name", "q-0-type": "text", "q-0-section": "About",
         "q-0-required": "on", "q-0-identifying": "on",
         "q-1-key": "", "q-1-label": "How much energy did you save?", "q-1-type": "textarea",
         "q-1-section": "Results", "q-1-required": "on"})
-    staff.post(reverse("awards:award_criteria", args=[award.slug]),
-               _criteria_post([(1, "Savings achieved", 60), (1, "Method", 40), (2, "On-site evidence", 100)]))
+    manager.post(reverse("awards:award_criteria", args=[award.slug]),
+                 _criteria_post([(1, "Savings achieved", 60), (1, "Method", 40), (2, "On-site evidence", 100)]))
     kapoor, iyer = User.objects.get(email=ACCOUNTS["judge"]), User.objects.get(email="iyer@judges.example")
-    staff.post(reverse("awards:award_panel", args=[award.slug]), {"judges": [kapoor.pk, iyer.pk]})
+    manager.post(reverse("awards:award_panel", args=[award.slug]), {"judges": [kapoor.pk, iyer.pk]})
 
-    # Open it
-    staff.post(reverse("awards:award_status", args=[award.slug]), {"status": "open"})
+    # Open it, and put staff2 on the team
+    manager.post(reverse("awards:award_status", args=[award.slug]), {"status": "open"})
     award.refresh_from_db()
     assert award.status == "open" and award.current_form.version == 1
+    manager.post(reverse("awards:award_team", args=[award.slug]), {"staff": [staff_user.pk]})
+    assert list(award.staff.all()) == [staff_user]
 
     # An applicant sees it, applies and submits
     applicant = seeded_client("applicant")
@@ -125,30 +137,30 @@ def test_bad_award_settings_are_refused(changes, message):
     fields = {"name": "X Award", "rounds": ["desk"], "judges_per_report": 2, "blind_judging": False,
               "entry_fee": 0, "opens_on": date(2026, 11, 1), "closes_on": date(2026, 12, 1), **changes}
     with pytest.raises(Exception, match=message):
-        award_services.create_award(by=StaffFactory(), **fields)
+        award_services.create_award(by=LeaderFactory(), **fields)
 
 
 @pytest.mark.django_db
-def test_closing_before_opening_is_refused(staff_client):
-    response = staff_client.post(reverse("awards:award_new"), {**AWARD, "closes_on": "2026-10-01"}, follow=True)
+def test_closing_before_opening_is_refused(leader_client):
+    response = leader_client.post(reverse("dashboard:award_new"), {**AWARD, "closes_on": "2026-10-01"}, follow=True)
     assert "be before the opening date" in response.content.decode()
     assert not Award.objects.filter(name=AWARD["name"]).exists()
 
 
 @pytest.mark.django_db
-def test_award_form_offers_at_most_two_rounds(staff_client):
-    page = staff_client.get(reverse("awards:award_new")).content.decode()
+def test_award_form_offers_at_most_two_rounds(leader_client):
+    page = leader_client.get(reverse("dashboard:award_new")).content.decode()
     assert 'name="round1"' in page and 'name="round2"' in page and 'name="round3"' not in page
-    response = staff_client.post(reverse("awards:award_new"), {**AWARD, "round3": "live"}, follow=True)
+    response = leader_client.post(reverse("dashboard:award_new"), {**AWARD, "round3": "live"}, follow=True)
     assert "at most 2 rounds" in response.content.decode()
     assert not Award.objects.filter(name=AWARD["name"]).exists()
 
 
 @pytest.mark.django_db
 def test_names_get_unique_web_addresses():
-    staff = StaffFactory()
-    first = award_services.create_award(by=staff, name="Quality Award", rounds=["desk"])
-    second = award_services.create_award(by=staff, name="Quality Award", rounds=["desk"])
+    leader = LeaderFactory()
+    first = award_services.create_award(by=leader, name="Quality Award", rounds=["desk"])
+    second = award_services.create_award(by=leader, name="Quality Award", rounds=["desk"])
     assert (first.slug, second.slug) == ("quality-award", "quality-award-2")
 
 
@@ -210,11 +222,12 @@ def test_panel_controls_who_can_be_assigned():
 # --- Who can use these screens ---------------------------------------------------------
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("name", ["awards:award_list", "awards:award_new"])
-def test_award_admin_is_staff_only(client_for, name):
-    for url_name in ("entries:dashboard", "judging:assignments", "dashboard:overview"):
-        assert client_for(url_name).get(reverse(name)).status_code == 403
-    assert client_for("awards:staff_home").get(reverse(name)).status_code == 200
+@pytest.mark.parametrize("name,allowed", [("awards:award_list", "awards:staff_home"),
+                                          ("dashboard:award_new", "dashboard:overview")])
+def test_award_admin_is_staff_only_and_only_leaders_create_awards(client_for, name, allowed):
+    for url_name in ("entries:dashboard", "judging:assignments", "awards:staff_home", "dashboard:overview"):
+        expected = 200 if url_name == allowed else 403
+        assert client_for(url_name).get(reverse(name)).status_code == expected, url_name
 
 
 @pytest.mark.django_db

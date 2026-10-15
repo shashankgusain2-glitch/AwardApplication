@@ -39,7 +39,7 @@
         {% for p in people %}
           <tr>
             <td><strong>{{ p.display_name }}</strong><br><span class="muted small">{{ p.email }}</span></td>
-            <td>{{ p.get_role_display }}</td>
+            <td>{{ p.get_role_display }}{% if p.role == "manager" %}<br><span class="muted small">{% for a in p.managed_awards.all %}{{ a.name }}{% if not forloop.last %}, {% endif %}{% empty %}No award yet{% endfor %}</span>{% elif p.role == "staff" %}<br><span class="muted small">{% for a in p.staff_awards.all %}{{ a.name }}{% if not forloop.last %}, {% endif %}{% empty %}No award yet{% endfor %}</span>{% endif %}</td>
             <td>{% if not p.is_active %}<span class="badge badge-declined">Deactivated</span>{% elif not p.has_usable_password %}<span class="badge badge-pending">Invited</span>{% else %}<span class="badge badge-approved">Active</span>{% endif %}</td>
             <td class="small">{{ p.last_login|date:"j M Y"|default:"Never" }}</td>
             <td>

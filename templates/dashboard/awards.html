@@ -1,0 +1,40 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Awards and managers{% endblock %}
+{% block heading %}Awards and managers{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Every award and who runs it. Each award has one award manager; staff only see the awards they are on.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+<div class="row" style="margin-bottom:1rem">
+  <a class="btn btn-primary" href="{% url 'dashboard:award_new' %}">+ New award</a>
+  <a class="btn btn-outline" href="{% url 'dashboard:people' %}?role=manager">Award managers</a>
+</div>
+
+{% if without_manager %}
+  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>{{ without_manager }} award{{ without_manager|pluralize }} without an active manager</strong>Choose one with <em>Team</em>. Until then only you and its allocated staff can work on it.</div></div>
+{% endif %}
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Award</th><th>Status</th><th>Award manager</th><th>Staff</th><th>Judges on panel</th><th>Entries</th><th></th></tr></thead>
+      <tbody>
+        {% for a in awards %}
+          <tr>
+            <td><strong>{{ a.name }}</strong><br><span class="muted small">{{ a.sector|default:"" }}{% if a.closes_on %} · closes {{ a.closes_on|date:"j M Y" }}{% endif %}</span></td>
+            <td><span class="badge badge-{{ a.status }}">{{ a.get_status_display }}</span></td>
+            <td class="small">{% if a.manager %}<strong>{{ a.manager.display_name }}</strong>{% if not a.manager.is_active %} <span class="badge badge-declined">Deactivated</span>{% endif %}<br><span class="muted">{{ a.manager.email }}</span>{% else %}<span class="muted">None yet</span>{% endif %}</td>
+            <td class="small">{% for s in a.staff.all %}{{ s.display_name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="muted">None yet</span>{% endfor %}</td>
+            <td>{{ a.judge_panel.all|length }}</td>
+            <td>{{ a.entries }}</td>
+            <td><a class="btn btn-outline btn-sm" href="{% url 'awards:award_team' a.slug %}">Team</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="muted small">No awards yet. Create the first one.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -19,7 +19,7 @@ class IsApplicant(HasRole):
 
 
 class IsStaff(HasRole):
-    roles = ("staff",)
+    roles = ("staff", "manager")   # award managers do staff work on their awards
 
 
 class IsJudge(HasRole):
@@ -31,7 +31,8 @@ class IsLeader(HasRole):
 
 
 class IsStaffOrLeader(HasRole):
-    roles = ("staff", "leader")
+    """Staff, award managers and leaders. What each sees is narrowed by apps/awards/access.py."""
+    roles = ("staff", "manager", "leader")
 
 
 class IsOwner(BasePermission):

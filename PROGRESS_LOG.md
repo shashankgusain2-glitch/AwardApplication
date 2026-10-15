@@ -51,7 +51,7 @@ The four rules from the brief:
 
 | Roadmap task | Status | Est. hours | Timeline | Evidence |
 |---|---|---|---|---|
-| Phase 1 Planning (workflows, roadmap) | Done | n/a | 11–12 Oct | `docs/RoadmapAndTimelines.md`, `docs/User-Workflows.md`, `docs/decisions/decision-log.md` |
+| Phase 1 Planning (workflows, roadmap) | Done | n/a | 11–12 Oct | `docs/Project-Roadmap.md`, `docs/User-Workflows.md`, `docs/decisions/decision-log.md` |
 | Phase 2 Skeleton (clickable screens) | Done (later replaced by real data) | n/a | 11–13 Oct | commit `d8a51db`; `templates/` |
 | 3.1 Data model and database | Done | 3 | Day 1 | 11 migrations across 7 apps; `docs/Data-Model.md` |
 | 3.2 Backend foundation | Done | 2 | Day 1 | `config/settings/{base,dev,test,prod}.py`; `GET /api/v1/health/` |
@@ -303,7 +303,7 @@ Only questions marked identifying (and file names) mention the organisation.
 | 10 | Not deployed yet: production image, settings and runbook exist (`docs/Deployment.md`), but no hosting, domain, bucket or email account is chosen | Can't go live until those are picked |
 | 11 | Dev database on port 8000 holds older seed answers and one probe-modified draft evaluation | Demo looks leakier than the code is |
 | 12 | `Application.title` is shown to staff and leaders and is free text | Fine; noted because judges' view hides it |
-| 13 | Stray untracked `package-lock.json` in the repo root (no Node app) | Clutter |
+| 13 | ~~Stray `package-lock.json` in the repo root (no Node app)~~ Removed | n/a |
 
 ---
 

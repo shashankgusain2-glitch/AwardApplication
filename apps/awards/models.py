@@ -33,6 +33,12 @@ class Award(TimeStampedModel, SoftDeleteModel):
     judges_per_report = models.PositiveSmallIntegerField(default=2)
     blind_judging = models.BooleanField(default=False, help_text="Applies to desk-review rounds only")
     entry_fee = models.PositiveIntegerField(default=0, help_text="Rupees; 0 = no fee")
+    # Who runs it: a leader picks one award manager and the programme staff allocated to it.
+    # Staff and managers only ever see the awards they are on (apps/awards/access.py).
+    manager = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL,
+                                related_name="managed_awards", limit_choices_to={"role": "manager"})
+    staff = models.ManyToManyField("accounts.User", blank=True, related_name="staff_awards",
+                                   limit_choices_to={"role": "staff"})
 
     class Meta:
         ordering = ["name"]

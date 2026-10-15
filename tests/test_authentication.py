@@ -272,4 +272,4 @@ def test_demo_accounts_seed_creates_every_role():
     from django.core.management import call_command
     call_command("seed_demo", verbosity=0)
     roles = set(get_user_model().objects.filter(email__in=ACCOUNTS.values()).values_list("role", flat=True))
-    assert roles == {"applicant", "staff", "judge", "leader"}
+    assert roles == {"applicant", "staff", "manager", "judge", "leader"}

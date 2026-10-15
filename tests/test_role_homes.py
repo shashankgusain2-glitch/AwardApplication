@@ -165,7 +165,8 @@ def test_judge_cannot_answer_another_judges_assignment(real, judge_client):
 
 @pytest.mark.django_db
 def test_staff_home_shows_real_work(real, staff_client):
-    ApplicantProfileFactory(organisation_name="Waiting Org", verification_status="pending")
+    waiting = ApplicantProfileFactory(organisation_name="Waiting Org", verification_status="pending")
+    ApplicationFactory(award=real["award"], applicant=waiting.user, status="draft")   # applied to this award
     unassigned = ApplicationFactory(award=real["award"], reference="BEA-2026-CCCCCC")
     page = staff_client.get(reverse("awards:staff_home")).content.decode()
     assert "Waiting Org" in page                                  # organisation to verify

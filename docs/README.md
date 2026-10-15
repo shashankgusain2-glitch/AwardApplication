@@ -7,9 +7,10 @@
 | [API.md](API.md) | REST API: endpoints, who can use them, response format, sample requests |
 | [Data-Model.md](Data-Model.md) | All models, fields, constraints and the ER diagram |
 | [Backend-Foundation-Plan.md](Backend-Foundation-Plan.md) | Phase 2 checklist (done vs. remaining) and day-by-day plan |
-| [Roadmap.md](Roadmap.md) | Product roadmap, phases 0–6 |
-| [RoadmapAndTimelines.md](RoadmapAndTimelines.md) | Project roadmap with stages and timelines |
+| [Product-Roadmap.md](Product-Roadmap.md) | Product roadmap, phases 0–6 |
+| [Project-Roadmap.md](Project-Roadmap.md) | Project roadmap with stages and timelines |
 | [User-Workflows.md](User-Workflows.md) | Journey of each user through an award cycle |
+| [Award-Managers-Changes.md](Award-Managers-Changes.md) | 15 Oct: award managers, staff only see their own awards, leaders create awards (what changed) |
 | [UI-UX.md](UI-UX.md) | Screens, design principles, where each rule shows in the UI |
 | [Abstraction.md](Abstraction.md) | What every award shares, what changes per award, and where the model breaks |
 | [Architecture.md](Architecture.md) | Folder structure, how the parts fit, technical choices |

@@ -160,3 +160,23 @@ Each decision: the options, the one we picked, why, and what would change our mi
 | Blind judging (found while integrating) | Hide identifying answers only vs. also the title and file names | **Also the title and file names** in blind rounds | Real entries put the company's name in the title and in file names; both leaked to judges before |
 
 **What would change our mind:** a separate mobile app or a JavaScript frontend would use the same API (and the Postman collection documents it); it would need its own token storage and refresh handling.
+
+---
+
+## D9. Award managers, and staff only see their own awards
+
+**Date:** 15 Oct 2026 · Asked by the user: staff should only reach the awards allocated to them; a new role works under leadership and runs specific awards; creating awards moves from staff to leaders.
+
+| Choice | Options | Picked | Why |
+|---|---|---|---|
+| New role | Make some staff "senior" with a flag vs. a fifth role | **A fifth role, `manager` ("Award manager")** | One role per account is how every check already works (D6); a flag would need checking in a second place |
+| Managers per award | Several vs. one | **One manager per award** (`Award.manager`); a manager can run several awards | The request: "each award is assigned to a specific manager". One clear owner per award |
+| Staff allocation | Staff pick awards vs. assigned to them | **Assigned** (`Award.staff`) by a leader or that award's manager | Staff shouldn't grant themselves access |
+| Where the rule lives | Check in each view vs. one helper | **`apps/awards/access.py` → `awards_for(user)`**, used by every `visible_to()`, staff page, API queryset, file download, request list and notification | One place to read and test; another award's record gives 404 (same as D7's object-level rule) |
+| Managers' portal | A separate set of pages vs. the staff portal | **The staff portal**, scoped to their awards, plus a Team page | Managers do the same work as staff; no duplicated screens |
+| Two-step requests | Managers as the first or the final step | **First step (the staff check)** on their own awards; the final confirmation stays with leaders | Keeps "staff check, leadership confirms" (D8) unchanged |
+| Creating awards | Staff vs. leaders | **Leaders only**, choosing the manager on the same form | The request; awards are a leadership decision |
+| Existing data | Put every existing staff member on every award vs. nobody | **Nobody**: leaders allocate after the upgrade (the demo seed allocates its own staff) | Giving everyone everything would undo the point of the change |
+| Organisations to verify | All vs. only those on my awards | **Only organisations that applied to one of their awards** (leaders: all) | An organisation is checked by the team that will judge it |
+
+**What would change our mind:** if one award needed several managers, `Award.manager` would become a many-to-many like `Award.staff`; `awards_for()` is the only rule to change.

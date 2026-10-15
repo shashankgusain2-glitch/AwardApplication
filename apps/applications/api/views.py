@@ -33,7 +33,7 @@ from .serializers import (
 
 
 class ApplicantStaffOrLeader(HasRole):
-    roles = ("applicant", "staff", "leader")
+    roles = ("applicant", "staff", "manager", "leader")
 
 
 class ApplicationFilter(django_filters.FilterSet):

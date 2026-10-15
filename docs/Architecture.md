@@ -58,7 +58,8 @@ AwardApplication/
 └── docs/                     # Everything that isn't code
     ├── README.md             # Index of all documents
     ├── Architecture.md       # This file
-    ├── Roadmap.md            # Product roadmap
+    ├── Product-Roadmap.md    # Product roadmap
+    ├── Project-Roadmap.md    # Project stages and timelines
     ├── User-Workflows.md     # Journey of each user
     ├── testing.md            # What the tests check, and what they don't
     ├── Git-Workflow.md       # Branches and commits

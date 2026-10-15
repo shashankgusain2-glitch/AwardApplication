@@ -7,6 +7,7 @@
       <a class="chip" href="{% url 'awards:form_edit' award.slug %}">2. Application form</a>
       <a class="chip {% if request.resolver_match.url_name == 'award_criteria' %}active{% endif %}" href="{% url 'awards:award_criteria' award.slug %}">3. Scoring criteria</a>
       <a class="chip {% if request.resolver_match.url_name == 'award_panel' %}active{% endif %}" href="{% url 'awards:award_panel' award.slug %}">4. Judge panel</a>
+      {% if role == "manager" %}<a class="chip {% if request.resolver_match.url_name == 'award_team' %}active{% endif %}" href="{% url 'awards:award_team' award.slug %}">5. Team</a>{% endif %}
     </nav>
     <form method="post" action="{% url 'awards:award_status' award.slug %}" class="row">
       {% csrf_token %}

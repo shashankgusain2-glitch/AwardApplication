@@ -167,8 +167,9 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
 
 class ApplicantProfileViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """
-    Applicants: their own profile (/profiles/mine/). Staff and leaders: all
-    profiles, and verify them (/profiles/{id}/verify/).
+    Applicants: their own profile (/profiles/mine/). Leaders: all; staff and award
+    managers: organisations that applied to their awards. All three can verify
+    them (/profiles/{id}/verify/).
     """
     serializer_class = ApplicantProfileSerializer
     queryset_model = ApplicantProfile
@@ -180,8 +181,11 @@ class ApplicantProfileViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, 
         if getattr(self, "swagger_fake_view", False):   # building the API docs: no user
             return self.queryset_model.objects.none()
         qs = ApplicantProfile.objects.select_related("user")
-        if self.request.user.role in (User.Role.STAFF, User.Role.LEADER):
+        if self.request.user.role == User.Role.LEADER:
             return qs
+        if self.request.user.role in (User.Role.STAFF, User.Role.MANAGER):   # organisations on their awards
+            from apps.awards.access import awards_for
+            return qs.filter(user__applications__award__in=awards_for(self.request.user)).distinct()
         return qs.filter(user=self.request.user)
 
     def get_permissions(self):

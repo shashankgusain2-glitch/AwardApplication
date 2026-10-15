@@ -48,6 +48,19 @@ def overview(request):
 
 
 @role_required("leader")
+def awards(request):
+    """Every award with who runs it (manager and staff). Leaders create awards here and choose their teams."""
+    rows = (Award.objects.select_related("manager").prefetch_related("staff", "judge_panel")
+            .annotate(entries=Count("applications", filter=Q(applications__is_deleted=False)
+                                    & ~Q(applications__status=Application.Status.DRAFT), distinct=True))
+            .order_by("name"))
+    return render(request, "dashboard/awards.html", {
+        "role": ROLE, "awards": rows,
+        "without_manager": sum(1 for a in rows if a.manager is None or not a.manager.is_active),
+    })
+
+
+@role_required("leader")
 def review(request):
     """The full list: every submitted application, its status and its scores so far."""
     reports = application_services.visible_to(request.user).exclude(status=Application.Status.DRAFT) \
@@ -123,7 +136,7 @@ def people(request):
     if request.method == "POST":
         role = request.POST.get("role", "")
         if role not in dict(STAFF_ROLES):
-            messages.error(request, "Choose staff, judge or leader. Applicants sign up themselves.")
+            messages.error(request, "Choose staff, award manager, judge or leader. Applicants sign up themselves.")
             return redirect("dashboard:people")
         email = request.POST.get("email", "").strip().lower()
         name = request.POST.get("name", "").strip()
@@ -150,7 +163,7 @@ def people(request):
             _show_link(request, user, link)
         return redirect("dashboard:people")
 
-    users = User.objects.order_by("role", "name", "email")
+    users = User.objects.prefetch_related("managed_awards", "staff_awards").order_by("role", "name", "email")
     role, query = request.GET.get("role", ""), request.GET.get("q", "").strip()
     if role in User.Role.values:
         users = users.filter(role=role)

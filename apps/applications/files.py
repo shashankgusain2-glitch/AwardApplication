@@ -7,7 +7,8 @@ Rules:
 - PDF, JPG or PNG up to 10 MB. The file's first bytes must really be that
   type: a renamed .exe doesn't get in.
 - One file per question: uploading again replaces the old file.
-- Who may download: the applicant who owns it, staff and leaders, and judges
+- Who may download: the applicant who owns it, leaders, the staff and award
+  manager of that award, and judges
   with a live (not declined) assignment on that report. On a blind round the
   judge gets a neutral file name, because file names often name the company.  [Rule 1]
 """
@@ -82,8 +83,11 @@ def visible_to(user):
     qs = Attachment.objects.select_related("application__award", "application__form_version")
     if user.role == User.Role.APPLICANT:
         return qs.filter(application__applicant=user, application__is_deleted=False)
-    if user.role in (User.Role.STAFF, User.Role.LEADER):
+    if user.role == User.Role.LEADER:
         return qs
+    if user.role in (User.Role.STAFF, User.Role.MANAGER):
+        from apps.awards.access import awards_for
+        return qs.filter(application__award__in=awards_for(user))   # only the awards they are on
     if user.role == User.Role.JUDGE:
         live = JudgeAssignment.objects.filter(judge=user).exclude(status=JudgeAssignment.Status.DECLINED)
         return qs.filter(application__in=live.values("report"))

@@ -5,8 +5,8 @@ Two-step confirmation for requests made after submitting (TwoStepApproval models
       │                          │
       └──staff refuse──▶ refused └──leader refuses──▶ refused
 
-Staff always check first; a leader can't skip that step, and staff can't give the final
-confirmation. Every step is audited and the person who asked is told. The caller (the
+Staff (or the award manager) on that award check first; a leader can't skip that step, and
+staff can't give the final confirmation. Every step is audited and the person who asked is told. The caller (the
 service for each kind of request) checks its own "is it still allowed?" rule before each
 step and applies the effect when this returns APPROVED.
 """
@@ -26,8 +26,10 @@ def step(request, *, by, approve, note=""):
     note = (note or "").strip()
     now = timezone.now()
     if request.status == T.WAITING_STAFF:
-        if by.role != User.Role.STAFF:
+        if by.role not in (User.Role.STAFF, User.Role.MANAGER):
             raise BusinessRuleError("Programme staff check this request first; it then comes to leadership.")
+        from apps.awards.access import check_can_work_on
+        check_can_work_on(by, award_of(request))   # only staff and managers on this award
         request.staff_by, request.staff_at, request.staff_note = by, now, note
         request.status = T.WAITING_LEADER if approve else T.REFUSED
         if not approve:
@@ -76,16 +78,31 @@ def _staff_link():
     return reverse("awards:entries")
 
 
-def waiting(status):
+def award_of(request):
+    """The award a request belongs to (an applicant request or a judge's score change)."""
+    if hasattr(request, "application"):
+        return request.application.award
+    return request.evaluation.assignment.report.award
+
+
+def waiting(status, user=None):
     """
     Every request at one stage (WAITING_STAFF or WAITING_LEADER), oldest first, in one shape
     for the staff and leadership pages: applicant edits, re-evaluations and judges' score changes.
+    With a user: only requests on the awards they may work on (staff and managers see their own).
     """
     from apps.applications.models import ApplicantRequest
+    from apps.awards.access import awards_for, sees_every_award
     from apps.evaluations.models import ScoreChangeRequest
 
+    applicant_requests = ApplicantRequest.objects.filter(status=status)
+    score_requests = ScoreChangeRequest.objects.filter(status=status)
+    if user is not None and not sees_every_award(user):
+        applicant_requests = applicant_requests.filter(application__award__in=awards_for(user))
+        score_requests = score_requests.filter(evaluation__assignment__report__award__in=awards_for(user))
+
     rows = []
-    for req in ApplicantRequest.objects.filter(status=status).select_related(
+    for req in applicant_requests.select_related(
             "application__award", "application__applicant__applicant_profile", "requested_by", "staff_by"):
         app = req.application
         profile = getattr(app.applicant, "applicant_profile", None)
@@ -93,7 +110,7 @@ def waiting(status):
                      "reference": app.reference, "award": app.award.name, "report_status": app.get_status_display(),
                      "who": getattr(profile, "organisation_name", "") or app.applicant.email,
                      "who_role": "Applicant"})
-    for req in ScoreChangeRequest.objects.filter(status=status).select_related(
+    for req in score_requests.select_related(
             "evaluation__assignment__report__award", "evaluation__assignment__judge", "staff_by"):
         assignment = req.evaluation.assignment
         rows.append({"kind": "score", "label": "Change a submitted score", "request": req, "type": "score",

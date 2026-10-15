@@ -1,0 +1,58 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Team · {{ award.name }}{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url list_url %}">Awards</a> / {{ award.name }}</p>{% endblock %}
+{% block heading %}Team: {{ award.name }}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Who runs this award. Staff only see the awards they are on: its entries, judges, requests and files.{% if leader %} You choose the award manager; you or the manager choose the staff.{% endif %}</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+{% if not leader %}{% include "awards/_award_steps.html" %}{% endif %}
+
+<form method="post" class="card stack">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="save">
+  {% if leader %}
+    <div class="field">
+      <label for="t-manager">Award manager</label>
+      <select id="t-manager" name="manager" style="max-width:420px">
+        <option value="">No manager</option>
+        {% for m in managers %}<option value="{{ m.pk }}" {% if award.manager_id == m.pk %}selected{% endif %}>{{ m.display_name }} ({{ m.email }})</option>{% endfor %}
+      </select>
+      <span class="hint">{% if not managers %}No award manager accounts yet: add one on the <a href="{% url 'dashboard:people' %}">People</a> page with the role "Award manager".{% else %}The manager runs this award and chooses its staff. One manager can run several awards.{% endif %}</span>
+    </div>
+  {% else %}
+    <p class="small" style="margin:0">Award manager: <strong>{{ award.manager.display_name }}</strong> (you)</p>
+  {% endif %}
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th></th><th>Programme staff</th><th>Email</th></tr></thead>
+      <tbody>
+        {% for s in staff %}
+          <tr>
+            <td><input type="checkbox" name="staff" value="{{ s.user.pk }}" {% if s.checked %}checked{% endif %} aria-label="{{ s.user.display_name }} on the team"></td>
+            <td><strong>{{ s.user.display_name }}</strong></td>
+            <td class="muted small">{{ s.user.email }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3" class="muted small">No active staff accounts yet. Invite one below.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="row"><button class="btn btn-primary" type="submit">Save team</button><span class="hint">New team members get a notification. Removing someone only takes away their access to this award.</span></div>
+</form>
+
+<form method="post" class="card stack" style="margin-top:1.5rem">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="invite">
+  <h2 style="margin:0">Invite a new staff member</h2>
+  <p class="muted small" style="margin:0">Creates a programme staff account, puts it on this award's team and emails a set-your-password link.</p>
+  <div class="row" style="flex-wrap:wrap">
+    <div class="field"><label for="i-name">Name</label><input id="i-name" name="name" type="text" required></div>
+    <div class="field"><label for="i-email">Email</label><input id="i-email" name="email" type="email" required></div>
+  </div>
+  <div class="row"><button class="btn btn-outline" type="submit">Invite to the team</button></div>
+</form>
+{% endblock %}

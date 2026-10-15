@@ -21,9 +21,9 @@ htmlcov/
 .DS_Store
 Thumbs.db
 .vscode/
+.idea/
 logs/*
 !logs/.gitkeep
 .env.*
 !.env.example
 !.env.production.example
-staticfiles/

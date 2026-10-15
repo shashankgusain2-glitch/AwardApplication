@@ -17,7 +17,7 @@
 {% endif %}
 
 <div class="card" style="margin-bottom:1.5rem">
-  <div class="card-head"><h2>Awards</h2><span class="row"><a class="btn btn-primary btn-sm" href="{% url 'awards:award_new' %}">+ New award</a><a class="btn btn-outline btn-sm" href="{% url 'awards:award_list' %}">Manage awards</a></span></div>
+  <div class="card-head"><h2>Awards</h2><a class="btn btn-outline btn-sm" href="{% url 'awards:award_list' %}">Manage awards</a></div>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Award</th><th>Rounds</th><th>Drafts</th><th>Submitted</th><th>Being judged</th><th>Scored</th><th>Judging progress</th></tr></thead>
@@ -33,7 +33,7 @@
             <td style="min-width:140px"><div class="progress"><span style="width:{{ row.progress }}%"></span></div><span class="muted small">{{ row.evaluations_done }} of {{ row.evaluations_total }} evaluations</span></td>
           </tr>
         {% empty %}
-          <tr><td colspan="7" class="muted small">No awards yet. Run <code>python manage.py seed_data</code> for demo data.</td></tr>
+          <tr><td colspan="7" class="muted small">You aren't on any award yet. A leader or an award manager adds you to an award's team.</td></tr>
         {% endfor %}
       </tbody>
     </table>

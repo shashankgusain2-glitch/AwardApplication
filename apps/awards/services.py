@@ -204,7 +204,13 @@ def _sync_rounds(award, rounds):
 def create_award(*, by, name, rounds, sector="", summary="", opens_on=None, closes_on=None,
                  applicant_type=Award.ApplicantType.ORGANISATION, judges_per_report=2, blind_judging=False,
                  entry_fee=0):
-    """A new award, always starting as Upcoming (open it once it has a form, criteria and judges)."""
+    """
+    A new award, always starting as Upcoming (open it once it has a form, criteria and judges).
+    Only a leader creates awards; they then choose its manager and staff (set_team).
+    """
+    from apps.accounts.models import User
+    if not (by.role == User.Role.LEADER or by.is_superuser):
+        raise BusinessRuleError("Only a leader can create a new award.")
     _check_award_fields(name=name, judges_per_report=judges_per_report, opens_on=opens_on, closes_on=closes_on,
                         rounds=rounds, blind_judging=blind_judging, entry_fee=entry_fee)
     award = Award.objects.create(slug=_unique_slug(name), name=name.strip(), sector=sector, summary=summary,
@@ -365,3 +371,45 @@ def check_criteria_weights(award, round_number=1):
     total = sum(Criterion.objects.filter(award=award, round_number=round_number).values_list("weight", flat=True))
     if total != 100:
         raise BusinessRuleError(f"Round {round_number} weights add up to {total}, not 100.")
+
+
+@transaction.atomic
+def set_team(award, *, by, staff, manager=None, change_manager=False):
+    """
+    Who runs this award. A leader picks the award manager and the staff; the award's
+    manager picks the staff only. Newly added people are told. Audited.
+    """
+    from apps.accounts.models import User
+    from apps.notifications.models import Notification
+    from apps.notifications.services import notify
+
+    is_leader = by.role == User.Role.LEADER or by.is_superuser
+    if not is_leader and not (by.role == User.Role.MANAGER and award.manager_id == by.pk):
+        raise BusinessRuleError("Only a leader or this award's manager can choose its team.")
+    if change_manager and not is_leader:
+        raise BusinessRuleError("Only a leader can choose an award's manager.")
+    if change_manager and manager is not None and (manager.role != User.Role.MANAGER or not manager.is_active):
+        raise BusinessRuleError("The award manager must be an active account with the Award manager role.")
+    if any(s.role != User.Role.STAFF or not s.is_active for s in staff):
+        raise BusinessRuleError("Only active programme staff accounts can be allocated to an award.")
+
+    before_staff = set(award.staff.values_list("pk", flat=True))
+    before_manager = award.manager
+    award.staff.set(staff)
+    if change_manager:
+        award.manager = manager
+        award.save(update_fields=["manager", "updated_at"])
+    record(by, "update", award, changes={
+        "staff": sorted(s.email for s in staff),
+        **({"manager": manager.email if manager else None} if change_manager else {})})
+
+    from django.urls import reverse
+    link = reverse("awards:staff_home")
+    for person in staff:
+        if person.pk not in before_staff:
+            notify(person, f"You've been added to the team for {award.name}.", kind=Notification.Kind.INFO,
+                   link=link)
+    if change_manager and manager is not None and manager != before_manager:
+        notify(manager, f"You are now the award manager for {award.name}.", kind=Notification.Kind.INFO,
+               link=link)
+    return award

@@ -5,7 +5,7 @@
 ## What it does in the application
 
 - Shows the **public pages**: Home, About us, Awards list (with sector filter), each Award's page, and Log in.
-- Holds the **sample content** for the public pages (award descriptions, stats, past winners) and the duplicate-review screen. Every portal screen for the four roles reads the real database.
+- Holds the **sample content** for the public pages (award descriptions, stats, past winners) and the duplicate-review screen. Every portal screen for the five roles reads the real database.
 - Adds the organisation name and the portal menus to **every page** automatically.
 
 ## Files

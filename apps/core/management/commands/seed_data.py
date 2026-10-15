@@ -4,7 +4,8 @@ and audit entry applies). Safe to run more than once.
 
 Run with:  python manage.py seed_data
 
-Creates: 1 leader, 2 staff, 3 judges, 5 applicants (organisations), the two
+Creates: 1 leader, 1 award manager (runs both demo awards), 2 staff (one on both
+awards, one on Kaizen only), 3 judges, 5 applicants (organisations), the two
 demo awards (rounds, form v1, criteria), 10 reports, judge assignments and
 some finished evaluations. All accounts use DEMO_PASSWORD (see .env.example).
 Test data only: never run this against a real deployment.
@@ -28,7 +29,10 @@ from apps.notifications.services import emails_off
 DEFAULT_DEMO_PASSWORD = "Awards-Demo-2026"
 
 LEADER = ("leader@awards.example", "A. Verma")
+MANAGER = ("manager@awards.example", "R. Kulkarni")   # award manager for both demo awards
 STAFF = [("staff@awards.example", "Meena Shah"), ("staff2@awards.example", "Arjun Mehta")]
+# Which demo awards each staff member is on (staff only see their own awards).
+STAFF_AWARDS = {"staff@awards.example": ["business-excellence", "kaizen"], "staff2@awards.example": ["kaizen"]}
 JUDGES = [
     # email, name, expertise, priority
     ("kapoor@judges.example", "Dr. R. Kapoor", "Manufacturing, quality", 1),
@@ -64,11 +68,17 @@ class Command(BaseCommand):
     def load(self):
         password = os.environ.get("DEMO_PASSWORD", DEFAULT_DEMO_PASSWORD)
         leader = self.user(*LEADER, User.Role.LEADER, password)
+        manager = self.user(*MANAGER, User.Role.MANAGER, password)
         staff = [self.user(email, name, User.Role.STAFF, password) for email, name in STAFF]
         judges = [self.user(email, name, User.Role.JUDGE, password) for email, name, _, _ in JUDGES]
         applicants = [self.user(email, name, User.Role.APPLICANT, password) for email, name, *_ in APPLICANTS]
 
         awards = [self.award(slug, leader) for slug in demo_data.BUILT_AWARDS]
+        for award in awards:   # who runs each award; adds only, so teams changed in the app are kept
+            if award.manager is None:
+                award.manager = manager
+                award.save(update_fields=["manager", "updated_at"])
+            award.staff.add(*[s for s in staff if award.slug in STAFF_AWARDS[s.email]])
         for judge, (_, _, expertise, priority) in zip(judges, JUDGES, strict=True):
             profile, _ = JudgeProfile.objects.update_or_create(
                 user=judge, defaults={"expertise": expertise, "priority": priority, "max_open_assignments": 10})
@@ -183,7 +193,7 @@ class Command(BaseCommand):
     def print_logins(self, password):
         self.stdout.write("")
         self.stdout.write(self.style.MIGRATE_HEADING("Test logins (demo data only)"))
-        rows = [(LEADER[0], "leader")] + [(e, "staff") for e, _ in STAFF] + \
+        rows = [(LEADER[0], "leader"), (MANAGER[0], "manager")] + [(e, "staff") for e, _ in STAFF] + \
                [(e, "judge") for e, *_ in JUDGES] + [(e, "applicant") for e, *_ in APPLICANTS]
         for email, role in rows:
             self.stdout.write(f"  {role:10} {email}")

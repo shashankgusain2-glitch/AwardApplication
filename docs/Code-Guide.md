@@ -236,7 +236,8 @@ The rule tests are **written but skipped** until their features are built. It's 
 |---|---|
 | `README.md` | Index of all documents |
 | `Code-Guide.md` | This file |
-| `Roadmap.md` | Product roadmap, phases 0–6 |
+| `Product-Roadmap.md` | Product roadmap, phases 0–6 |
+| `Project-Roadmap.md` | Project roadmap with stages and timelines |
 | `User-Workflows.md` | Each user's journey through an award cycle |
 | `Architecture.md` | Structure, how parts fit together, technical choices |
 | `UI-UX.md` | Screen list, design principles, where each rule shows in the UI |

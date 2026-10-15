@@ -11,6 +11,18 @@ from django.urls import reverse
 from apps.core import demo_data
 
 
+@pytest.fixture(autouse=True)
+def demo_awards(db):
+    """
+    The two demo awards exist before staff log in, so the test staff member is on both
+    (see conftest). Returns their starting settings, to check that refused changes saved nothing.
+    """
+    from apps.awards.services import get_or_create_from_demo
+    for slug in demo_data.BUILT_AWARDS:
+        get_or_create_from_demo(slug)
+    return demo_data.award_overrides()
+
+
 def _post(staff_client, **fields):
     data = {
         "slug": "kaizen", "round1_type": "desk", "round2_type": "site", "judges_per_entry": "2",
@@ -68,10 +80,10 @@ def test_settings_for_one_award_do_not_change_the_other(staff_client, client):
     ("fee_amount", "-5"),
     ("deadline", ""),
 ])
-def test_invalid_settings_are_rejected(staff_client, field, value):
+def test_invalid_settings_are_rejected(staff_client, demo_awards, field, value):
     response = _post(staff_client, **{field: value})
     assert b"Saved" not in response.content
-    assert demo_data.award_overrides() == {}
+    assert demo_data.award_overrides() == demo_awards
 
 
 @pytest.mark.django_db
@@ -104,10 +116,10 @@ def test_settings_are_saved_in_the_award_table_and_audited(staff_client):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("round1,round2", [("site", "none"), ("live", "none"), ("site", "live"), ("site", "site")])
-def test_blind_rejected_when_every_round_is_in_person(staff_client, round1, round2):
+def test_blind_rejected_when_every_round_is_in_person(staff_client, demo_awards, round1, round2):
     response = _post(staff_client, round1_type=round1, round2_type=round2, blind="on")
     assert b"Blind judging isn&#x27;t possible" in response.content
-    assert demo_data.award_overrides() == {}
+    assert demo_data.award_overrides() == demo_awards
 
 
 @pytest.mark.django_db

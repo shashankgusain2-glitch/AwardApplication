@@ -32,7 +32,28 @@ class UserFactory(factory.django.DjangoModelFactory):
 
 
 class StaffFactory(UserFactory):
+    """
+    Programme staff. Staff only see the awards they are on, but most tests are about
+    other rules, so by default a test staff member is on every award that exists
+    (AwardFactory also adds existing staff to new awards). Pass awards=[...] to choose.
+    """
     role = User.Role.STAFF
+
+    @factory.post_generation
+    def awards(obj, create, extracted, **kwargs):
+        if create:
+            obj.staff_awards.set(Award.objects.all() if extracted is None else extracted)
+
+
+class ManagerFactory(UserFactory):
+    """An award manager (pass awards=[...] to make them the manager of those awards)."""
+    role = User.Role.MANAGER
+
+    @factory.post_generation
+    def awards(obj, create, extracted, **kwargs):
+        for award in (extracted or []) if create else []:
+            award.manager = obj
+            award.save(update_fields=["manager"])
 
 
 class LeaderFactory(UserFactory):
@@ -59,6 +80,12 @@ class AwardFactory(factory.django.DjangoModelFactory):
         FormVersion.objects.create(award=obj, version=1, questions=QUESTIONS, published_at=timezone.now())
         Criterion.objects.create(award=obj, key="approach", label="Approach", weight=40, order=0)
         Criterion.objects.create(award=obj, key="results", label="Results", weight=60, order=1)
+
+    @factory.post_generation
+    def staff(obj, create, extracted, **kwargs):
+        """Every existing staff member is on the team by default (see StaffFactory); staff=[...] to choose."""
+        if create:
+            obj.staff.set(User.objects.filter(role=User.Role.STAFF) if extracted is None else extracted)
 
 
 class JudgeFactory(UserFactory):

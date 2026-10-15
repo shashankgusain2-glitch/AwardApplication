@@ -10,6 +10,7 @@ from apps.accounts.models import ApplicantProfile, User
 from apps.applications.models import Application
 from apps.applications.services import set_status
 from apps.audit.services import record
+from apps.awards.access import STAFF_WORK_ROLES, awards_for, check_can_work_on
 from apps.core.services import BusinessRuleError
 from apps.notifications.services import notify
 
@@ -26,8 +27,10 @@ def visible_to(user):
     qs = JudgeAssignment.objects.select_related("judge", "report__award", "report__form_version", "assigned_by")
     if user.role == User.Role.JUDGE:
         return qs.filter(judge=user)
-    if user.role in (User.Role.STAFF, User.Role.LEADER):
+    if user.role == User.Role.LEADER:
         return qs
+    if user.role in (User.Role.STAFF, User.Role.MANAGER):
+        return qs.filter(report__award__in=awards_for(user))   # only the awards they are on
     return qs.none()
 
 
@@ -59,14 +62,15 @@ def eligible_judges(report, round=1):
     return sorted(judges, key=lambda j: (j.judge_profile.priority, j.open_count, j.email))
 
 
-def _check_can_assign(by):
-    if by.role not in (User.Role.STAFF, User.Role.LEADER):
-        raise BusinessRuleError("Only staff or leaders can assign judges.")
+def _check_can_assign(by, report):
+    if by.role not in STAFF_WORK_ROLES:
+        raise BusinessRuleError("Only staff, award managers or leaders can assign judges.")
+    check_can_work_on(by, report.award)
 
 
 @transaction.atomic
 def assign(report, judge, *, by, round=1):
-    _check_can_assign(by)
+    _check_can_assign(by, report)
     if judge.role != User.Role.JUDGE:
         raise BusinessRuleError(f"{judge} isn't a judge.")
     if report.status not in ASSIGNABLE:
@@ -95,7 +99,7 @@ def assign(report, judge, *, by, round=1):
 @transaction.atomic
 def reassign(assignment, new_judge, *, by):
     """Move an unfinished assignment to another judge; the old one is kept as declined."""
-    _check_can_assign(by)
+    _check_can_assign(by, assignment.report)
     if assignment.status in (A.COMPLETED, A.SUPERSEDED):
         raise BusinessRuleError("A completed or replaced evaluation can't be reassigned.")
     old_judge = assignment.judge
@@ -130,7 +134,7 @@ def judges_still_needed(report, round=1):
 @transaction.atomic
 def auto_assign(report, *, by, round=1):
     """Fill the report up to the award's judges-per-report with the best eligible judges."""
-    _check_can_assign(by)
+    _check_can_assign(by, report)
     needed = judges_still_needed(report, round)
     if needed == 0:
         return []
@@ -196,8 +200,8 @@ def record_conflict(*, judge, profile, by, reason=""):
     Staff record a conflict (judges don't declare them). Any unfinished
     assignment between that judge and organisation is withdrawn at once.
     """
-    if by.role not in (User.Role.STAFF, User.Role.LEADER):
-        raise BusinessRuleError("Only staff or leaders can record conflicts.")
+    if by.role not in STAFF_WORK_ROLES:
+        raise BusinessRuleError("Only staff, award managers or leaders can record conflicts.")
     conflict, _ = ConflictOfInterest.objects.get_or_create(
         judge=judge, applicant_profile=profile, defaults={"reason": reason, "recorded_by": by})
     withdrawn = JudgeAssignment.objects.filter(judge=judge, report__applicant=profile.user, status__in=OPEN_STATUSES)

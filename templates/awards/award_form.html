@@ -1,7 +1,7 @@
 {% extends "portal_base.html" %}
 
 {% block title %}{% if award %}{{ award.name }}{% else %}New award{% endif %}{% endblock %}
-{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'awards:award_list' %}">Awards</a> / {% if award %}{{ award.name }}{% else %}New{% endif %}</p>{% endblock %}
+{% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url list_url %}">Awards</a> / {% if award %}{{ award.name }}{% else %}New{% endif %}</p>{% endblock %}
 {% block heading %}{% if award %}{{ award.name }}{% else %}New award{% endif %}{% endblock %}
 {% block subheading %}{% if award %}<p style="margin:.25rem 0 0"><span class="badge badge-{{ award.status }}">{{ award.get_status_display }}</span></p>{% endif %}{% endblock %}
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
@@ -47,7 +47,21 @@
     <p class="hint">Rounds run in order; leave later rounds empty if not needed. A round that already has judges assigned can't be removed.</p>
   </div>
 
+  {% if managers is not None %}
+  <div class="card">
+    <div class="card-head"><h2>Who runs it</h2></div>
+    <div class="field">
+      <label for="a-manager">Award manager</label>
+      <select id="a-manager" name="manager" style="max-width:420px">
+        <option value="">Choose later</option>
+        {% for m in managers %}<option value="{{ m.pk }}" {% if chosen_manager == m.pk|stringformat:"s" %}selected{% endif %}>{{ m.display_name }} ({{ m.email }})</option>{% endfor %}
+      </select>
+      <span class="hint">The manager sets the award up (questions, criteria, judges), chooses its staff and opens it. You choose the staff on the next page.</span>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="row"><button class="btn btn-primary" type="submit">{% if award %}Save{% else %}Create award{% endif %}</button>
-    <a class="btn btn-outline" href="{% url 'awards:award_list' %}">Cancel</a></div>
+    <a class="btn btn-outline" href="{% url list_url %}">Cancel</a></div>
 </form>
 {% endblock %}

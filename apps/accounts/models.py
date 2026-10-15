@@ -2,7 +2,7 @@
 People and their profiles.
 
 Every user has exactly one role and logs in with their email. Applicants
-sign up themselves; staff, judge and leader accounts are created by a
+sign up themselves; staff, award manager, judge and leader accounts are created by a
 leader or admin (or the seed command).
 """
 from django.contrib.auth.models import AbstractUser, BaseUserManager
@@ -41,6 +41,7 @@ class User(AbstractUser):
         APPLICANT = "applicant", "Applicant"
         STAFF = "staff", "Staff"
         JUDGE = "judge", "Judge"
+        MANAGER = "manager", "Award manager"
         LEADER = "leader", "Leader"
 
     username = None
@@ -61,7 +62,7 @@ class User(AbstractUser):
     class Meta:
         indexes = [models.Index(fields=["role", "is_active"], name="user_role_active_idx")]
         constraints = [
-            models.CheckConstraint(condition=Q(role__in=["applicant", "staff", "judge", "leader"]),
+            models.CheckConstraint(condition=Q(role__in=["applicant", "staff", "manager", "judge", "leader"]),
                                    name="user_role_valid"),
         ]
 

@@ -26,7 +26,7 @@ from .serializers import (
 
 
 class JudgeStaffOrLeader(HasRole):
-    roles = ("judge", "staff", "leader")
+    roles = ("judge", "staff", "manager", "leader")
 
 
 class EvaluationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
@@ -92,8 +92,9 @@ class ScoreChangeRequestViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):   # building the API docs: no user
             return self.queryset_model.objects.none()
-        return ScoreChangeRequest.objects.select_related("evaluation__assignment__judge",
-                                                         "evaluation__assignment__report")
+        # Staff and award managers: only requests on their awards (leaders: all).
+        return (ScoreChangeRequest.objects.filter(evaluation__in=services.visible_to(self.request.user))
+                .select_related("evaluation__assignment__judge", "evaluation__assignment__report"))
 
     @extend_schema(request=ChangeDecisionSerializer, responses=ChangeRequestSerializer)
     @action(detail=True, methods=["post"])

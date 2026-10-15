@@ -1,10 +1,14 @@
 """
-Programme staff screens. The home page, entries, judge assignment, the
-form builder and award settings read and write the real database through
-the services; the duplicate-review screen still shows sample data (there is
-no duplicate-detection model yet).
+Programme staff screens, also used by award managers. Everyone here only ever
+sees the awards they are on (apps/awards/access.py): staff the awards a leader or
+manager allocated to them, managers the awards they manage. Creating an award is
+a leader's job (dashboard). The home page, entries, judge assignment, the form
+builder and award settings read and write the real database through the
+services; the duplicate-review screen still shows sample data (there is no
+duplicate-detection model yet).
 """
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Count, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -18,18 +22,17 @@ from apps.applications.models import Application
 from apps.assignments import services as assignment_services
 from apps.assignments.models import ConflictOfInterest
 from apps.awards import services as award_services
+from apps.awards.access import awards_for
 from apps.awards.models import Award
 from apps.core import approvals, overview
 from apps.core import demo_data as d
 from apps.core.services import BusinessRuleError
 
-ROLE = "staff"
 
-
-@role_required("staff")
+@role_required("staff", "manager")
 def staff_home(request):
     """Home page: what needs staff today, from the database."""
-    return render(request, "awards/staff_home.html", {"role": ROLE, **overview.staff_home()})
+    return render(request, "awards/staff_home.html", {"role": request.user.role, **overview.staff_home(request.user)})
 
 
 def _clean_settings(post):
@@ -77,14 +80,19 @@ def _clean_settings(post):
     return settings, errors
 
 
-@role_required("staff")
+def _settings_slugs(user):
+    """The demo awards on the Award settings screen that this person is on."""
+    return set(awards_for(user).filter(slug__in=d.BUILT_AWARDS).values_list("slug", flat=True))
+
+
+@role_required("staff", "manager")
 @require_http_methods(["GET", "POST"])
 def settings(request):
     """Award settings. Saved into the Award tables; the descriptions shown come from the award catalogue."""
     if request.method == "POST":
         slug = request.POST.get("slug")
         award = d.get_award(slug, request)
-        if award is None or slug not in d.BUILT_AWARDS:
+        if award is None or slug not in _settings_slugs(request.user):
             raise Http404("Award not found")
 
         if "reset" in request.POST:
@@ -105,20 +113,20 @@ def settings(request):
         return redirect("awards:settings")
 
     return render(request, "awards/settings.html", {
-        "role": ROLE,
-        "awards": d.built_awards(request),
+        "role": request.user.role,
+        "awards": [a for a in d.built_awards(request) if a["slug"] in _settings_slugs(request.user)],
         "applicant_types": d.APPLICANT_TYPES,
         "round_types": d.ROUND_TYPES,
     })
 
 
-@role_required("staff")
+@role_required("staff", "manager")
 def form_builder(request, slug=None):
     """Each award's published form versions and their questions (read-only: published versions never change)."""
-    awards = Award.objects.order_by("name")
-    award = get_object_or_404(Award, slug=slug) if slug else awards.filter(form_versions__isnull=False).first()
+    awards = awards_for(request.user).order_by("name")
+    award = get_object_or_404(awards, slug=slug) if slug else awards.filter(form_versions__isnull=False).first()
     if award is None:   # nothing set up yet
-        return render(request, "awards/form_builder.html", {"role": ROLE, "awards": awards, "award": None})
+        return render(request, "awards/form_builder.html", {"role": request.user.role, "awards": awards, "award": None})
     versions = list(award.form_versions.annotate(applications_count=Count("applications")).order_by("-version"))
     try:
         wanted = int(request.GET.get("version", 0))
@@ -132,19 +140,19 @@ def form_builder(request, slug=None):
             sections.append({"name": name, "questions": []})
         sections[-1]["questions"].append(q)
     return render(request, "awards/form_builder.html", {
-        "role": ROLE, "awards": awards, "award": award, "versions": versions, "chosen": chosen,
+        "role": request.user.role, "awards": awards, "award": award, "versions": versions, "chosen": chosen,
         "sections": sections,
     })
 
 
-@role_required("staff")
+@role_required("staff", "manager")
 @require_http_methods(["GET", "POST"])
 def form_edit(request, slug):
     """
     Edit the questions and publish them as a NEW version (Rule 4): the current
     version never changes, and applications already started keep their version.
     """
-    award = get_object_or_404(Award, slug=slug)
+    award = get_object_or_404(awards_for(request.user), slug=slug)
     current = award.current_form
     blank = {"key": "", "label": "", "type": "textarea", "section": "", "subsection": "",
              "required": True, "identifying": False}
@@ -178,7 +186,7 @@ def _form_edit_page(request, award, current, rows):
             sections.append({"name": name, "rows": []})
         sections[-1]["rows"].append({**row, "n": n})
     return render(request, "awards/form_edit.html", {
-        "role": ROLE, "award": award, "current": current, "sections": sections, "row_count": len(rows),
+        "role": request.user.role, "award": award, "current": current, "sections": sections, "row_count": len(rows),
         "subcategories": sorted({row["subsection"].strip() for row in rows if (row.get("subsection") or "").strip()}),
         "blank": {"key": "", "type": "textarea", "required": True}, "types": award_services.QUESTION_TYPES})
 
@@ -230,48 +238,133 @@ def _parse_award_form(post):
     return fields, rounds, errors
 
 
-def _award_form_page(request, award, values, rounds):
+def _award_form_page(request, award, values, rounds, **extra):
+    leader = request.user.role == User.Role.LEADER
     return render(request, "awards/award_form.html", {
-        "role": ROLE, "award": award, "values": values,
+        "role": request.user.role, "award": award, "values": values,
         "rounds": rounds + [""] * (award_services.MAX_ROUNDS - len(rounds)),
         "round_kinds": award_services.ROUND_KINDS, "applicant_types": Award.ApplicantType.choices,
+        "list_url": "dashboard:awards" if leader else "awards:award_list", **extra,
     })
 
 
-@role_required("staff")
+def _active(role):
+    return User.objects.filter(role=role, is_active=True).order_by("name", "email")
+
+
+@role_required("staff", "manager")
 def award_list(request):
-    awards = Award.objects.prefetch_related("rounds", "judge_panel").annotate(entries=Count("applications"))
+    """The awards this person is on (staff: allocated to them; managers: the ones they manage)."""
+    awards = (awards_for(request.user).select_related("manager").prefetch_related("rounds", "judge_panel", "staff")
+              .annotate(entries=Count("applications")))
     return render(request, "awards/award_list.html", {
-        "role": ROLE,
+        "role": request.user.role,
         "rows": [{"award": a, "problems": award_services.ready_to_open(a) + award_services.ready_to_judge(a)}
                  for a in awards],
     })
 
 
-@role_required("staff")
+@role_required("leader")
 @require_http_methods(["GET", "POST"])
 def award_new(request):
+    """Leaders create awards and choose the award manager; the manager (or leader) then picks the staff."""
+    managers = _active(User.Role.MANAGER)
+    chosen = request.POST.get("manager", "")
     if request.method == "POST":
         fields, rounds, errors = _parse_award_form(request.POST)
+        manager = managers.filter(pk=chosen).first() if chosen.isdigit() else None
+        if chosen and manager is None:
+            errors.append("Choose an active award manager from the list.")
         if not errors:
             try:
-                award = award_services.create_award(by=request.user, rounds=rounds, **fields)
+                with transaction.atomic():
+                    award = award_services.create_award(by=request.user, rounds=rounds, **fields)
+                    if manager:
+                        award_services.set_team(award, by=request.user, staff=[], manager=manager,
+                                                change_manager=True)
             except BusinessRuleError as error:
                 errors.append(str(error))
             else:
-                messages.success(request, f"{award.name} created. Next: add its questions, criteria and judges, "
-                                          f"then open it.")
-                return redirect("awards:award_edit", slug=award.slug)
+                messages.success(request, f"{award.name} created. Next: choose its staff here; its manager "
+                                          f"then sets up the questions, criteria and judges, and opens it.")
+                return redirect("awards:award_team", slug=award.slug)
         for error in errors:
             messages.error(request, error)
-        return _award_form_page(request, None, fields, rounds)
-    return _award_form_page(request, None, {"judges_per_report": 2, "entry_fee": 0}, ["desk"])
+        return _award_form_page(request, None, fields, rounds, managers=managers, chosen_manager=chosen)
+    return _award_form_page(request, None, {"judges_per_report": 2, "entry_fee": 0}, ["desk"],
+                            managers=managers, chosen_manager="")
 
 
-@role_required("staff")
+@role_required("manager", "leader")
+@require_http_methods(["GET", "POST"])
+def award_team(request, slug):
+    """
+    Who runs this award. A leader picks the award manager and the staff; the award's
+    manager picks the staff and can invite a new staff member straight onto the team.
+    Staff only ever see the awards they are on.
+    """
+    award = get_object_or_404(awards_for(request.user).select_related("manager"), slug=slug)
+    leader = request.user.role == User.Role.LEADER
+    staff = _active(User.Role.STAFF)
+    if request.method == "POST" and request.POST.get("action") == "invite":
+        return _invite_staff(request, award)
+    if request.method == "POST":
+        chosen_staff = list(staff.filter(pk__in=_ids(request.POST.getlist("staff"))))
+        manager = None
+        if leader and request.POST.get("manager", "").isdigit():
+            manager = _active(User.Role.MANAGER).filter(pk=request.POST["manager"]).first()
+        try:
+            award_services.set_team(award, by=request.user, staff=chosen_staff, manager=manager,
+                                    change_manager=leader)
+        except BusinessRuleError as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, f"{award.name}: team saved ({len(chosen_staff)} staff"
+                                      f"{', manager ' + manager.display_name if manager else ''}).")
+        return redirect("awards:award_team", slug=award.slug)
+    on_team = set(award.staff.values_list("pk", flat=True))
+    return render(request, "awards/award_team.html", {
+        "role": request.user.role, "award": award, "leader": leader,
+        "staff": [{"user": s, "checked": s.pk in on_team} for s in staff],
+        "managers": _active(User.Role.MANAGER) if leader else None,
+        "list_url": "dashboard:awards" if leader else "awards:award_list",
+    })
+
+
+def _invite_staff(request, award):
+    """Create a staff account, put it on this award's team and email the set-your-password link."""
+    from django.conf import settings as django_settings
+    from django.core.exceptions import ValidationError
+    from django.core.validators import validate_email
+
+    email = request.POST.get("email", "").strip().lower()
+    name = request.POST.get("name", "").strip()
+    try:
+        if not name:
+            raise BusinessRuleError("Give the person's name.")
+        validate_email(email)
+        with transaction.atomic():
+            person = account_services.create_account(created_by=request.user, email=email, name=name,
+                                                     role=User.Role.STAFF)
+            award_services.set_team(award, by=request.user, staff=[*award.staff.filter(is_active=True), person])
+            link = account_services.invite(person, by=request.user)
+    except ValidationError:
+        messages.error(request, "Enter a valid email address.")
+    except BusinessRuleError as error:
+        messages.error(request, str(error))
+    else:
+        messages.success(request, f"{person.display_name} added to the {award.name} team. An email with a "
+                                  f"set-your-password link was sent to {person.email}.")
+        if django_settings.SHOW_INVITE_LINKS:
+            messages.info(request, f"Email may not be set up yet: send {person.email} this one-time link "
+                                   f"yourself: {link}")
+    return redirect("awards:award_team", slug=award.slug)
+
+
+@role_required("staff", "manager")
 @require_http_methods(["GET", "POST"])
 def award_edit(request, slug):
-    award = get_object_or_404(Award, slug=slug)
+    award = get_object_or_404(awards_for(request.user), slug=slug)
     if request.method == "POST":
         fields, rounds, errors = _parse_award_form(request.POST)
         if not errors:
@@ -290,10 +383,10 @@ def award_edit(request, slug):
     return _award_form_page(request, award, values, [r.kind for r in award.rounds.all()])
 
 
-@role_required("staff")
+@role_required("staff", "manager")
 @require_POST
 def award_status(request, slug):
-    award = get_object_or_404(Award, slug=slug)
+    award = get_object_or_404(awards_for(request.user), slug=slug)
     try:
         award_services.set_status(award, by=request.user, status=request.POST.get("status", ""))
         messages.success(request, f"{award.name} is now {award.get_status_display().lower()}.")
@@ -302,10 +395,10 @@ def award_status(request, slug):
     return redirect("awards:award_edit", slug=award.slug)
 
 
-@role_required("staff")
+@role_required("staff", "manager")
 @require_http_methods(["GET", "POST"])
 def award_criteria(request, slug):
-    award = get_object_or_404(Award, slug=slug)
+    award = get_object_or_404(awards_for(request.user), slug=slug)
     locked = award_services.criteria_locked(award)
     if request.method == "POST":
         count = min(int(request.POST["rows"]) if request.POST.get("rows", "").isdigit() else 0, 100)
@@ -330,14 +423,14 @@ def award_criteria(request, slug):
                             and str(c.get("weight", "")).isdigit() and c.get("label") and not c.get("remove"))
               for r in rounds}
     return render(request, "awards/award_criteria.html", {
-        "role": ROLE, "award": award, "rows": rows, "rounds": rounds, "totals": totals, "locked": locked,
+        "role": request.user.role, "award": award, "rows": rows, "rounds": rounds, "totals": totals, "locked": locked,
     })
 
 
-@role_required("staff")
+@role_required("staff", "manager")
 @require_http_methods(["GET", "POST"])
 def award_panel(request, slug):
-    award = get_object_or_404(Award, slug=slug)
+    award = get_object_or_404(awards_for(request.user), slug=slug)
     judges = User.objects.filter(role=User.Role.JUDGE).select_related("judge_profile").order_by("name", "email")
     if request.method == "POST":
         chosen = list(judges.filter(pk__in=_ids(request.POST.getlist("judges")), is_active=True))
@@ -346,15 +439,15 @@ def award_panel(request, slug):
         return redirect("awards:award_panel", slug=award.slug)
     on_panel = set(award.judge_panel.values_list("user_id", flat=True))
     return render(request, "awards/award_panel.html", {
-        "role": ROLE, "award": award, "on_panel": on_panel,
+        "role": request.user.role, "award": award, "on_panel": on_panel,
         "judges": [{"user": j, "checked": j.pk in on_panel} for j in judges],
     })
 
 
-@role_required("staff")
+@role_required("staff", "manager")
 def entries(request):
     """
-    Every application (staff see all), with what needs a decision:
+    Every application on the awards this person is on, with what needs a decision:
     organisations to verify, edit requests and judges' score-change requests.
     """
     reports = application_services.visible_to(request.user).select_related("applicant__applicant_profile")
@@ -368,15 +461,14 @@ def entries(request):
         reports = reports.filter(Q(reference__icontains=filters["q"]) | Q(title__icontains=filters["q"])
                                  | Q(applicant__applicant_profile__organisation_name__icontains=filters["q"]))
     return render(request, "awards/entries.html", {
-        "role": ROLE,
+        "role": request.user.role,
         "reports": reports.order_by("-updated_at"),
         "statuses": Application.Status.choices,
-        "awards": Award.objects.order_by("name"),
+        "awards": awards_for(request.user).order_by("name"),
         "filters": filters,
-        "to_verify": ApplicantProfile.objects.filter(verification_status=ApplicantProfile.Verification.PENDING)
-                                             .select_related("user"),
-        "staff_requests": approvals.waiting(approvals.T.WAITING_STAFF),
-        "leader_requests": approvals.waiting(approvals.T.WAITING_LEADER),
+        "to_verify": overview.organisations_to_verify(request.user),
+        "staff_requests": approvals.waiting(approvals.T.WAITING_STAFF, request.user),
+        "leader_requests": approvals.waiting(approvals.T.WAITING_LEADER, request.user),
     })
 
 
@@ -400,17 +492,17 @@ def _decide(request, action, success):
     return _back(request)
 
 
-@role_required("staff")
+@role_required("staff", "manager")
 @require_POST
 def verify_organisation(request, pk):
-    profile = get_object_or_404(ApplicantProfile, pk=pk)
+    profile = get_object_or_404(overview.organisations_for(request.user), pk=pk)   # only on their awards
     approve = request.POST.get("decision") == "approve"
     return _decide(request, lambda: account_services.verify_organisation(
         profile, by=request.user, approve=approve, note=request.POST.get("note", "")),
         f"{profile.organisation_name}: {'verified' if approve else 'not verified'}.")
 
 
-@role_required("staff")
+@role_required("staff", "manager")
 @require_POST
 def reject_report(request, pk):
     """Staff check: a submitted report that isn't eligible is rejected (with a note)."""
@@ -420,18 +512,18 @@ def reject_report(request, pk):
         f"{report.reference} rejected.")
 
 
-@role_required("staff")
+@role_required("staff", "manager")
 def assign(request, pk=None):
     """
     /staff/assign/        reports that still need judges (round 1)
     /staff/assign/<id>/   pick judges for one report: only eligible judges are offered
                           (on the panel, no recorded conflict, under their workload limit)
     """
-    needing = [r for r in Application.objects.filter(status__in=assignment_services.ASSIGNABLE)
-               .select_related("award", "applicant__applicant_profile").order_by("submitted_at")
+    assignable = application_services.visible_to(request.user).filter(status__in=assignment_services.ASSIGNABLE)
+    needing = [r for r in assignable.select_related("award", "applicant__applicant_profile").order_by("submitted_at")
                if assignment_services.judges_still_needed(r) > 0]
     if pk is None:
-        return render(request, "awards/assign_list.html", {"role": ROLE, "reports": needing})
+        return render(request, "awards/assign_list.html", {"role": request.user.role, "reports": needing})
 
     report = get_object_or_404(application_services.visible_to(request.user), pk=pk)
     if request.method == "POST":
@@ -451,7 +543,7 @@ def assign(request, pk=None):
 
     profile = ApplicantProfile.objects.filter(user=report.applicant).first()
     return render(request, "awards/assign.html", {
-        "role": ROLE,
+        "role": request.user.role,
         "report": report,
         "profile": profile,
         "current": report.assignments.select_related("judge").order_by("round", "assigned_at"),
@@ -464,10 +556,10 @@ def assign(request, pk=None):
     })
 
 
-@role_required("staff")
+@role_required("staff", "manager")
 def duplicates(request):
     """Sample data: duplicate detection needs its own model (a later step)."""
     return render(request, "awards/duplicates.html", {
-        "role": ROLE,
+        "role": request.user.role,
         "duplicates": d.DUPLICATES,
     })

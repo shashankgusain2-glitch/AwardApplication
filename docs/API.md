@@ -8,7 +8,7 @@
 
 ```json
 { "success": true,  "data": { ... },  "message": "", "errors": null }
-{ "success": false, "data": null,     "message": "Only staff or leaders can assign judges.", "errors": null }
+{ "success": false, "data": null,     "message": "Only staff, award managers or leaders can assign judges.", "errors": null }
 { "success": false, "data": null,     "message": "This field is required.", "errors": { "report": ["This field is required."] } }
 ```
 
@@ -16,6 +16,8 @@ Lists are paginated inside `data`: `{ "count", "next", "previous", "results": [.
 Most lists also accept **filters** (e.g. `?status=submitted&award=kaizen`), **search** (`?search=...`) and **ordering** (`?ordering=-created_at`).
 
 ## Endpoints and who can use them
+
+**Award managers** can use every endpoint marked *staff*. **Staff and award managers only ever get data for the awards they are on** (applications, assignments, evaluations, score-change requests, organisation profiles, files and the dashboard summary); another award's record returns 404. Leaders see every award.
 
 | Endpoint | Method | Who | What |
 |---|---|---|---|
@@ -32,7 +34,7 @@ Most lists also accept **filters** (e.g. `?status=submitted&award=kaizen`), **se
 | `/profiles/mine/` | GET / PUT / PATCH | applicant | Your organisation profile (GSTIN and PAN format-checked) |
 | `/profiles/` · `/profiles/{id}/verify/` | GET · POST | staff, leader | List organisations; verify or reject `{approve, note}` |
 | `/awards/` · `/awards/{slug}/` | GET | anyone | Awards with rounds, criteria and the current form |
-| `/applications/` | GET / POST | applicant (own), staff & leader (all) | Applicants create `{award: slug, title}` |
+| `/applications/` | GET / POST | applicant (own), staff & award manager (their awards), leader (all) | Applicants create `{award: slug, title}` |
 | `/applications/{id}/` | GET / PATCH / DELETE | applicant (own) | Save answers `{content: {...}}` (partial is fine); delete drafts only |
 | `/applications/{id}/submit/` | POST | applicant (own) | Checks required answers, then locks it |
 | `/applications/{id}/request-edit/` | POST | applicant (own) | `{reason}`: ask staff to allow changes |
@@ -55,7 +57,7 @@ Most lists also accept **filters** (e.g. `?status=submitted&award=kaizen`), **se
 | `/evaluations/{id}/change-scores/` | POST | judge (own) | `{scores, reason}`: needs an approved request; every change is recorded |
 | `/score-change-requests/` · `/{id}/decide/` | GET · POST | staff, leader | `{approve}` |
 | `/notifications/` · `/{id}/read/` | GET · POST | everyone (own) | |
-| `/dashboard/summary/` | GET | everyone | Counts by status for **your** role: applicants their own reports, judges their own assignments, staff and leaders the whole event plus per-award progress |
+| `/dashboard/summary/` | GET | everyone | Counts by status for **your** role: applicants their own reports, judges their own assignments, staff and award managers their own awards, leaders the whole event, plus per-award progress |
 | `/lookups/` | GET | everyone | Codes and labels for drop-downs and badges (roles, statuses, round kinds, score range) |
 | `/health/` | GET | anyone | `{status, database}` |
 

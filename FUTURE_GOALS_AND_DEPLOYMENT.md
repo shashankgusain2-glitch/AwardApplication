@@ -2,7 +2,7 @@
 
 > **Snapshot:** 14 Oct 2026, `main` at `8477b62`. What already exists is in [PROGRESS_LOG.md](PROGRESS_LOG.md).
 > **Hosting chosen (14 Oct 2026):** Supabase (database and files) with Render or Railway (the app); ready-made configs `render.yaml` and `railway.json`, steps in [docs/Deployment.md](docs/Deployment.md). ⚠️ **Not provided yet:** the **target deployment date**. The timeline in §7 counts back from a launch day "**D**" (pick the date and fill it in). Hosting advice in §4 is a recommendation, not a decision.
-> Estimates follow the roadmap style in `docs/RoadmapAndTimelines.md`: hours of focused work, plus a "done when" check.
+> Estimates follow the roadmap style in `docs/Project-Roadmap.md`: hours of focused work, plus a "done when" check.
 
 ---
 

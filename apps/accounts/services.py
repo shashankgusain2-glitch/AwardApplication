@@ -35,11 +35,13 @@ def register_applicant(*, email, password, name, organisation_name=""):
 @transaction.atomic
 def create_account(*, created_by, email, name, role, password=None, **judge_fields):
     """
-    Staff, judge and leader accounts are never self-registered: only a
-    leader (or a superuser) creates them.
+    Staff, award manager, judge and leader accounts are never self-registered: a
+    leader (or a superuser) creates them. An award manager may create staff accounts
+    only (for their award's team).
     """
-    if not (created_by.role == User.Role.LEADER or created_by.is_superuser):
-        raise BusinessRuleError("Only a leader can create accounts.")
+    by_manager = created_by.role == User.Role.MANAGER and role == User.Role.STAFF
+    if not (created_by.role == User.Role.LEADER or created_by.is_superuser or by_manager):
+        raise BusinessRuleError("Only a leader can create accounts. Award managers can add programme staff.")
     if role not in User.Role.values:
         raise BusinessRuleError("Unknown role.")
     _check_new_email(email)
@@ -81,8 +83,8 @@ def invite(user, *, by):
 @transaction.atomic
 def verify_organisation(profile, *, by, approve, note=""):
     """Staff check a new organisation before its reports go to judges (13 Oct meeting)."""
-    if by.role not in (User.Role.STAFF, User.Role.LEADER):
-        raise BusinessRuleError("Only staff or leaders can verify organisations.")
+    if by.role not in (User.Role.STAFF, User.Role.MANAGER, User.Role.LEADER):
+        raise BusinessRuleError("Only staff, award managers or leaders can verify organisations.")
     if approve and not profile.gstin:
         raise BusinessRuleError("The organisation needs a GSTIN before it can be verified.")
     before = profile.verification_status

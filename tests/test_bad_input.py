@@ -32,7 +32,7 @@ def test_staff_forms_survive_junk(seeded):
     staff = seeded_client("staff")
     award = Award.objects.first()
     report = Application.objects.exclude(status="draft").first()
-    for name, args in [("awards:award_new", []), ("awards:award_edit", [award.slug]),
+    for name, args in [("awards:award_team", [award.slug]), ("awards:award_edit", [award.slug]),
                        ("awards:award_status", [award.slug]), ("awards:award_criteria", [award.slug]),
                        ("awards:award_panel", [award.slug]), ("awards:form_edit", [award.slug]),
                        ("awards:assign", [report.pk]), ("awards:verify_organisation", [1]),
@@ -42,6 +42,11 @@ def test_staff_forms_survive_junk(seeded):
     for name, query in [("awards:entries", {"status": "x", "award": "x", "q": "%' OR 1=1 --"}),
                         ("awards:form_builder", {"version": "abc"})]:
         _no_crash(staff, "get", reverse(name, args=[award.slug] if name == "awards:form_builder" else []), query)
+    manager = seeded_client("manager")
+    for data in (JUNK, {**JUNK, "action": "invite"}, {"staff": ["abc", "-1"], "manager": "x"}):
+        _no_crash(manager, "post", reverse("awards:award_team", args=[award.slug]), data)
+        _no_crash(seeded_client("leader"), "post", reverse("awards:award_team", args=[award.slug]), data)
+    _no_crash(seeded_client("leader"), "post", reverse("dashboard:award_new"), {**JUNK, "manager": "abc"})
 
 
 @pytest.mark.django_db
@@ -78,12 +83,14 @@ def test_bad_values_explain_themselves(seeded):
     from apps.accounts.models import User
     from apps.awards.services import create_award
     staff = seeded_client("staff")
-    award = create_award(by=User.objects.get(email=ACCOUNTS["staff"]), name="Fresh Award", rounds=["desk"])
+    award = create_award(by=User.objects.get(email=ACCOUNTS["leader"]), name="Fresh Award", rounds=["desk"])
+    award.staff.add(User.objects.get(email=ACCOUNTS["staff"]))
     page = staff.post(reverse("awards:award_criteria", args=[award.slug]),
                       {"rows": "1", "c-0-round": "1", "c-0-label": "A", "c-0-weight": "heavy"}, follow=True)
     assert "must be a whole number" in page.content.decode()
-    page = staff.post(reverse("awards:award_new"), {"name": "X", "round1": "desk", "judges_per_report": "many",
-                                                    "opens_on": "31/31/2026"}, follow=True).content.decode()
+    page = seeded_client("leader").post(reverse("dashboard:award_new"), {
+        "name": "X", "round1": "desk", "judges_per_report": "many", "opens_on": "31/31/2026"},
+        follow=True).content.decode()
     assert "Judges per report must be a whole number" in page and "use a date like" in page
     page = staff.post(reverse("awards:assign", args=[Application.objects.exclude(status="draft").first().pk]),
                       {"judges": ["abc"]}, follow=True).content.decode()

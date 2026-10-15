@@ -49,14 +49,17 @@ The application always remembers which version of the form it used. **[R4]**
 
 ---
 
-## 3. Staff (Member and Working staff)
+## 3. Award manager (the Member) and programme staff (Working staff)
 
-**Before the cycle (the Member)**
-1. Create the award and choose its settings: rounds, blind on or off, number of judges, scoring questions.
+Each award has **one award manager**, chosen by leadership, and the **programme staff** allocated to it. Both only ever see the awards they are on.
+
+**Before the cycle (the award manager)**
+1. Leadership creates the award and picks its manager. The manager chooses its settings: rounds, blind on or off, number of judges, scoring questions.
 2. Build the form. Publishing it saves it as a version, and old versions are never changed. **[R4]**
 3. Select the judges.
+4. Choose the award's staff (or invite a new staff member onto the team).
 
-**During the cycle (Working staff)**
+**During the cycle (programme staff and the manager, on their own awards)**
 1. Check new entries.
 2. Help applicants who contact them, for example someone blocked by a duplicate GST.
 3. **Assign judges.** The system suggests judges using the rules below, and staff confirm.
@@ -78,9 +81,10 @@ The application always remembers which version of the form it used. **[R4]**
 ## 4. Leadership
 
 1. **Dashboard:** one view of all awards, showing scores, flagged items and pending decisions.
-2. **Review queue:** problem cases sent up for a decision, such as ties, re-evaluation requests, conflict cases and applicant appeals.
-3. **Policy settings:** set the rules that apply to all awards.
-4. **Decisions:**
+2. **Awards and managers:** create new awards, give each one an award manager, and change any award's team.
+3. **Review queue:** problem cases sent up for a decision, such as ties, re-evaluation requests, conflict cases and applicant appeals.
+4. **Policy settings:** set the rules that apply to all awards.
+5. **Decisions:**
    - approve the winners
    - decide conflict cases
    - decide appeals (resolutions)

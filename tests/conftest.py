@@ -19,6 +19,8 @@ ACCOUNTS = {
     "judge": "kapoor@judges.example",
     "judge2": "rao@judges.example",
     "leader": "leader@awards.example",
+    "manager": "manager@awards.example",
+    "staff2": "staff2@awards.example",   # demo data: on Kaizen only
 }
 
 # Which role can open which part of the site.
@@ -30,6 +32,9 @@ def make_user(email, role, password=PASSWORD, **extra):
     user = User(email=email, role=role, **extra)
     user.set_password(password)
     user.save()
+    if role == "staff":   # like StaffFactory: test staff are on every award unless a test says otherwise
+        from apps.awards.models import Award
+        user.staff_awards.set(Award.objects.all())
     return user
 
 

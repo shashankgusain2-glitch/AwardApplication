@@ -8,14 +8,14 @@
 |---|---|
 | [core/](core/) | Shared base models (timestamps, soft delete), API building blocks, validators, demo data commands, public website pages |
 | [accounts/](accounts/) | Users (email login, one role), applicant and judge profiles, web login/sign-up, JWT auth API |
-| [awards/](awards/) | Awards, rounds, versioned forms, criteria; staff portal screens |
+| [awards/](awards/) | Awards, rounds, versioned forms, criteria, each award's manager and staff (`access.py`: who sees which award); staff and award manager portal screens |
 | [applications/](applications/) | Applications ("reports") and attachments |
 | [assignments/](assignments/) | Judge assignments and staff-recorded conflicts |
 | [evaluations/](evaluations/) | Scores and the permanent record of score changes |
 | [notifications/](notifications/) | In-app notifications |
 | [audit/](audit/) | Append-only audit trail |
 
-## Server-rendered portal screens (sample data until Phase 3)
+## Server-rendered portal screens (no tables of their own; they use the services above)
 
 | Folder | Who |
 |---|---|

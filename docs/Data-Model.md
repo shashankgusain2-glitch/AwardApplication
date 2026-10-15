@@ -40,7 +40,7 @@ erDiagram
         bigint id PK
         string email UK "login"
         string name
-        string role "applicant|staff|judge|leader"
+        string role "applicant|staff|manager|judge|leader"
         bool is_active
         datetime created_at
         datetime updated_at
@@ -189,12 +189,12 @@ Legend: **N** = `null=True`, **B** = `blank=True`, **UK** = unique, **IX** = ind
 |---|---|---|
 | `email` | EmailField(254) | **UK**, the login (`USERNAME_FIELD = "email"`), stored lower-case |
 | `name` | CharField(150) | B, default `""` (replaces `first_name` + `last_name`; data migrated) |
-| `role` | CharField(20, choices) | default `applicant`, **IX** · `applicant` · `staff` · `judge` · `leader` |
+| `role` | CharField(20, choices) | default `applicant`, **IX** · `applicant` · `staff` · `manager` (award manager) · `judge` · `leader` |
 | `is_active` | BooleanField | default True (inherited) |
 | `created_at` / `updated_at` | DateTimeField | auto |
 | `username` | *removed* | `username = None`; existing values were already the email |
 
-- **Constraints:** `CheckConstraint(role IN the four roles)`.
+- **Constraints:** `CheckConstraint(role IN the five roles)`.
 - **Indexes:** `(role, is_active)` for "list active judges" style lookups.
 - **Manager:** custom `UserManager` (`create_user(email, password, role, name)`, `create_superuser`).
 
@@ -246,6 +246,10 @@ Replaces the session/`AwardSetting` settings with real columns (data migrated).
 | `judges_per_report` | PositiveSmallIntegerField | default 2; `Check(1 ≤ n ≤ 7)` |
 | `blind_judging` | BooleanField | default False (only applies to desk rounds; enforced in service) |
 | `entry_fee` | PositiveIntegerField | default 0 (rupees; 0 = no fee) |
+| `manager` | FK → User | N, **SET_NULL**, `related_name="managed_awards"`; role must be `manager` (service). One award manager per award; a manager can run several |
+| `staff` | M2M → User | B, `related_name="staff_awards"`; role must be `staff` (service). The programme staff allocated to this award |
+
+- **Who sees an award** (`apps/awards/access.py`): leaders all; the award's manager; its allocated staff. Every staff page, service, API view, file download and request list filters through `awards_for(user)`.
 
 ### 3.5 `awards.AwardRound`
 

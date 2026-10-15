@@ -15,10 +15,11 @@ from apps.applications.services import set_status
 from apps.assignments.models import JudgeAssignment
 from apps.assignments.services import start_review
 from apps.audit.services import record
+from apps.awards.access import awards_for
 from apps.awards.models import Criterion
 from apps.core.services import BusinessRuleError
 from apps.notifications.models import Notification
-from apps.notifications.services import notify_role
+from apps.notifications.services import notify_team
 
 from .models import CriterionScore, Evaluation, ScoreChange, ScoreChangeRequest
 
@@ -61,8 +62,10 @@ def visible_to(user):
     qs = Evaluation.objects.select_related("assignment__judge", "assignment__report").prefetch_related("scores")
     if user.role == User.Role.JUDGE:
         return qs.filter(assignment__judge=user)
-    if user.role in (User.Role.STAFF, User.Role.LEADER):
+    if user.role == User.Role.LEADER:
         return qs
+    if user.role in (User.Role.STAFF, User.Role.MANAGER):
+        return qs.filter(assignment__report__award__in=awards_for(user))   # only the awards they are on
     return qs.none()
 
 
@@ -170,7 +173,7 @@ def request_change(evaluation, *, judge, reason):
         raise BusinessRuleError("You already have a request waiting or approved.")
     req = ScoreChangeRequest.objects.create(evaluation=evaluation, reason=reason.strip())
     record(judge, "update", req, changes={"reason": reason.strip()})
-    notify_role(User.Role.STAFF, f"{_what(evaluation.assignment)}: {judge.display_name} asks. "
+    notify_team(evaluation.assignment.report.award, f"{_what(evaluation.assignment)}: {judge.display_name} asks. "
                 f"Reason: {reason.strip()} Check it, then it goes to leadership to confirm.",
                 kind=Notification.Kind.REQUEST, link=reverse("awards:entries"))
     return req

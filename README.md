@@ -2,7 +2,7 @@
 
 One web platform to run many award programmes. Applicants apply, judges score, staff run each award, and leadership sees every award in one place. Staff set up each award (rounds, blind judging, form questions) on screen, without code.
 
-> **Status:** project skeleton. Features are being built phase by phase. See [docs/Roadmap.md](docs/Roadmap.md).
+> **Status:** project skeleton. Features are being built phase by phase. See [docs/Product-Roadmap.md](docs/Product-Roadmap.md).
 
 ## The four rules this platform keeps
 

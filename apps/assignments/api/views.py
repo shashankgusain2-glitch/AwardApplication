@@ -23,7 +23,7 @@ from .serializers import (
 
 
 class JudgeStaffOrLeader(HasRole):
-    roles = ("judge", "staff", "leader")
+    roles = ("judge", "staff", "manager", "leader")
 
 
 class AssignmentViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,

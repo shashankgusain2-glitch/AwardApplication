@@ -1,11 +1,15 @@
 from django.urls import path
 
+from apps.awards import views as award_views
+
 from . import views
 
 app_name = "dashboard"
 
 urlpatterns = [
     path("", views.overview, name="overview"),
+    path("awards/", views.awards, name="awards"),
+    path("awards/new/", award_views.award_new, name="award_new"),   # only leaders create awards
     path("review/", views.review, name="review"),
     path("results/", views.results, name="results"),
     path("results/<int:pk>/decide/", views.decide, name="decide"),

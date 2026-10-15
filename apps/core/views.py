@@ -50,7 +50,7 @@ def award_detail(request, slug):
     })
 
 
-@role_required("staff", "leader")
+@role_required("staff", "manager", "leader")
 @require_POST
 def decide_request(request, type, pk):
     """

@@ -3,7 +3,7 @@ Sample data for the clickable UI screens.
 
 Everything here is FAKE and only exists so every page can be clicked
 through before the real database models are built. Each screen will
-switch to real data as its app is built (see docs/Roadmap.md).
+switch to real data as its app is built (see docs/Product-Roadmap.md).
 
 Award settings changed on the staff "Award settings" screen are kept in
 the browser session (see award_overrides) and applied on top of AWARDS,
@@ -589,8 +589,19 @@ PORTAL_NAV = {
         ("Duplicate review", "awards:duplicates"),
         ("Assign judges", "awards:assign"),
     ],
+    # Award managers: the staff portal for the awards they manage, plus choosing each award's team.
+    "manager": [
+        ("My awards", "awards:staff_home"),
+        ("Awards and teams", "awards:award_list"),
+        ("Award settings", "awards:settings"),
+        ("Form builder", "awards:form_builder"),
+        ("Entries", "awards:entries"),
+        ("Duplicate review", "awards:duplicates"),
+        ("Assign judges", "awards:assign"),
+    ],
     "leader": [
         ("Overview", "dashboard:overview"),
+        ("Awards and managers", "dashboard:awards"),
         ("All applications", "dashboard:review"),
         ("Approve results", "dashboard:results"),
         ("Requests to confirm", "dashboard:requests"),
@@ -603,6 +614,7 @@ ROLE_LABELS = {
     "applicant": "Applicant",
     "judge": "Judge",
     "staff": "Programme staff",
+    "manager": "Award manager",
     "leader": "Leadership",
 }
 

@@ -24,7 +24,7 @@
       <tbody>
         {% for row in awards %}
           <tr>
-            <td><strong>{{ row.award.name }}</strong></td>
+            <td><strong>{{ row.award.name }}</strong><br><span class="muted small">Manager: {{ row.award.manager.display_name|default:"none yet" }}</span></td>
             <td><span class="badge badge-{{ row.award.status }}">{{ row.award.get_status_display }}</span></td>
             <td>{{ row.entries }}<br><span class="muted small">+ {{ row.award.drafts }} draft{{ row.award.drafts|pluralize }}</span></td>
             <td>{{ row.award.evaluating }}</td>

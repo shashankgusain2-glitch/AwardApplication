@@ -10,9 +10,10 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.audit.services import record
+from apps.awards.access import awards_for, check_can_work_on
 from apps.core.services import BusinessRuleError
 from apps.notifications.models import Notification
-from apps.notifications.services import notify, notify_role
+from apps.notifications.services import notify, notify_team
 
 from .models import ApplicantRequest, Application
 
@@ -21,9 +22,9 @@ S = Application.Status
 # Which status changes staff/leaders may make by hand (the others happen
 # automatically when judges are assigned and evaluations are submitted).
 MANUAL_TRANSITIONS = {
-    (S.SUBMITTED, S.REJECTED): ("staff", "leader"),     # failed the staff check
+    (S.SUBMITTED, S.REJECTED): ("staff", "manager", "leader"),     # failed the staff check
     (S.SCORED, S.APPROVED): ("leader",),                # leaders approve results
-    (S.SCORED, S.REJECTED): ("staff", "leader"),
+    (S.SCORED, S.REJECTED): ("staff", "manager", "leader"),
 }
 
 
@@ -32,8 +33,10 @@ def visible_to(user):
     qs = Application.objects.select_related("applicant", "award", "form_version")
     if user.role == User.Role.APPLICANT:
         return qs.filter(applicant=user)
-    if user.role in (User.Role.STAFF, User.Role.LEADER):
+    if user.role == User.Role.LEADER:
         return qs
+    if user.role in (User.Role.STAFF, User.Role.MANAGER):
+        return qs.filter(award__in=awards_for(user))   # only the awards they are on
     if user.role == User.Role.JUDGE:
         return qs.filter(assignments__judge=user).distinct()
     return qs.none()
@@ -188,7 +191,7 @@ def _ask(application, *, by, kind, reason):
         raise BusinessRuleError("You already have a request waiting for a decision.")
     req = ApplicantRequest.objects.create(application=application, kind=kind, requested_by=by, reason=reason.strip())
     record(by, "create", req, changes={"kind": kind, "reason": reason.strip()})
-    notify_role(User.Role.STAFF, f"{_what(application, kind)}: the applicant asks. Reason: {reason.strip()} "
+    notify_team(application.award, f"{_what(application, kind)}: the applicant asks. Reason: {reason.strip()} "
                 f"Check it, then it goes to leadership to confirm.",
                 kind=Notification.Kind.REQUEST, link=reverse("awards:entries"))
     return req
@@ -309,6 +312,7 @@ def change_status(application, *, by, new_status, note=""):
         raise BusinessRuleError(f"Can't move an application from {application.status} to {new_status}.")
     if by.role not in allowed_roles:
         raise BusinessRuleError("Your role can't make this change.")
+    check_can_work_on(by, application.award)
     set_status(application, new_status, by=by, note=note)
     outcome = "approved" if new_status == S.APPROVED else "not successful"
     notify(application.applicant, f"{application.reference} ({application.award.name}): your application was {outcome}."

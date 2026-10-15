@@ -22,6 +22,7 @@ SESSION_ROLE = "role"
 ROLE_HOME = {
     "applicant": "entries:dashboard",
     "staff": "awards:staff_home",
+    "manager": "awards:staff_home",   # award managers use the staff portal, for their own awards
     "judge": "judging:assignments",
     "leader": "dashboard:overview",
 }

@@ -76,3 +76,9 @@ def mark_read(notification):
 
 def mark_all_read(user):
     return Notification.objects.filter(user=user, is_read=False).update(is_read=True, read_at=timezone.now())
+
+
+def notify_team(award, message, **kwargs):
+    """Notify the people who run this award: its manager and allocated staff (not every staff member)."""
+    from apps.awards.access import team
+    return [notify(u, message, **kwargs) for u in team(award)]
