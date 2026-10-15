@@ -153,6 +153,32 @@ Production starts **empty**: no demo people, no demo awards. `seed_data` refuses
 4. Applicants can now see the award on their dashboard and apply. Staff verify each organisation, then assign judges.
 5. Check **Audit log** (leadership menu) to confirm actions are being recorded.
 
+### Or: import people and awards from CSV files
+
+Steps 2 and 3 can be done in one go with `import_csv`. Fill in copies of the files in [deploy/import-templates/](../deploy/import-templates/) (column notes in its README). **Don't commit the real files**: they hold people's emails.
+
+On Render, open the service's **Shell** tab. The first leader must already exist (`createsuperuser`). Then:
+
+1. Put the files in a folder. The Shell has no upload button, so paste each file:
+   ```bash
+   mkdir -p /tmp/import && cat > /tmp/import/people.csv <<'EOF'
+   (paste the file's contents here, then press Enter)
+   EOF
+   ```
+   Repeat for `awards.csv`, `criteria.csv` and `questions.csv`. Any file can be left out.
+2. Check them. This is a dry run: nothing is saved, and every problem is listed by file and line.
+   ```bash
+   python manage.py import_csv /tmp/import --by <your leader email>
+   ```
+3. When it says "Dry run, nothing saved. Would do: …", save, and email each new account its set-your-password link:
+   ```bash
+   python manage.py import_csv /tmp/import --by <your leader email> --commit --invite
+   ```
+   While email isn't set up (`SHOW_INVITE_LINKS=True`), the links are also printed so you can pass them on by hand.
+4. Log in, check the awards' set-up checklists, then set each award to **Open**. Imported awards start as Upcoming.
+
+Running it again is safe: people are matched by email and awards by name. Nobody is removed from a team or panel, criteria are replaced, and a new form version is published only if the questions changed. Existing people keep their role.
+
 ## Backup and restore test (before launch, then monthly)
 
 ```bash

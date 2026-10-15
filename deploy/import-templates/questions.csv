@@ -1,0 +1,6 @@
+award,section,subsection,label,type,required,identifying
+Business Excellence Award 2027,About you,,Organisation name,text,yes,yes
+Business Excellence Award 2027,About you,,Headquarters or main plant location,text,yes,yes
+Business Excellence Award 2027,About you,,Number of employees,text,yes,no
+Business Excellence Award 2027,Leadership,,How do leaders set direction and communicate it?,textarea,yes,no
+Business Excellence Award 2027,Leadership,,Upload your strategy document (PDF),file,no,no

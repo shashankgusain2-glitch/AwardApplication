@@ -1,0 +1,6 @@
+email,name,role,expertise,priority,max_open_assignments
+programme.lead@yourorg.example,Asha Verma,leader,,,
+award.manager@yourorg.example,Rahul Nair,manager,,,
+staff.one@yourorg.example,Priya Shah,staff,,,
+judge.one@yourorg.example,Dr. Meera Iyer,judge,"Manufacturing, quality",1,10
+judge.two@yourorg.example,Prof. Arun Das,judge,"Strategy, finance",2,10
