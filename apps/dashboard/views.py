@@ -215,3 +215,26 @@ def requests_to_confirm(request):
         "rows": approvals.for_leaders(approvals.waiting(approvals.T.WAITING_LEADER)),
         "with_staff": approvals.for_leaders(approvals.waiting(approvals.T.WAITING_STAFF)),
     })
+
+
+@role_required("leader")
+def request_detail(request, type, pk):
+    """
+    One request a leader confirms (a judge's score change), opened from its notification:
+    what was asked, the staff check, the current scores, and Confirm / Refuse.
+    """
+    from django.http import Http404
+
+    from apps.core import approvals
+    from apps.evaluations.models import ScoreChangeRequest
+
+    if type != "score":
+        raise Http404("Leaders only confirm judges' score changes.")
+    req = get_object_or_404(ScoreChangeRequest.objects.select_related(
+        "evaluation__assignment__report__award", "evaluation__assignment__judge", "staff_by", "decided_by"), pk=pk)
+    assignment = req.evaluation.assignment
+    return render(request, "dashboard/request_detail.html", {
+        "role": ROLE, "req": req, "assignment": assignment, "report": assignment.report,
+        "scores": req.evaluation.scores.select_related("criterion").order_by("criterion__order"),
+        "can_decide": req.status == approvals.T.WAITING_LEADER and approvals.can_confirm(request.user, req),
+    })

@@ -132,7 +132,7 @@ def test_requests_reach_and_are_decided_by_the_awards_own_team(two):
     applications.request_edit(report, by=report.applicant, reason="Typo in section 2")
     req = applications.open_request(report, "edit")
     told = set(Notification.objects.filter(kind="request").values_list("user", flat=True))
-    assert told == {two["s_alpha"].pk, two["m_alpha"].pk}            # not Beta's team
+    assert told == {two["s_alpha"].pk}                               # Alpha's staff only (not Beta's team)
 
     assert approvals.waiting(approvals.T.WAITING_STAFF, two["s_beta"]) == []
     assert len(approvals.waiting(approvals.T.WAITING_STAFF, two["m_alpha"])) == 1

@@ -213,7 +213,7 @@ Only questions marked identifying (and file names) mention the organisation.
 
 | Kind | Where | Result |
 |---|---|---|
-| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **440 passed, 0 skipped** (15 Oct) |
+| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **442 passed, 0 skipped** (16 Oct) |
 | Postman | `postman/` (collection, environment, `CHECKLIST.md`) | **123 requests, 279 checks, 0 failures** with Newman on fresh seed data; repeatable |
 | End-to-end | `tests/test_web_workflow.py` and a manual browser run | Sign up → organisation → submit → staff verify and assign → both judges grade → scored → leader approves → applicant sees "Approved" |
 | Rules | `tests/rules/` | Rule 1: 8 tests running. ⚠️ Rule 2 and Rule 3 files are **skipped placeholders**, although those behaviours are tested in `tests/api/`. Rule 4: 6 tests running |
@@ -253,6 +253,7 @@ Only questions marked identifying (and file names) mention the organisation.
 | 15 Oct | Fixes found while testing: the API couldn't accept entries (`change-status` now takes `accepted`); entries declined at the staff check counted as results; only high duplicate matches block accepting; Postman verifies the organisation after it applies (staff only see organisations on their awards) and decides re-evaluations as the award manager | Postman run and browser check | `apps/applications/api/serializers.py`, `postman/build_collection.py` |
 | 15 Oct | **Edit requests: staff check, then the award manager confirms** (not a leader; a leader only for an award with no manager). Staff on the award take the first step (the manager only if the award has no staff); the manager sees *Waiting for you to confirm* on Entries and on their home page; the applicant's status page, form and notifications name the award manager. Judges' score changes still go to leadership | The request | `apps/core/approvals.py`, `templates/awards/entries.html`, `templates/entries/` |
 | 15 Oct | **Duplicate review is staff-only; leaders' *All applications* page removed**: menu items gone for leaders and award managers, Duplicate review refuses them (403), the overview button opens *Approve results* | The request | `apps/core/demo_data.py`, `apps/awards/views.py`, `apps/dashboard/` |
+| 16 Oct | **Leaders only get notifications they act on**: edit requests are told to the award's staff only and never reach leaders (no manager: the staff check decides); an open edit request closes itself when a judge starts; a leader's score-change notification opens that request's page with Confirm / Refuse; data migrations remove leaders' old edit notifications and relink the rest | The request | `apps/core/approvals.py`, `apps/applications/services.py`, `apps/dashboard/`, `apps/notifications/migrations/` |
 
 ---
 

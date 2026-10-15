@@ -178,6 +178,8 @@ def start_review(assignment, *, judge):
     assignment.save(update_fields=["status", "updated_at"])
     if assignment.report.status == Application.Status.ASSIGNED:
         set_status(assignment.report, Application.Status.IN_REVIEW, by=judge)
+    from apps.applications.services import close_edit_requests
+    close_edit_requests(assignment.report, by=judge)        # edits are only possible before judging
     record(judge, "update", assignment, changes={"status": A.IN_REVIEW})
     return assignment
 

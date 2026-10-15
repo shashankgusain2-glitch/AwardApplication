@@ -50,16 +50,27 @@ def test_edit_needs_staff_then_the_award_manager_and_only_then_takes_effect(peop
 
 
 @pytest.mark.django_db
-def test_a_leader_confirms_edits_only_when_the_award_has_no_manager(people):
+def test_without_an_award_manager_the_staff_check_decides_and_leaders_never_hear(people):
     people["award"].manager = None
     people["award"].save()
     report = ApplicationFactory(award=people["award"])
     applications.request_edit(report, by=report.applicant, reason="Wrong turnover figure")
+    with pytest.raises(BusinessRuleError, match="staff check this request first"):
+        applications.decide_edit(report, by=people["leader"], allow=True)
     applications.decide_edit(report, by=people["staff"], allow=True)
-    assert "waiting for you to confirm" in Notification.objects.get(user=people["leader"]).message
-    applications.decide_edit(report, by=people["leader"], allow=True)
     report.refresh_from_db()
-    assert report.edit_allowed
+    assert report.edit_allowed and report.requests.get().status == "approved"
+    assert "approved by programme staff" in Notification.objects.filter(
+        user=report.applicant).latest("created_at").message
+    assert not Notification.objects.filter(user=people["leader"]).exists()
+
+
+@pytest.mark.django_db
+def test_edit_requests_are_told_to_staff_only(people):
+    report = ApplicationFactory(award=people["award"])
+    applications.request_edit(report, by=report.applicant, reason="Wrong turnover figure")
+    told = set(Notification.objects.filter(kind="request").values_list("user", flat=True))
+    assert told == {people["staff"].pk}                     # not the manager (until staff pass it on), not leaders
 
 
 @pytest.mark.django_db
@@ -88,16 +99,24 @@ def test_nobody_skips_a_step(people):
 
 
 @pytest.mark.django_db
-def test_edit_is_blocked_once_a_judge_has_started(people):
+def test_an_open_edit_request_closes_when_a_judge_starts(people):
     report = ApplicationFactory(award=people["award"])
     assignment = assignments.assign(report, people["judge"], by=people["staff"])   # assigned, not started: fine
     applications.request_edit(report, by=report.applicant, reason="Wrong figure")
+    assert Notification.objects.filter(user=people["staff"], is_read=False).exists()
     assignments.start_review(assignment, judge=people["judge"])                     # judge starts meanwhile
-    with pytest.raises(BusinessRuleError, match="judging has started"):
+
+    req = report.requests.get()
+    assert req.status == "declined" and "started judging" in req.decision_note
+    assert "closed because a judge has started judging" in Notification.objects.filter(
+        user=report.applicant).latest("created_at").message
+    assert not Notification.objects.filter(user=people["staff"], is_read=False,
+                                           message__contains="Edit after submitting").exists()   # reminder cleared
+    with pytest.raises(BusinessRuleError, match="no edit request waiting|hasn't asked"):
         applications.decide_edit(report, by=people["staff"], allow=True)
-    applications.decide_edit(report, by=people["staff"], allow=False, note="Judging has started.")
 
     report.refresh_from_db()
+    assert not report.edit_requested
     with pytest.raises(BusinessRuleError, match="Judging has started"):
         applications.request_edit(report, by=report.applicant, reason="Another try")
 
@@ -168,3 +187,37 @@ def test_a_waiting_score_change_cannot_be_approved_after_the_result(people):
     evaluations.decide_change(req, by=people["staff"], approve=False, note="Result already decided")
     assert "Result already decided" in Notification.objects.filter(
         user=people["judge"]).latest("created_at").message
+
+
+@pytest.mark.django_db
+def test_a_leader_opens_a_score_change_from_the_notification_and_decides_it(people, client):
+    from django.urls import reverse
+
+    from .conftest import login
+    report, evaluation = _scored(people)
+    req = evaluations.request_change(evaluation, judge=people["judge"], reason="I misread the energy table")
+    evaluations.decide_change(req, by=people["staff"], approve=True, note="Fair")
+    note = Notification.objects.get(user=people["leader"])
+    assert note.link == reverse("dashboard:request_detail", args=["score", req.pk])
+
+    people["leader"].set_password("Test-pass-2026!")
+    people["leader"].save()
+    login(client, people["leader"].email, "Test-pass-2026!")
+    page = client.post(reverse("notifications:open", args=[note.pk]), follow=True).content.decode()
+    assert "I misread the energy table" in page and "Confirm" in page and "Refuse" in page
+    client.post(reverse("core:decide_request", args=["score", req.pk]), {"decision": "approve"})
+    req.refresh_from_db()
+    assert req.status == "approved"
+    assert "Nothing to confirm: this request was already confirmed" in client.get(note.link).content.decode()
+    assert client.get(reverse("dashboard:request_detail", args=["applicant", req.pk])).status_code == 404
+
+
+@pytest.mark.django_db
+def test_deciding_a_score_change_clears_the_leaders_reminder(people):
+    report, evaluation = _scored(people)
+    other_leader = LeaderFactory()
+    req = evaluations.request_change(evaluation, judge=people["judge"], reason="Misread the results")
+    evaluations.decide_change(req, by=people["staff"], approve=True)
+    assert Notification.objects.filter(user__role="leader", is_read=False).count() == 2
+    evaluations.decide_change(req, by=other_leader, approve=False, note="Scores stand")
+    assert not Notification.objects.filter(user__role="leader", is_read=False).exists()   # no stale "waiting"
