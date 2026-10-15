@@ -106,7 +106,15 @@ def step(request, *, by, approve, note=""):
         raise BusinessRuleError("This request has already been decided.")
     request.save()
     record(by, "update", request, changes={"status": request.status, "note": note})
+    if request.status in (T.APPROVED, T.REFUSED) and not is_edit(request):
+        _clear_leader_reminders(request)
     return request.status
+
+
+def _clear_leader_reminders(request):
+    """Decided: the leaders' "waiting for you" notifications about it are no longer work to do."""
+    from django.utils import timezone as tz
+    Notification.objects.filter(link=_leader_link(request), is_read=False).update(is_read=True, read_at=tz.now())
 
 
 def reevaluation_approver(award):

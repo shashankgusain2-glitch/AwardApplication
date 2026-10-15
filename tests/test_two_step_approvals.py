@@ -208,5 +208,16 @@ def test_a_leader_opens_a_score_change_from_the_notification_and_decides_it(peop
     client.post(reverse("core:decide_request", args=["score", req.pk]), {"decision": "approve"})
     req.refresh_from_db()
     assert req.status == "approved"
-    assert "Already decided" in client.get(note.link).content.decode()
+    assert "Nothing to confirm: this request was already confirmed" in client.get(note.link).content.decode()
     assert client.get(reverse("dashboard:request_detail", args=["applicant", req.pk])).status_code == 404
+
+
+@pytest.mark.django_db
+def test_deciding_a_score_change_clears_the_leaders_reminder(people):
+    report, evaluation = _scored(people)
+    other_leader = LeaderFactory()
+    req = evaluations.request_change(evaluation, judge=people["judge"], reason="Misread the results")
+    evaluations.decide_change(req, by=people["staff"], approve=True)
+    assert Notification.objects.filter(user__role="leader", is_read=False).count() == 2
+    evaluations.decide_change(req, by=other_leader, approve=False, note="Scores stand")
+    assert not Notification.objects.filter(user__role="leader", is_read=False).exists()   # no stale "waiting"

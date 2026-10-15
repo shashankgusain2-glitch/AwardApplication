@@ -19,6 +19,24 @@
   {% if req.staff_by %}<p class="small" style="margin:.5rem 0 0">✓ Checked by staff ({{ req.staff_by.display_name }}, {{ req.staff_at|date:"j M Y" }}){% if req.staff_note %}: “{{ req.staff_note }}”{% endif %}</p>{% endif %}
 </div>
 
+<div class="card" style="margin-bottom:1.5rem{% if can_decide %};border-left:4px solid var(--warning){% endif %}">
+  {% if can_decide %}
+    <h2 style="font-size:1.05rem">Your decision</h2>
+    <form method="post" action="{% url 'core:decide_request' 'score' req.pk %}" class="row">
+      {% csrf_token %}<input type="hidden" name="next" value="{% url 'dashboard:requests' %}">
+      <input name="note" type="text" placeholder="Note to the judge (optional)" style="flex:1;min-width:240px" aria-label="Note">
+      <button class="btn btn-success btn-sm" name="decision" value="approve">Confirm</button>
+      <button class="btn btn-outline btn-sm" name="decision" value="refuse">Refuse</button>
+    </form>
+  {% elif req.status == "requested" %}
+    <p class="muted small" style="margin:0">Programme staff haven't checked it yet. It comes to you once they do.</p>
+  {% else %}
+    <div class="callout callout-{% if req.status == 'declined' %}warning{% else %}success{% endif %}" style="margin:0"><div>
+      <strong>Nothing to confirm: this request was already {% if req.status == "declined" %}refused{% else %}confirmed{% endif %}{% if req.decided_by %} by {{ req.decided_by.display_name }} on {{ req.decided_at|date:"j M Y, H:i" }}{% endif %}.</strong>
+      {% if req.status == "used" %}The judge has since changed their scores (recorded with a reason). {% endif %}{% if req.decision_note %}Note: “{{ req.decision_note }}”. {% endif %}Confirm and Refuse only appear while a request is waiting for a leader. <a href="{% url 'dashboard:requests' %}">See requests waiting for you</a>.
+    </div></div>
+  {% endif %}
+</div>
 <div class="card" style="margin-bottom:1.5rem">
   <h2 style="font-size:1.05rem">Scores as submitted (total {{ req.evaluation.total_score }} / 10)</h2>
   <div class="table-wrap">
@@ -34,19 +52,4 @@
   <p class="muted small" style="margin:.5rem 0 0">Confirming lets the judge change these scores themselves; every change is recorded with who, when, the old and new value and a reason.</p>
 </div>
 
-<div class="card">
-  {% if can_decide %}
-    <h2 style="font-size:1.05rem">Your decision</h2>
-    <form method="post" action="{% url 'core:decide_request' 'score' req.pk %}" class="row">
-      {% csrf_token %}<input type="hidden" name="next" value="{% url 'dashboard:requests' %}">
-      <input name="note" type="text" placeholder="Note to the judge (optional)" style="flex:1;min-width:240px" aria-label="Note">
-      <button class="btn btn-success btn-sm" name="decision" value="approve">Confirm</button>
-      <button class="btn btn-outline btn-sm" name="decision" value="refuse">Refuse</button>
-    </form>
-  {% elif req.status == "requested" %}
-    <p class="muted small" style="margin:0">Programme staff haven't checked it yet. It comes to you once they do.</p>
-  {% else %}
-    <p class="muted small" style="margin:0">Already decided{% if req.decided_by %} by {{ req.decided_by.display_name }} on {{ req.decided_at|date:"j M Y" }}{% endif %}{% if req.decision_note %}: “{{ req.decision_note }}”{% endif %}. Nothing more to do.</p>
-  {% endif %}
-</div>
 {% endblock %}
