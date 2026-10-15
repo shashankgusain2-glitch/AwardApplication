@@ -23,7 +23,6 @@ PAGES = [
     "awards:duplicates",
     "awards:assign",
     "dashboard:overview",
-    "dashboard:review",
     "dashboard:results",
 ]
 
@@ -76,8 +75,6 @@ def test_every_screen_opens_for_every_role_on_the_seed_data(seeded):
         assert staff.get(reverse("awards:form_builder", args=[award.slug]), {"version": "1"}).status_code == 200
     assert staff.get(reverse("awards:entries"), {"status": "submitted", "q": "Polymers"}).status_code == 200
 
-    leader = seeded_client("leader")
-    assert leader.get(reverse("dashboard:review"), {"status": "scored", "award": "kaizen"}).status_code == 200
 
 
 @pytest.mark.django_db
@@ -85,8 +82,8 @@ def test_screens_show_the_seed_data_not_samples(seeded):
     from .conftest import seeded_client
     entries = seeded_client("staff").get(reverse("awards:entries")).content.decode()
     assert "Shri Ganesh Polymers Ltd" in entries and "Northstar Auto Components" in entries
-    review = seeded_client("leader").get(reverse("dashboard:review")).content.decode()
-    assert "Coastal Marine Foods" in review
+    results = seeded_client("leader").get(reverse("dashboard:results")).content.decode()
+    assert "Coastal Marine Foods" in results
     status = seeded_client("applicant").get(reverse("entries:status")).content.decode()
     assert "Business Excellence Award" in status and "Kaizen Competition" in status
 

@@ -39,7 +39,7 @@ Most lists also accept **filters** (e.g. `?status=submitted&award=kaizen`), **se
 | `/applications/{id}/submit/` | POST | applicant (own) | Checks required answers, then locks it |
 | `/applications/{id}/request-edit/` | POST | applicant (own) | `{reason}`: ask staff to allow changes |
 | `/applications/{id}/decide-edit/` | POST | staff, leader | `{allow}` |
-| `/applications/{id}/change-status/` | POST | staff, leader | `{status: rejected\|approved, note}` (approve: leader only) |
+| `/applications/{id}/change-status/` | POST | staff, manager, leader | `{status: accepted\|rejected\|approved, note}`: accept a submitted entry (verified organisation, no undecided duplicate in the award), decline it (`rejected`, note required) or approve a scored one (leader only) |
 | `/applications/{id}/attachments/` | POST (multipart) | applicant (own, while editable) | `{question_key, file}`: PDF/JPG/PNG up to 10 MB on a file question; replaces an earlier file. Returns `download_url` |
 | `/attachments/{id}/download/` | GET | owner, staff, leader, judges assigned to the report | The file. Blind rounds give judges a neutral file name; anyone else gets 404 |
 | `/applications/{id}/eligible-judges/` | GET | staff, leader | Judges who may take it: panel, no conflict, under limit, best first |
@@ -65,7 +65,7 @@ Most lists also accept **filters** (e.g. `?status=submitted&award=kaizen`), **se
 
 ## Postman
 
-A ready-to-import collection (116 requests in 12 folders, with tests) and a testing checklist are in [postman/](../postman/README.md).
+A ready-to-import collection (123 requests in 12 folders, with tests) and a testing checklist are in [postman/](../postman/README.md).
 
 ## Sample requests (curl)
 

@@ -74,7 +74,6 @@ def test_leader_forms_survive_junk(seeded):
     leader = seeded_client("leader")
     report = Application.objects.exclude(status="draft").first()
     _no_crash(leader, "post", reverse("dashboard:decide", args=[report.pk]), JUNK)
-    _no_crash(leader, "get", reverse("dashboard:review"), {"status": "x", "award": "<script>"})
 
 
 @pytest.mark.django_db

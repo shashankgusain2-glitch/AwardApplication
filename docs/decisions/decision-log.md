@@ -174,9 +174,71 @@ Each decision: the options, the one we picked, why, and what would change our mi
 | Staff allocation | Staff pick awards vs. assigned to them | **Assigned** (`Award.staff`) by a leader or that award's manager | Staff shouldn't grant themselves access |
 | Where the rule lives | Check in each view vs. one helper | **`apps/awards/access.py` → `awards_for(user)`**, used by every `visible_to()`, staff page, API queryset, file download, request list and notification | One place to read and test; another award's record gives 404 (same as D7's object-level rule) |
 | Managers' portal | A separate set of pages vs. the staff portal | **The staff portal**, scoped to their awards, plus a Team page | Managers do the same work as staff; no duplicated screens |
-| Two-step requests | Managers as the first or the final step | **First step (the staff check)** on their own awards; the final confirmation stays with leaders | Keeps "staff check, leadership confirms" (D8) unchanged |
+| Two-step requests | Managers as the first or the final step | **First step (the staff check)** on their own awards; the final confirmation stays with leaders | Keeps "staff check, leadership confirms" (D8) unchanged | *Changed by D12 for applicants' edit requests: the award manager now confirms them.*
 | Creating awards | Staff vs. leaders | **Leaders only**, choosing the manager on the same form | The request; awards are a leadership decision |
 | Existing data | Put every existing staff member on every award vs. nobody | **Nobody**: leaders allocate after the upgrade (the demo seed allocates its own staff) | Giving everyone everything would undo the point of the change |
 | Organisations to verify | All vs. only those on my awards | **Only organisations that applied to one of their awards** (leaders: all) | An organisation is checked by the team that will judge it |
 
 **What would change our mind:** if one award needed several managers, `Award.manager` would become a many-to-many like `Award.staff`; `awards_for()` is the only rule to change.
+
+---
+
+## D10. Duplicate organisations and the staff check on each entry
+
+**Date:** 15 Oct 2026 · Asked by the user: duplicates only under the awards they are actually in, finish the duplicate solution end to end, staff accept or decline entries, and the applicant should see judging move on
+
+| Choice | Options | Picked | Why |
+|---|---|---|---|
+| Finding duplicates | A nightly job vs. on save | **On every profile save** (sign-up and profile form), plus a full scan from `seed_data` | Staff see a pair as soon as it exists; profiles are few, so comparing one against all is cheap |
+| What counts as a match | GSTIN only vs. GSTIN, names | **High**: same PAN (GSTIN characters 3-12; one company has a GSTIN per state) or the same name once "Pvt Ltd" and punctuation are removed. **Possible**: name similarity ≥ 0.80 | GSTINs are unique per profile already, so an exact GSTIN never matches; PAN and names do |
+| Which award tab shows a pair | Either record entered vs. both entered | **Both entered** that award; every other pair is on a *Not in the same award* tab | The request: show duplicates only on the tabs of the awards they are actually in; a pair only clashes in an award when both are there |
+| What a merge does | Move entries to one login vs. link the records | **Link** (`merged_into`): both logins and their entries stay; conflicts and verification follow the main record | People keep their accounts; undo is one field; the conflict check (Rule 2) is what the merge is for |
+| Two entries in one award | Merge anyway vs. block | **Block** until staff decline one (a *Decline as duplicate* button on the card) | One organisation enters an award once |
+| Staff check per entry | Organisation verification only vs. also each entry | **Also each entry**: new status `accepted`; only accepted entries go to judges; declining needs a reason | The request; an entry can be ineligible even from a verified organisation |
+| Accepting with an open duplicate | Allow vs. block | **Block** while an undecided duplicate also entered the same award | Forces the duplicate to be resolved before judges see either entry |
+| Applicant progress | Status only vs. counts | **Counts only**: "1 of 3 judges finished · 1 reviewing now" | The applicant thought it was stuck on *Assigned*; counts say nothing about who judges or what they scored |
+
+**What would change our mind:** if the client wants one login per company, a merge would move entries to the main account instead of linking records.
+
+---
+
+## D11. A results board for everyone; the award manager decides re-evaluations
+
+**Date:** 15 Oct 2026 · Asked by the user: nobody could see results once they were out; make a screen where they can be seen and a re-evaluation asked for with a reason, approved by the award manager who reassigns judges, with the new result on the board
+
+| Choice | Options | Picked | Why |
+|---|---|---|---|
+| Who sees what on the board | Everyone sees everything vs. by role | **By role**: staff and managers the full ranking of their awards, leaders every award, applicants the successful entries plus their own, judges the successful entries | Winners are public; another organisation's unsuccessful result isn't |
+| When a result is "out" | Approved/rejected status vs. also judged | **Judged, then approved or rejected by a leader** | An entry declined at the staff check is also "rejected" but has no score; it isn't a result and can't be re-evaluated |
+| Who approves a re-evaluation | Staff then leader (two steps, as before) vs. the award manager | **The award manager, one step**; a leader only if the award has no active manager | The request; the manager owns the award and chooses the new judges |
+| After approval | Back to the general assign list vs. straight to choosing judges | **Straight to the assign page** for that entry; the first judges aren't offered (they are "Replaced") | One flow; fresh eyes |
+| The new result | Updated automatically vs. decided again | **Decided again by leadership** (Approve results shows "Re-evaluation: new judges' scores · was …"); the board then shows the new score and result with "Re-evaluated · was …" | Results stay a leadership decision; the old judges' scores stop counting the moment the re-evaluation is approved |
+| Duplicates blocking acceptance | Any open match vs. high matches only | **High matches only** (same PAN or same cleaned name); possible matches stay flagged | "Plant 1" and "Plant 2" look alike but are often different entries; found when the Postman run registered a second test company |
+
+**What would change our mind:** if the client wants results public on the website, the board's applicant view (successful entries only) is the one to show.
+
+---
+
+## D12. Applicants' edit requests: staff check, then the award manager confirms
+
+**Date:** 15 Oct 2026 · Asked by the user: an edit confirmation shouldn't go to leadership; staff check it first, then the award manager confirms, and only then can the applicant edit
+
+| Choice | Options | Picked | Why |
+|---|---|---|---|
+| Final confirmation of an edit | A leader (D9) vs. the award manager | **The award's manager** | The request; the manager owns the award. Leaders no longer see edit requests |
+| First step | Staff or the manager vs. staff only | **Staff on that award**; the manager only if the award has no active staff | Otherwise the manager could check and confirm the same request alone |
+| Award without a manager | Stuck vs. a fallback | **A leader confirms** (the "Requests to confirm" page shows only these and judges' score changes) | A request must never be stuck; every award should have a manager anyway (the Awards page warns when it doesn't) |
+| Judges' score changes | Also to the manager vs. unchanged | **Unchanged: staff check, a leader confirms** | Not part of the request; scores are Rule 3 and stay with leadership |
+| Requests already checked by staff before this change | Leave with leaders vs. move | **Move**: they now wait for the award manager | The rule is computed from the request's kind and award, not stored |
+
+---
+
+## D13. Duplicate review is for programme staff; leaders have no "All applications" page
+
+**Date:** 15 Oct 2026 · Asked by the user: remove *All applications* and *Duplicate review* from leaders and award managers
+
+| Choice | Options | Picked | Why |
+|---|---|---|---|
+| Duplicate review | Hide the menu item vs. also refuse the page | **Menu item removed and the page refused (403)** for award managers and leaders; the service refuses them too | A hidden page that still works by URL isn't really removed. Staff on the award decide duplicates; managers still see the *Possible duplicate* badge on Entries |
+| All applications (leaders) | Hide vs. delete | **Deleted** (view, address, template); the overview's "Open review queue" button now opens *Approve results* | Only leaders used it; scored entries are on *Approve results* and decided ones on the *Results board* |
+

@@ -77,5 +77,6 @@ class ReevaluationDecisionSerializer(DecideSerializer):
 
 
 class StatusChangeSerializer(serializers.Serializer):
-    status = serializers.ChoiceField(choices=[Application.Status.REJECTED, Application.Status.APPROVED])
+    status = serializers.ChoiceField(choices=[Application.Status.ACCEPTED, Application.Status.REJECTED,
+                                              Application.Status.APPROVED])
     note = serializers.CharField(required=False, allow_blank=True, default="")

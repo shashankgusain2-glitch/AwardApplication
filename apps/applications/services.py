@@ -22,7 +22,9 @@ S = Application.Status
 # Which status changes staff/leaders may make by hand (the others happen
 # automatically when judges are assigned and evaluations are submitted).
 MANUAL_TRANSITIONS = {
+    (S.SUBMITTED, S.ACCEPTED): ("staff", "manager", "leader"),     # passed the staff check
     (S.SUBMITTED, S.REJECTED): ("staff", "manager", "leader"),     # failed the staff check
+    (S.ACCEPTED, S.REJECTED): ("staff", "manager", "leader"),      # found out later (e.g. a duplicate)
     (S.SCORED, S.APPROVED): ("leader",),                # leaders approve results
     (S.SCORED, S.REJECTED): ("staff", "manager", "leader"),
 }
@@ -170,7 +172,7 @@ def edit_blocked(application):
     """Why the applicant can't ask to edit now ("" = they can). Edits are only possible before judging starts."""
     if application.status == S.DRAFT:
         return "Drafts can be changed without asking."
-    if application.status not in (S.SUBMITTED, S.ASSIGNED) or judging_started(application):
+    if application.status not in (S.SUBMITTED, S.ACCEPTED, S.ASSIGNED) or judging_started(application):
         return ("Judging has started, so the report can't be edited any more. "
                 "Once the result is out, you can ask for a re-evaluation.")
     if application.edit_allowed:
@@ -191,10 +193,31 @@ def _ask(application, *, by, kind, reason):
         raise BusinessRuleError("You already have a request waiting for a decision.")
     req = ApplicantRequest.objects.create(application=application, kind=kind, requested_by=by, reason=reason.strip())
     record(by, "create", req, changes={"kind": kind, "reason": reason.strip()})
-    notify_team(application.award, f"{_what(application, kind)}: the applicant asks. Reason: {reason.strip()} "
-                f"Check it, then it goes to leadership to confirm.",
-                kind=Notification.Kind.REQUEST, link=reverse("awards:entries"))
+    if kind == K.REEVALUATION:
+        _tell_reevaluation_approver(application, reason.strip())
+    else:
+        notify_team(application.award, f"{_what(application, kind)}: the applicant asks. Reason: {reason.strip()} "
+                    f"Check it, then it goes to the award manager to confirm.",
+                    kind=Notification.Kind.REQUEST, link=reverse("awards:entries"))
     return req
+
+
+def _tell_reevaluation_approver(application, reason):
+    """Re-evaluations go to the award manager (or every leader if the award has no manager); staff are told too."""
+    from apps.core.approvals import reevaluation_approver
+    from apps.notifications.services import notify_role
+
+    message = (f"{_what(application, K.REEVALUATION)}: the applicant asks. Reason: {reason} "
+               f"Approve it and choose new judges, or refuse it.")
+    link = reverse("awards:reevaluations")
+    approver = reevaluation_approver(application.award)
+    if approver is not None:
+        notify(approver, message, kind=Notification.Kind.REQUEST, link=link)
+    else:
+        notify_role(User.Role.LEADER, message, kind=Notification.Kind.REQUEST, link=link)
+    for person in application.award.staff.filter(is_active=True):
+        notify(person, f"{_what(application, K.REEVALUATION)}: the applicant asks; the award manager decides.",
+               kind=Notification.Kind.INFO, link=link)
 
 
 @transaction.atomic
@@ -212,17 +235,28 @@ def request_edit(application, *, by, reason):
     return application
 
 
+def has_result(application):
+    """
+    A result is out: judges scored it and leadership approved or rejected it. An entry
+    declined at the staff check is also "rejected", but nobody judged it, so it has no result.
+    """
+    from apps.evaluations.models import Evaluation
+    return application.status in (S.APPROVED, S.REJECTED) and Evaluation.objects.filter(
+        assignment__report=application, status=Evaluation.Status.SUBMITTED).exists()
+
+
 def can_request_reevaluation(application):
-    """Once the result is out (approved or rejected), and only once per application."""
-    return application.status in (S.APPROVED, S.REJECTED) and not application.reevaluation_status
+    """Once the result is out, and only once per application."""
+    return has_result(application) and not application.reevaluation_status
 
 
 @transaction.atomic
 def request_reevaluation(application, *, by, reason):
     if application.applicant_id != by.id:
         raise BusinessRuleError("You can only ask about your own application.")
-    if application.status not in (S.APPROVED, S.REJECTED):
-        raise BusinessRuleError("You can ask for a re-evaluation once the result is out.")
+    if not has_result(application):
+        raise BusinessRuleError("You can ask for a re-evaluation once the result is out (an entry declined at "
+                                "the staff check wasn't judged, so it has no result to re-evaluate).")
     if application.reevaluation_status:
         raise BusinessRuleError("You have already asked for a re-evaluation of this application.")
     _ask(application, by=by, kind=K.REEVALUATION, reason=reason)
@@ -248,6 +282,8 @@ def decide_request(req, *, by, approve, note=""):
                                     f"after the result.")
         if req.kind == K.REEVALUATION and application.status not in (S.APPROVED, S.REJECTED):
             raise BusinessRuleError(f"{application.reference} has no final result to re-evaluate any more.")
+    if req.kind == K.REEVALUATION:
+        return _decide_reevaluation_request(req, by=by, approve=approve, note=note)
     status = approvals.step(req, by=by, approve=approve, note=note)
     if req.kind == K.EDIT:
         if status == ApplicantRequest.Status.APPROVED:
@@ -267,6 +303,27 @@ def decide_request(req, *, by, approve, note=""):
     return req
 
 
+def _decide_reevaluation_request(req, *, by, approve, note):
+    """One step by the award manager. Approved: the first judges' work stops counting; fresh judges are needed."""
+    from apps.core import approvals
+
+    application = req.application
+    status = approvals.manager_step(req, by=by, approve=approve, note=note)
+    what = _what(application, K.REEVALUATION)
+    note_text = f" Note: {req.decision_note}" if req.decision_note else ""
+    if status == ApplicantRequest.Status.APPROVED:
+        _start_reevaluation(application, by)
+        notify(req.requested_by, f"{what}: approved by the award manager. New judges will score your application, "
+               f"then the result will be decided again.{note_text}",
+               kind=Notification.Kind.STATUS_CHANGE, link=reverse("core:results"))
+    else:
+        application.reevaluation_status = R.REFUSED
+        application.save(update_fields=["reevaluation_status", "updated_at"])
+        notify(req.requested_by, f"{what}: your request was refused. Your result stays as it is.{note_text}",
+               kind=Notification.Kind.STATUS_CHANGE, link=reverse("core:results"))
+    return req
+
+
 def _start_reevaluation(application, by):
     """The first judges' work becomes 'Replaced' (kept, no longer counted); fresh judges score it again."""
     from apps.assignments.models import JudgeAssignment
@@ -280,7 +337,7 @@ def _start_reevaluation(application, by):
         assignment.save(update_fields=["status", "updated_at"])
         record(by, "update", assignment, changes={"status": {"from": before, "to": assignment.status},
                                                   "why": "re-evaluation confirmed"})
-    set_status(application, S.SUBMITTED, by=by,
+    set_status(application, S.ACCEPTED, by=by,       # already checked by staff: straight back to the judges' pool
                note=f"re-evaluation confirmed; was {application.reevaluation_previous_result}")
 
 
@@ -313,19 +370,52 @@ def change_status(application, *, by, new_status, note=""):
     if by.role not in allowed_roles:
         raise BusinessRuleError("Your role can't make this change.")
     check_can_work_on(by, application.award)
+    if new_status == S.ACCEPTED:
+        _check_can_accept(application)
+    if application.status in (S.SUBMITTED, S.ACCEPTED) and new_status == S.REJECTED and not note.strip():
+        raise BusinessRuleError("Give a reason for declining: the applicant sees it.")
     set_status(application, new_status, by=by, note=note)
-    outcome = "approved" if new_status == S.APPROVED else "not successful"
+    outcome = {S.APPROVED: "approved", S.ACCEPTED: "accepted for judging"}.get(new_status, "not successful")
     notify(application.applicant, f"{application.reference} ({application.award.name}): your application was {outcome}."
            + (f" Note: {note}" if note else ""), kind=Notification.Kind.STATUS_CHANGE, link=reverse("entries:status"))
     return application
+
+
+def _check_can_accept(application):
+    """Staff accept an entry only for a verified organisation with no undecided duplicate in this award."""
+    from apps.accounts import duplicates
+    from apps.accounts.models import ApplicantProfile
+
+    profile = ApplicantProfile.objects.filter(user=application.applicant).first()
+    if not duplicates.is_verified(profile):
+        raise BusinessRuleError("Verify the organisation first: entries are accepted only from verified "
+                                "organisations.")
+    clash = duplicates.open_duplicate_in_award(profile, application.award)
+    if clash:
+        raise BusinessRuleError(f"{clash.profile_a.organisation_name} and {clash.profile_b.organisation_name} may be "
+                                f"the same organisation, and both entered {application.award.name}. Programme staff "
+                                f"decide it on Duplicate review first.")
+
+
+def accept_entry(application, *, by, note=""):
+    """Staff check passed: the entry can go to judges."""
+    return change_status(application, by=by, new_status=S.ACCEPTED, note=note)
+
+
+def decline_entry(application, *, by, note):
+    """Staff check failed (not eligible, a duplicate entry, ...). The applicant sees the reason."""
+    return change_status(application, by=by, new_status=S.REJECTED, note=note)
 
 
 def applicant_home(user):
     """Everything the applicant's home page shows: only this applicant's own data."""
     from apps.accounts.models import ApplicantProfile
     from apps.awards.models import Award
+    from apps.evaluations.services import applicant_progress
 
-    applications = list(visible_to(user).order_by("-updated_at"))
+    applications = list(visible_to(user).prefetch_related("assignments", "award__rounds").order_by("-updated_at"))
+    for application in applications:
+        application.judging = applicant_progress(application)
     entered = {a.award_id for a in applications}
     return {
         "applications": applications,

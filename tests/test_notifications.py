@@ -21,6 +21,7 @@ from .factories import (
     AwardFactory,
     JudgeFactory,
     LeaderFactory,
+    ManagerFactory,
     StaffFactory,
 )
 
@@ -60,6 +61,7 @@ def test_submit_edit_request_and_decision_reach_the_right_people():
     award = AwardFactory()
     applicant = ApplicantProfileFactory().user
     staff = StaffFactory()
+    manager = ManagerFactory(awards=[award])
     app = application_services.create_draft(applicant=applicant, award=award, title="Entry")
     application_services.update(app, by=applicant, content={"org": "X", "city": "Pune", "story": "Y"})
     application_services.submit(app, by=applicant)
@@ -69,10 +71,11 @@ def test_submit_edit_request_and_decision_reach_the_right_people():
     assert "the applicant asks" in Notification.objects.get(user=staff).message
     leader = LeaderFactory()
     application_services.decide_edit(app, by=staff, allow=True)
-    assert "passed it to leadership" in Notification.objects.filter(user=applicant).first().message
-    assert "waiting for a leader to confirm" in Notification.objects.get(user=leader).message
-    application_services.decide_edit(app, by=leader, allow=True)
-    assert "approved by leadership" in Notification.objects.filter(user=applicant).first().message
+    assert "passed it to the award manager" in Notification.objects.filter(user=applicant).first().message
+    assert "waiting for you to confirm" in Notification.objects.filter(user=manager).first().message
+    assert not Notification.objects.filter(user=leader).exists()
+    application_services.decide_edit(app, by=manager, allow=True)
+    assert "approved by the award manager" in Notification.objects.filter(user=applicant).first().message
 
 
 @pytest.mark.django_db

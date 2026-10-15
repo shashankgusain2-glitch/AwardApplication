@@ -6,14 +6,16 @@
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-<div class="grid grid-4" style="margin-bottom:1.5rem">
+<div class="grid grid-3" style="margin-bottom:1.5rem">
   <div class="kpi"><span>Organisations to verify</span><strong>{{ to_verify|length }}</strong></div>
+  <a class="kpi" href="{% url 'awards:entries' %}?status=submitted" style="text-decoration:none;color:inherit"><span>Entries to accept</span><strong>{{ to_accept }}</strong></a>
+  {% if role == "staff" %}<a class="kpi" href="{% url 'awards:duplicates' %}" style="text-decoration:none;color:inherit"><span>Possible duplicates</span><strong>{{ duplicates }}</strong></a>{% endif %}
   <div class="kpi"><span>Reports needing judges</span><strong>{{ needing_judges|length }}</strong></div>
   <div class="kpi"><span>Requests for you to check</span><strong>{{ staff_requests }}</strong></div>
-  <div class="kpi"><span>Waiting for leadership</span><strong>{{ leader_requests }}</strong></div>
+  {% if role == "manager" %}<a class="kpi" href="{% url 'awards:entries' %}" style="text-decoration:none;color:inherit"><span>Waiting for you to confirm</span><strong>{{ to_confirm }}</strong></a>{% else %}<div class="kpi"><span>Checked, waiting for confirmation</span><strong>{{ leader_requests }}</strong></div>{% endif %}
 </div>
 {% if staff_requests %}
-  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>{{ staff_requests }} request{{ staff_requests|pluralize }} waiting for staff</strong>Applicant edits, re-evaluations or judges' score changes. Check them on <a href="{% url 'awards:entries' %}">Entries</a>; leadership then confirms.</div></div>
+  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>{{ staff_requests }} request{{ staff_requests|pluralize }} waiting for staff</strong>Applicant edits (the award manager then confirms) or judges' score changes (leadership then confirms). Check them on <a href="{% url 'awards:entries' %}">Entries</a>.</div></div>
 {% endif %}
 
 <div class="card" style="margin-bottom:1.5rem">

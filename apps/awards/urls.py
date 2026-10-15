@@ -18,8 +18,12 @@ urlpatterns = [
     path("form-builder/<slug:slug>/new-version/", views.form_edit, name="form_edit"),
     path("entries/", views.entries, name="entries"),
     path("duplicates/", views.duplicates, name="duplicates"),
+    path("duplicates/<int:pk>/", views.duplicate_decide, name="duplicate_decide"),
     path("assign/", views.assign, name="assign"),
+    path("re-evaluations/", views.reevaluations, name="reevaluations"),
+    path("re-evaluations/<int:pk>/", views.reevaluation_decide, name="reevaluation_decide"),
     path("assign/<int:pk>/", views.assign, name="assign"),
     path("organisations/<int:pk>/verify/", views.verify_organisation, name="verify_organisation"),
+    path("entries/<int:pk>/accept/", views.accept_report, name="accept_report"),
     path("entries/<int:pk>/reject/", views.reject_report, name="reject_report"),
 ]

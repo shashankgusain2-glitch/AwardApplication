@@ -18,9 +18,9 @@
   <div class="callout callout-success" style="margin-bottom:1.5rem">
     <div>
       <strong>This application was submitted{% if application.submitted_at %} on {{ application.submitted_at|date:"j M Y" }}{% endif %} and is locked</strong>
-      {% if application.edit_requested and edit_request %}You asked to change it: “{{ edit_request.reason }}”. <strong>{{ edit_request.get_status_display }}</strong>: the programme staff check it first, then leadership confirms it.
+      {% if application.edit_requested and edit_request %}You asked to change it: “{{ edit_request.reason }}”. <strong>{{ edit_request.stage_label }}</strong>: the programme staff check it first, then the award manager confirms it.
       {% elif edit_blocked %}{{ edit_blocked }}
-      {% else %}If something is wrong, you can ask to change it until a judge starts on it. The programme staff check your request, then leadership confirms it.
+      {% else %}If something is wrong, you can ask to change it until a judge starts on it. The programme staff check your request, then the award manager confirms it.
         <form method="post" class="row" style="margin-top:.5rem">
           {% csrf_token %}<input type="hidden" name="action" value="request_edit"><input type="hidden" name="section" value="{{ current_index }}">
           <input name="reason" type="text" placeholder="What do you need to change, and why?" required style="flex:1">
@@ -30,7 +30,7 @@
     </div>
   </div>
 {% elif application.edit_allowed %}
-  <div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>You're allowed to change this application</strong>Leadership confirmed your request. Make your changes, then submit again. Judges can't start on it until you do.</div></div>
+  <div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>You're allowed to change this application</strong>The award manager confirmed your request. Make your changes, then submit again. Judges can't start on it until you do.</div></div>
 {% endif %}
 
 {% if problem_count and editable %}

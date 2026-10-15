@@ -520,23 +520,6 @@ SAMPLE_SCORES = {
 
 # --- Staff portal -----------------------------------------------------------
 
-STAFF_ENTRIES = [
-    {"id": "A-0042", "org": "Acme Precision Components", "submitted": "—", "status": "Draft", "flag": ""},
-    {"id": "A-0051", "org": "Shri Ganesh Polymers Ltd", "submitted": "28 Sep 2026", "status": "Eligible", "flag": "Possible duplicate"},
-    {"id": "A-0053", "org": "Coastal Marine Foods", "submitted": "30 Sep 2026", "status": "Info requested", "flag": ""},
-    {"id": "A-0038", "org": "Northstar Auto Components", "submitted": "25 Sep 2026", "status": "Assigned", "flag": ""},
-    {"id": "A-0060", "org": "Vertex Pharma Labs", "submitted": "5 Oct 2026", "status": "New", "flag": ""},
-]
-
-DUPLICATES = [
-    {"a": "Shree Ganesh Polymers Ltd.", "b": "Shri Ganesh Polymers Limited", "score": "0.93",
-     "reason": "Same GSTIN", "level": "High"},
-    {"a": "Coastal Marine Foods", "b": "COASTAL MARINE FOODS PVT LTD", "score": "1.00",
-     "reason": "Same name after cleaning", "level": "High"},
-    {"a": "Sharma Traders Pvt Ltd", "b": "Sharma Trading Co", "score": "0.81",
-     "reason": "Similar name, different GSTIN", "level": "Possible"},
-]
-
 JUDGE_POOL = [
     {"name": "Dr. R. Kapoor", "expertise": "Manufacturing, Quality", "load": "5 / 15", "match": "Strong"},
     {"name": "Prof. N. Rao", "expertise": "Quality, Academia", "load": "3 / 15", "match": "Strong"},
@@ -575,10 +558,12 @@ PORTAL_NAV = {
         ("Organisation profile", "entries:organisation"),
         ("Application form", "entries:form"),
         ("Application status", "entries:status"),
+        ("Results", "core:results"),
     ],
     "judge": [
         ("My assignments", "judging:assignments"),
         ("Score an entry", "judging:score"),
+        ("Results", "core:results"),
     ],
     "staff": [
         ("My awards", "awards:staff_home"),
@@ -588,6 +573,8 @@ PORTAL_NAV = {
         ("Entries", "awards:entries"),
         ("Duplicate review", "awards:duplicates"),
         ("Assign judges", "awards:assign"),
+        ("Re-evaluations", "awards:reevaluations"),
+        ("Results", "core:results"),
     ],
     # Award managers: the staff portal for the awards they manage, plus choosing each award's team.
     "manager": [
@@ -596,14 +583,16 @@ PORTAL_NAV = {
         ("Award settings", "awards:settings"),
         ("Form builder", "awards:form_builder"),
         ("Entries", "awards:entries"),
-        ("Duplicate review", "awards:duplicates"),
         ("Assign judges", "awards:assign"),
+        ("Re-evaluations", "awards:reevaluations"),
+        ("Results", "core:results"),
     ],
     "leader": [
         ("Overview", "dashboard:overview"),
         ("Awards and managers", "dashboard:awards"),
-        ("All applications", "dashboard:review"),
         ("Approve results", "dashboard:results"),
+        ("Results board", "core:results"),
+        ("Re-evaluations", "awards:reevaluations"),
         ("Requests to confirm", "dashboard:requests"),
         ("People", "dashboard:people"),
         ("Audit log", "dashboard:audit"),

@@ -7,7 +7,8 @@ Run with:  python manage.py seed_data
 Creates: 1 leader, 1 award manager (runs both demo awards), 2 staff (one on both
 awards, one on Kaizen only), 3 judges, 5 applicants (organisations), the two
 demo awards (rounds, form v1, criteria), 10 reports, judge assignments and
-some finished evaluations. All accounts use DEMO_PASSWORD (see .env.example).
+some finished evaluations, plus 3 second registrations of existing companies
+(for Duplicate review). All accounts use DEMO_PASSWORD (see .env.example).
 Test data only: never run this against a real deployment.
 """
 import os
@@ -46,6 +47,17 @@ APPLICANTS = [
     ("anita@coastalfoods.example", "Anita D'Souza", "Coastal Marine Foods", "32AAAAA0003A1Z1", True),
     ("vikram@vertexpharma.example", "Vikram Rao", "Vertex Pharma Labs", "36AAAAA0004A1Z9", True),
     ("meera@northstar.example", "Meera Iyer", "Northstar Auto Components", "29AAAAA0005A1Z7", False),
+]
+# The same companies registered a second time by someone else, for Duplicate review:
+# email, contact, organisation, GSTIN, {award index: stage of their entry}
+DUPLICATE_APPLICANTS = [
+    # same PAN as Shri Ganesh (another state's GSTIN); both entered Business Excellence → decline one, then merge
+    ("sunil@shreeganesh.example", "Sunil Patel", "Shree Ganesh Polymers Limited", "27AAAAA0002A1Z1", {0: "submitted"}),
+    # same name once "Pvt Ltd" is removed; only a Kaizen draft, so it can be merged straight away
+    ("accounts@coastalmarine.example", "Joseph Fernandes", "COASTAL MARINE FOODS PVT. LTD.", "32BBBBB0003B1Z5",
+     {1: "draft"}),
+    # only a similar name, no entries yet: leaders see it under "No entries yet"
+    ("neha@vertexlabs.example", "Neha Rao", "Vertex Pharma Laboratories", "36CCCCC0004C1Z3", {}),
 ]
 
 
@@ -102,6 +114,7 @@ class Command(BaseCommand):
             self.stdout.write("Reports already exist; skipping reports, assignments and evaluations.")
         else:
             self.reports(applicants, awards, staff[0], judges)
+        self.duplicates(awards, password)
 
         self.print_logins(password)
 
@@ -176,6 +189,9 @@ class Command(BaseCommand):
             applications.submit(report, by=applicant)
             if stage == "submitted":
                 continue
+            applications.accept_entry(report, by=staff)          # the staff check
+            if stage == "accepted":
+                continue
             picks = assignments.eligible_judges(report)[:award.judges_per_report]
             made = [assignments.assign(report, judge, by=staff) for judge in picks]
             if stage == "assigned":
@@ -190,11 +206,30 @@ class Command(BaseCommand):
                                  feedback="Clear evidence; good results.", submit=(stage == "scored"))
         self.stdout.write(self.style.SUCCESS("Created 10 reports with assignments and evaluations."))
 
+    def duplicates(self, awards, password):
+        """Second registrations of existing companies, with their entries, then a duplicate scan."""
+        from apps.accounts.duplicates import scan
+        for email, contact, org, gstin, entries in DUPLICATE_APPLICANTS:
+            user = self.user(email, contact, User.Role.APPLICANT, password)
+            ApplicantProfile.objects.update_or_create(user=user, defaults={
+                "organisation_name": org, "gstin": gstin, "holder_pan": gstin[2:12], "contact_name": contact,
+                "sector": "Manufacturing", "organisation_size": "medium"})
+            for index, stage in entries.items():
+                award = awards[index]
+                if Application.objects.filter(applicant=user, award=award).exists():
+                    continue
+                report = applications.create_draft(applicant=user, award=award, title=f"{award.name} 2026: {org}")
+                applications.update(report, by=user, content=self.answers(report.form_version, org))
+                if stage == "submitted":
+                    applications.submit(report, by=user)
+        found = scan()
+        self.stdout.write(self.style.SUCCESS(f"Duplicate scan: {found} new possible duplicate pair(s)."))
+
     def print_logins(self, password):
         self.stdout.write("")
         self.stdout.write(self.style.MIGRATE_HEADING("Test logins (demo data only)"))
         rows = [(LEADER[0], "leader"), (MANAGER[0], "manager")] + [(e, "staff") for e, _ in STAFF] + \
-               [(e, "judge") for e, *_ in JUDGES] + [(e, "applicant") for e, *_ in APPLICANTS]
+               [(e, "judge") for e, *_ in JUDGES] + [(e, "applicant") for e, *_ in APPLICANTS + DUPLICATE_APPLICANTS]
         for email, role in rows:
             self.stdout.write(f"  {role:10} {email}")
         self.stdout.write(f"  Password for all: {password}")

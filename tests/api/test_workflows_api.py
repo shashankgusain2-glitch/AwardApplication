@@ -103,7 +103,7 @@ def test_score_change_needs_staff_permission_reason_and_is_recorded(world, as_us
 def test_declined_report_goes_back_to_the_pool(world, as_user):
     as_user(world["judge_a"]).post(f"/api/v1/assignments/{world['a1'].id}/decline/")
     world["report_1"].refresh_from_db()
-    assert world["report_1"].status == Application.Status.SUBMITTED
+    assert world["report_1"].status == Application.Status.ACCEPTED      # still accepted: waits for another judge
 
 
 @pytest.mark.django_db
@@ -233,10 +233,10 @@ def test_seed_data_creates_the_required_demo_set():
     from apps.accounts.models import User
     call_command("seed_data", verbosity=0, stdout=open("/dev/null", "w"))
     count = lambda role: User.objects.filter(role=role).count()  # noqa: E731
-    assert (count("leader"), count("staff"), count("judge"), count("applicant")) == (1, 2, 3, 5)
-    assert Application.objects.count() == 10
+    assert (count("leader"), count("staff"), count("judge"), count("applicant")) == (1, 2, 3, 8)   # 3 duplicates
+    assert Application.objects.count() == 12           # 10 reports + the duplicate companies' 2 entries
     for judge in User.objects.filter(role="judge"):
         assert judge.judge_assignments.count() >= 2                       # several per judge
     assert Application.objects.filter(status="scored").exists()            # some already scored
     call_command("seed_data", verbosity=0, stdout=open("/dev/null", "w"))  # safe to re-run
-    assert Application.objects.count() == 10
+    assert Application.objects.count() == 12                           # nothing added twice

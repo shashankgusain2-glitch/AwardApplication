@@ -31,7 +31,8 @@
             <tr>
               <td><strong>{{ app.reference }}</strong></td>
               <td>{{ app.award.name }}<br><span class="muted small">{{ app.title }}</span></td>
-              <td><span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span>{% if app.edit_requested %} <span class="badge badge-draft">Edit requested</span>{% endif %}</td>
+              <td><span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span>{% if app.edit_requested %} <span class="badge badge-draft">Edit requested</span>{% endif %}
+                {% if app.judging %}{% include "entries/_judging_progress.html" with p=app.judging %}{% endif %}</td>
               <td><span class="muted small">v{{ app.form_version.version }}</span></td>
               <td class="small">{{ app.submitted_at|date:"j M Y"|default:"—" }}</td>
             </tr>

@@ -4,7 +4,7 @@
 
 | File | What it is |
 |---|---|
-| `Awards-Platform.postman_collection.json` | 116 requests in 12 folders (one per module), each with tests |
+| `Awards-Platform.postman_collection.json` | 123 requests in 12 folders (one per module), each with tests |
 | `Awards-Platform.postman_environment.json` | `base_url`, the demo account emails, and an empty `demo_password` |
 | [CHECKLIST.md](CHECKLIST.md) | Every request in run order: endpoint, method, role, expected status, a Pass/Fail box |
 | `build_collection.py` | Makes the three files above. Edit its `REQUESTS` list, then run it again |

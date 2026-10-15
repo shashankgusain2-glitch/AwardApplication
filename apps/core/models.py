@@ -47,6 +47,19 @@ class TwoStepApproval(TimeStampedModel):
         return self.status in (self.WAITING_STAFF, self.WAITING_LEADER)
 
     @property
+    def confirmer_label(self):
+        """Who gives the final confirmation: "the award manager (name)" or "leadership"."""
+        from apps.core.approvals import confirmer_label
+        return confirmer_label(self)
+
+    @property
+    def stage_label(self):
+        """The status in words, naming who it waits for."""
+        if self.status == self.WAITING_LEADER:
+            return f"Waiting for {self.confirmer_label}"
+        return self.get_status_display()
+
+    @property
     def note(self):
         """The note to show the person who asked: the leader's, else staff's."""
         return self.decision_note or self.staff_note

@@ -90,7 +90,11 @@ def test_leader_creates_a_third_award_and_its_team_runs_it_end_to_end(seeded):
     report = Application.objects.get(award=award)
     assert report.status == "submitted"
 
-    # Staff assign; the panel's two judges are offered (Rao isn't on the panel)
+    # Staff accept it (the organisation is verified), then assign; the panel's two judges are offered
+    staff.post(reverse("awards:accept_report", args=[report.pk]))
+    report.refresh_from_db()
+    assert report.status == "accepted", "accepting failed"
+    # (Rao isn't on the panel)
     page = staff.get(reverse("awards:assign", args=[report.pk])).content.decode()
     assert kapoor.display_name in page and "Prof. N. Rao" not in page
     staff.post(reverse("awards:assign", args=[report.pk]), {"action": "auto"})

@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.urls import reverse
 
+from apps.accounts.duplicates import group_ids, is_verified
 from apps.accounts.models import ApplicantProfile, User
 from apps.applications.models import Application
 from apps.applications.services import set_status
@@ -18,7 +19,8 @@ from .models import ConflictOfInterest, JudgeAssignment
 
 A = JudgeAssignment.Status
 OPEN_STATUSES = [A.PENDING, A.IN_REVIEW]
-ASSIGNABLE = [Application.Status.SUBMITTED, Application.Status.ASSIGNED, Application.Status.IN_REVIEW]
+# Only entries staff accepted go to judges (submitted ones are checked first).
+ASSIGNABLE = [Application.Status.ACCEPTED, Application.Status.ASSIGNED, Application.Status.IN_REVIEW]
 FILE_NAME_HIDDEN = "File attached (name hidden for blind judging)"
 
 
@@ -39,8 +41,10 @@ def _profile(report):
 
 
 def has_conflict(judge, report):
+    """A conflict with this organisation, or with any duplicate record merged with it.  [Rule 2]"""
     profile = _profile(report)
-    return bool(profile) and ConflictOfInterest.objects.filter(judge=judge, applicant_profile=profile).exists()
+    return bool(profile) and ConflictOfInterest.objects.filter(judge=judge,
+                                                               applicant_profile__in=group_ids(profile)).exists()
 
 
 def eligible_judges(report, round=1):
@@ -57,7 +61,7 @@ def eligible_judges(report, round=1):
                                          filter=Q(judge_assignments__status__in=OPEN_STATUSES)))
               .select_related("judge_profile"))
     if profile:
-        judges = judges.exclude(conflicts__applicant_profile=profile)
+        judges = judges.exclude(conflicts__applicant_profile__in=group_ids(profile))
     judges = [j for j in judges if j.open_count < j.judge_profile.max_open_assignments]
     return sorted(judges, key=lambda j: (j.judge_profile.priority, j.open_count, j.email))
 
@@ -73,14 +77,16 @@ def assign(report, judge, *, by, round=1):
     _check_can_assign(by, report)
     if judge.role != User.Role.JUDGE:
         raise BusinessRuleError(f"{judge} isn't a judge.")
+    if report.status == Application.Status.SUBMITTED:
+        raise BusinessRuleError("Accept this entry first (Entries page): only accepted entries go to judges.")
     if report.status not in ASSIGNABLE:
-        raise BusinessRuleError("Only submitted reports can be assigned to judges.")
+        raise BusinessRuleError("Only accepted entries can be assigned to judges.")
     from apps.awards.services import ready_to_judge
     missing = ready_to_judge(report.award)
     if missing:
         raise BusinessRuleError(f"{report.award.name} isn't ready for judging: " + " ".join(missing))
     profile = _profile(report)
-    if not profile or profile.verification_status != ApplicantProfile.Verification.VERIFIED:
+    if not is_verified(profile):
         raise BusinessRuleError("Staff must verify the applicant's organisation before assigning judges.")
     if has_conflict(judge, report):
         raise BusinessRuleError(f"{judge} has a recorded conflict with this organisation.")
@@ -88,7 +94,7 @@ def assign(report, judge, *, by, round=1):
         raise BusinessRuleError(f"{judge} can't take this report (not on the panel, already assigned, "
                                 f"or at their workload limit).")
     assignment = JudgeAssignment.objects.create(judge=judge, report=report, round=round, assigned_by=by)
-    if report.status == Application.Status.SUBMITTED:
+    if report.status == Application.Status.ACCEPTED:
         set_status(report, Application.Status.ASSIGNED, by=by)
     record(by, "assign", assignment, changes={"judge": judge.email, "report": report.reference, "round": round})
     notify(judge, f"New report to judge: {report.reference} ({report.award.name}). Accept or decline it.",
@@ -186,7 +192,7 @@ def decline(assignment, *, judge):
     assignment.save(update_fields=["status", "updated_at"])
     report = assignment.report
     if not report.assignments.filter(status__in=OPEN_STATUSES + [A.COMPLETED]).exists():
-        set_status(report, Application.Status.SUBMITTED, by=judge, note="back to the pool")
+        set_status(report, Application.Status.ACCEPTED, by=judge, note="back to the pool")
     record(judge, "update", assignment, changes={"status": A.DECLINED})
     if assignment.assigned_by:
         notify(assignment.assigned_by, f"{judge.display_name} declined {report.reference}. It needs another judge.",

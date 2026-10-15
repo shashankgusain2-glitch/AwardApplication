@@ -72,12 +72,15 @@ def test_full_workflow_through_the_web_screens(seeded):
     report.refresh_from_db()
     assert report.status == "submitted" and report.submitted_at
 
-    # 2. Staff: verify the organisation, then assign two judges from the eligible list
+    # 2. Staff: verify the organisation, accept the entry, then assign two judges from the eligible list
     staff = seeded_client("staff")
     assert profile.organisation_name in staff.get(reverse("awards:entries")).content.decode()
     staff.post(reverse("awards:verify_organisation", args=[profile.pk]), {"decision": "approve"})
     profile.refresh_from_db()
     assert profile.verification_status == "verified"
+    staff.post(reverse("awards:accept_report", args=[report.pk]))
+    report.refresh_from_db()
+    assert report.status == "accepted"
 
     kapoor = User.objects.get(email=ACCOUNTS["judge"])
     rao = User.objects.get(email=ACCOUNTS["judge2"])

@@ -138,9 +138,15 @@ def test_requests_reach_and_are_decided_by_the_awards_own_team(two):
     assert len(approvals.waiting(approvals.T.WAITING_STAFF, two["m_alpha"])) == 1
     with pytest.raises(BusinessRuleError, match="aren't on the team"):
         applications.decide_request(req, by=two["s_beta"], approve=True)
-    applications.decide_request(req, by=two["m_alpha"], approve=True)   # managers can take the staff step
+    applications.decide_request(req, by=two["s_alpha"], approve=True)   # Alpha's staff check it
     req.refresh_from_db()
     assert req.status == approvals.T.WAITING_LEADER
+    for wrong in (two["m_beta"], two["s_alpha"]):                        # another award's manager, or staff
+        with pytest.raises(BusinessRuleError, match="needs the award manager"):
+            applications.decide_request(req, by=wrong, approve=True)
+    applications.decide_request(req, by=two["m_alpha"], approve=True)   # Alpha's manager confirms
+    req.refresh_from_db()
+    assert req.status == approvals.T.APPROVED
 
 
 # --- Creating awards and choosing teams --------------------------------------------------

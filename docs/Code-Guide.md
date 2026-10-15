@@ -205,7 +205,6 @@ Templates are HTML with gaps like `{{ award.name }}` that views fill in. **Layou
 | `awards/duplicates.html` | Staff: possible duplicate companies, with Merge / Keep separate |
 | `awards/assign.html` | Staff: suggested judges; conflicted judges hidden |
 | `dashboard/overview.html` | Leadership: every award's stage, entries, judging progress and flags |
-| `dashboard/review.html` | Leadership: ties, score gaps, late conflicts and appeals to decide |
 | `dashboard/results.html` | Leadership: proposed winners with Approve / Send back |
 
 **Why templates live in a top-level `templates/` folder:** all pages are in one place, which is easier for a beginner to find. Each app's pages sit in a sub-folder named after the app.

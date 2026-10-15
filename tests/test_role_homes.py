@@ -152,7 +152,7 @@ def test_judge_accepts_and_declines_from_home(real, judge_client, judge2_client)
 
     judge2_client.post(reverse("judging:respond", args=[real["a_rao"].pk]), {"answer": "decline"})
     real["report_b"].refresh_from_db()
-    assert real["report_b"].status == Application.Status.SUBMITTED       # back to the pool
+    assert real["report_b"].status == Application.Status.ACCEPTED        # back to the pool
 
 
 @pytest.mark.django_db

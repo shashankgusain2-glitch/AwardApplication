@@ -72,9 +72,34 @@ def test_judges_cannot_record_or_see_conflicts(case):
     assert ConflictOfInterest.objects.count() == 1
 
 
-@pytest.mark.skip(reason="Needs duplicate-organisation detection and merging (plan R8), not built yet")
-def test_staff_recorded_conflict_matches_merged_duplicate_organisation():
-    ...
+@pytest.mark.django_db
+@pytest.mark.parametrize("conflict_on", ["main", "duplicate"])
+def test_staff_recorded_conflict_matches_merged_duplicate_organisation(case, conflict_on):
+    """The same company registered twice: once merged, a conflict with either record covers both."""
+    from apps.accounts import duplicates
+    from apps.accounts.models import DuplicateCandidate
+
+    from ..factories import ApplicantProfileFactory
+
+    main = case["report"].applicant.applicant_profile
+    second = ApplicantProfileFactory(organisation_name=main.organisation_name.upper(),
+                                     verification_status="pending")
+    other_award = AwardFactory(judges_per_report=1)
+    other_award.judge_panel.add(case["conflicted"].judge_profile, case["clean"].judge_profile)
+    second_report = ApplicationFactory(applicant=second.user, award=other_award)
+    if conflict_on == "duplicate":                  # move the conflict to the second record
+        ConflictOfInterest.objects.update(applicant_profile=second)
+    duplicates.scan(second)
+    pair = DuplicateCandidate.objects.get()
+    report_of = {main.pk: case["report"], second.pk: second_report}
+    unprotected = report_of[main.pk if conflict_on == "duplicate" else second.pk]
+    assert case["conflicted"] in assignments.eligible_judges(unprotected)   # missed before the merge
+
+    duplicates.merge(pair, by=case["staff"], keep=main)
+
+    assert case["conflicted"] not in assignments.eligible_judges(unprotected)
+    with pytest.raises(BusinessRuleError, match="conflict"):
+        assignments.assign(unprotected, case["conflicted"], by=case["staff"])
 
 
 @pytest.mark.django_db

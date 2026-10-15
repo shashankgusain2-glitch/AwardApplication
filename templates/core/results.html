@@ -1,0 +1,77 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Results{% endblock %}
+{% block heading %}Results{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Results that are out, per award. A re-evaluated entry shows its new score and result once the new judges finish and the result is decided again.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+{% if awards %}
+  <div class="chips" style="margin-bottom:1rem">
+    {% for a in awards %}<a class="chip {% if a == award %}active{% endif %}" href="?award={{ a.slug }}">{{ a.name }}</a>{% endfor %}
+  </div>
+{% endif %}
+
+{% if award %}
+<div class="card" style="margin-bottom:1.5rem">
+  <div class="card-head">
+    <h2>{{ award.name }}</h2>
+    <span class="muted small">{% if full %}Full ranking{% else %}Successful entries{% if role == "applicant" %} and your own{% endif %}{% endif %}</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Rank</th><th>Organisation</th><th>Score / 10</th><th>Result</th><th></th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+          <tr {% if r.mine %}style="background:var(--gold-soft)"{% endif %}>
+            <td><strong>{% if r.status == "approved" %}#{{ r.rank }}{% else %}—{% endif %}</strong></td>
+            <td><strong>{{ r.applicant.applicant_profile.organisation_name|default:r.applicant.display_name }}</strong>{% if r.mine %} <span class="badge badge-sector">You</span>{% endif %}<br><span class="muted small">{{ r.reference }}{% if full %} · {{ r.judged }} judge{{ r.judged|pluralize }}{% endif %}</span></td>
+            <td><strong>{{ r.average|floatformat:2|default:"—" }}</strong></td>
+            <td>
+              <span class="badge badge-{{ r.status }}">{{ r.result_label }}</span>
+              {% if r.reevaluated %}<br><span class="badge badge-results" style="margin-top:.25rem">Re-evaluated · was {{ r.previous_label|lower }}</span>{% endif %}
+            </td>
+            <td>
+              {% if r.mine %}
+                {% if r.open_request %}
+                  <span class="muted small">Re-evaluation asked {{ r.open_request.created_at|date:"j M Y" }}: waiting for the award manager</span>
+                {% elif r.can_reevaluate %}
+                  <details class="decline">
+                    <summary class="btn btn-outline btn-sm">Ask for re-evaluation</summary>
+                    <form method="post" action="{% url 'entries:request_reevaluation' r.pk %}" class="stack" style="margin-top:.5rem;min-width:280px">
+                      {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <textarea name="reason" rows="3" required placeholder="Why should it be judged again? e.g. evidence the judges missed"></textarea>
+                      <p class="muted small" style="margin:0">You can ask once. The award manager decides; if approved, new judges score your entry and the result is decided again.</p>
+                      <button class="btn btn-primary btn-sm" type="submit">Send request</button>
+                    </form>
+                  </details>
+                {% elif r.reevaluation_status == "refused" %}
+                  <span class="muted small">Re-evaluation refused</span>
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="muted small">No results to show here yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if in_progress %}
+<div class="card">
+  <h2 style="font-size:1.05rem">Being re-evaluated</h2>
+  <p class="muted small" style="margin:0 0 .5rem">New judges are scoring these entries. Their earlier result is shown until the new one is decided.</p>
+  {% for r in in_progress %}
+    <div class="settings-row">
+      <span><strong>{{ r.applicant.applicant_profile.organisation_name|default:r.applicant.display_name }}</strong> · {{ r.reference }}{% if r.mine %} <span class="badge badge-sector">You</span>{% endif %}</span>
+      <span class="row"><span class="muted small">was {{ r.previous_label|lower }}</span><span class="badge badge-{{ r.status }}">{{ r.get_status_display }}</span></span>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% else %}
+  <div class="card"><p class="muted small" style="margin:0">No results are out yet. They appear here once leadership decides them.</p></div>
+{% endif %}
+{% endblock %}

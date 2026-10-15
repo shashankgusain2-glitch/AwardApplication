@@ -2,7 +2,7 @@
 
 {% block title %}Requests to confirm{% endblock %}
 {% block heading %}Requests to confirm{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Changes asked for after submitting. Programme staff have checked each one; nothing happens until a leader confirms it.</p>{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Judges' score changes after submitting. Programme staff have checked each one; nothing happens until a leader confirms it. Applicants' edit requests are confirmed by each award's manager (here only for an award without a manager); re-evaluations are decided by the award manager.</p>{% endblock %}
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
@@ -16,7 +16,7 @@
 
 <div class="card" {% if rows %}style="border-left:4px solid var(--warning)"{% endif %}>
   <h2 style="font-size:1.05rem">Waiting for you ({{ rows|length }})</h2>
-  {% for row in rows %}{% include "partials/request_row.html" with step="leader" %}{% empty %}<p class="muted small" style="margin:0">Nothing to confirm.</p>{% endfor %}
+  {% for row in rows %}{% include "partials/request_row.html" with step="final" %}{% empty %}<p class="muted small" style="margin:0">Nothing to confirm.</p>{% endfor %}
 </div>
 
 {% if with_staff %}

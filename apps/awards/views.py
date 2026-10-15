@@ -3,9 +3,8 @@ Programme staff screens, also used by award managers. Everyone here only ever
 sees the awards they are on (apps/awards/access.py): staff the awards a leader or
 manager allocated to them, managers the awards they manage. Creating an award is
 a leader's job (dashboard). The home page, entries, judge assignment, the form
-builder and award settings read and write the real database through the
-services; the duplicate-review screen still shows sample data (there is no
-duplicate-detection model yet).
+builder, award settings and duplicate review read and write the real database
+through the services.
 """
 from django.contrib import messages
 from django.db import transaction
@@ -14,8 +13,9 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
+from apps.accounts import duplicates as duplicate_services
 from apps.accounts import services as account_services
-from apps.accounts.models import ApplicantProfile, User
+from apps.accounts.models import ApplicantProfile, DuplicateCandidate, User
 from apps.accounts.permissions import role_required
 from apps.applications import services as application_services
 from apps.applications.models import Application
@@ -27,6 +27,8 @@ from apps.awards.models import Award
 from apps.core import approvals, overview
 from apps.core import demo_data as d
 from apps.core.services import BusinessRuleError
+
+OPEN = DuplicateCandidate.Status.OPEN
 
 
 @role_required("staff", "manager")
@@ -467,9 +469,24 @@ def entries(request):
         "awards": awards_for(request.user).order_by("name"),
         "filters": filters,
         "to_verify": overview.organisations_to_verify(request.user),
-        "staff_requests": approvals.waiting(approvals.T.WAITING_STAFF, request.user),
-        "leader_requests": approvals.waiting(approvals.T.WAITING_LEADER, request.user),
+        # verification follows the main record after a merge, so ask the duplicates service
+        "verified_ids": {p.pk for p in ApplicantProfile.objects.filter(user__in=reports.values("applicant"))
+                         if duplicate_services.is_verified(p)},
+        "duplicate_ids": {pk for c in duplicate_services.candidates_for(request.user, status=OPEN)
+                          for pk in (c.profile_a_id, c.profile_b_id)},
+        **_requests_for(request.user),
     })
+
+
+def _requests_for(user):
+    """Requests on this person's awards: to check (staff), to confirm (the award manager), and the rest."""
+    to_check = approvals.waiting(approvals.T.WAITING_STAFF, user)
+    for row in to_check:
+        row["can_check"] = approvals.can_check(user, row["request"])
+    checked = approvals.waiting(approvals.T.WAITING_LEADER, user)
+    mine = approvals.to_confirm(user, checked)
+    return {"staff_requests": to_check, "confirm_requests": mine,
+            "leader_requests": [r for r in checked if r not in mine]}
 
 
 def _ids(values):
@@ -504,12 +521,20 @@ def verify_organisation(request, pk):
 
 @role_required("staff", "manager")
 @require_POST
-def reject_report(request, pk):
-    """Staff check: a submitted report that isn't eligible is rejected (with a note)."""
+def accept_report(request, pk):
+    """Staff check passed: the entry can now be assigned to judges."""
     report = get_object_or_404(application_services.visible_to(request.user), pk=pk)
-    return _decide(request, lambda: application_services.change_status(
-        report, by=request.user, new_status=Application.Status.REJECTED, note=request.POST.get("note", "")),
-        f"{report.reference} rejected.")
+    return _decide(request, lambda: application_services.accept_entry(report, by=request.user),
+                   f"{report.reference} accepted for judging. You can assign judges now.")
+
+
+@role_required("staff", "manager")
+@require_POST
+def reject_report(request, pk):
+    """Staff check failed: the entry is declined with a reason the applicant sees."""
+    report = get_object_or_404(application_services.visible_to(request.user), pk=pk)
+    return _decide(request, lambda: application_services.decline_entry(
+        report, by=request.user, note=request.POST.get("note", "")), f"{report.reference} declined.")
 
 
 @role_required("staff", "manager")
@@ -556,10 +581,133 @@ def assign(request, pk=None):
     })
 
 
-@role_required("staff", "manager")
+NOT_SHARED = "other"   # the tab for pairs that didn't both enter one award
+
+
+def _duplicate_side(profile, award):
+    """One organisation in a pair, as the duplicate card shows it."""
+    main = duplicate_services.root(profile)
+    entries = list(duplicate_services.entries_of([profile]).order_by("award__name"))
+    return {"profile": profile, "main": main if main.pk != profile.pk else None,
+            "verified": duplicate_services.is_verified(profile),
+            "here": [e for e in entries if award and e.award_id == award.pk],
+            "elsewhere": [e for e in entries if not award or e.award_id != award.pk]}
+
+
+@role_required("staff")
 def duplicates(request):
-    """Sample data: duplicate detection needs its own model (a later step)."""
+    """
+    Programme staff only. Possible duplicate organisations, one tab per award: a pair is
+    listed under an award only when both organisations entered it. The rest (one entered,
+    or neither) are on the "Not in the same award" tab. Merge, keep separate, or undo.
+    """
+    user = request.user
+    decided = request.GET.get("show") == "decided"
+    pairs = duplicate_services.candidates_for(user)
+    pairs = list(pairs.exclude(status=DuplicateCandidate.Status.OPEN) if decided
+                 else pairs.filter(status=DuplicateCandidate.Status.OPEN))
+    in_awards = {c.pk: duplicate_services.award_ids(c) for c in pairs}
+
+    tabs = [{"key": a.slug, "award": a, "count": sum(a.pk in in_awards[c.pk] for c in pairs)}
+            for a in awards_for(user).order_by("name")]
+    tabs.append({"key": NOT_SHARED, "award": None, "count": sum(not in_awards[c.pk] for c in pairs)})
+    chosen = request.GET.get("award") or next((t["key"] for t in tabs if t["count"]), tabs[0]["key"] if tabs else "")
+    tab = next((t for t in tabs if t["key"] == chosen), None)
+    award = tab["award"] if tab else None
+    if tab is None:
+        shown = []
+    elif award is None:
+        shown = [c for c in pairs if not in_awards[c.pk]]
+    else:
+        shown = [c for c in pairs if award.pk in in_awards[c.pk]]
+
+    cards = [{"pair": c, "a": _duplicate_side(c.profile_a, award), "b": _duplicate_side(c.profile_b, award),
+              "blockers": duplicate_services.merge_blockers(c) if c.status == DuplicateCandidate.Status.OPEN else []}
+             for c in shown]
     return render(request, "awards/duplicates.html", {
-        "role": request.user.role,
-        "duplicates": d.DUPLICATES,
+        "role": user.role, "tabs": tabs, "tab": tab, "award": award, "cards": cards, "decided": decided,
+        "can_decline": user.role in ("staff", "manager"),
     })
+
+
+@role_required("staff")
+@require_POST
+def duplicate_decide(request, pk):
+    pair = get_object_or_404(duplicate_services.candidates_for(request.user), pk=pk)
+    action, note = request.POST.get("action"), request.POST.get("note", "").strip()
+    if action == "merge":
+        keep = pair.profile_a if request.POST.get("keep") == str(pair.profile_a_id) else pair.profile_b
+        return _decide(request, lambda: duplicate_services.merge(pair, by=request.user, keep=keep, note=note),
+                       f"Merged: {keep.organisation_name} is now the main record. Conflicts and verification "
+                       f"apply to both.")
+    if action == "separate":
+        return _decide(request, lambda: duplicate_services.keep_separate(pair, by=request.user, note=note),
+                       "Kept as separate organisations. This pair won't be flagged again.")
+    if action == "undo":
+        return _decide(request, lambda: duplicate_services.undo(pair, by=request.user),
+                       "Decision undone. The pair is waiting for review again.")
+    messages.error(request, "Unknown action.")
+    return _back(request, "awards:duplicates")
+
+
+# --- Re-evaluations: the award manager decides, then chooses fresh judges ----------------
+
+@role_required("staff", "manager", "leader")
+def reevaluations(request):
+    """
+    Re-evaluation requests on this person's awards. The award manager (a leader, if the award
+    has no manager) approves or refuses; approving sends them straight to choosing new judges.
+    Staff see the list and the progress, but don't decide.
+    """
+    from apps.applications.models import ApplicantRequest
+    from apps.core import approvals
+    from apps.core.results import RESULT_LABEL
+    from apps.evaluations.services import applicant_progress
+
+    mine = awards_for(request.user)
+    requests = (ApplicantRequest.objects.filter(kind=ApplicantRequest.Kind.REEVALUATION, application__award__in=mine)
+                .select_related("application__award__manager", "application__applicant__applicant_profile",
+                                "decided_by").order_by("-created_at"))
+    waiting = [r for r in requests if r.waiting]
+    for req in waiting:
+        app = req.application
+        req.can_decide = approvals.can_decide_reevaluation(request.user, app.award)
+        req.approver = approvals.reevaluation_approver(app.award)
+        req.previous = RESULT_LABEL.get(app.status, app.get_status_display())
+        req.scores = list(app.assignments.filter(evaluation__status="submitted").exclude(status="superseded")
+                          .values_list("evaluation__total_score", flat=True))
+    in_progress = [r.application for r in requests if r.status == ApplicantRequest.Status.APPROVED
+                   and r.application.status not in (Application.Status.APPROVED, Application.Status.REJECTED)]
+    for app in in_progress:
+        app.needed = assignment_services.judges_still_needed(app)
+        app.progress = applicant_progress(app)
+    done = [r for r in requests if not r.waiting][:20]
+    return render(request, "awards/reevaluations.html", {
+        "role": request.user.role, "waiting": waiting, "in_progress": in_progress, "done": done,
+        "can_assign": request.user.role in ("staff", "manager"),
+    })
+
+
+@role_required("staff", "manager", "leader")
+@require_POST
+def reevaluation_decide(request, pk):
+    from apps.applications.models import ApplicantRequest
+
+    req = get_object_or_404(ApplicantRequest.objects.filter(
+        kind=ApplicantRequest.Kind.REEVALUATION, application__award__in=awards_for(request.user)), pk=pk)
+    approve = request.POST.get("decision") == "approve"
+    try:
+        application_services.decide_request(req, by=request.user, approve=approve,
+                                            note=request.POST.get("note", ""))
+    except BusinessRuleError as error:
+        messages.error(request, str(error))
+        return redirect("awards:reevaluations")
+    reference = req.application.reference
+    if not approve:
+        messages.success(request, f"{reference}: re-evaluation refused. The applicant has been told.")
+        return redirect("awards:reevaluations")
+    messages.success(request, f"{reference}: re-evaluation approved. Choose the new judges now; the first judges "
+                              f"aren't offered again.")
+    if request.user.role in ("staff", "manager"):
+        return redirect("awards:assign", pk=req.application.pk)
+    return redirect("awards:reevaluations")

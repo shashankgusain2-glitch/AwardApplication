@@ -58,6 +58,27 @@ def report_progress(report):
     return round(sum(assignment_progress(a) for a in in_round) / slots)
 
 
+def applicant_progress(report):
+    """
+    What the applicant may know while judges work: counts only, never who the judges
+    are or what they scored. None when the report isn't with judges.
+    """
+    if report.status not in (Application.Status.ASSIGNED, Application.Status.IN_REVIEW):
+        return None
+    live = [a for a in report.assignments.all() if a.status not in (A.DECLINED, A.SUPERSEDED)]
+    if not live:
+        return None
+    current = max(a.round for a in live)
+    in_round = [a for a in live if a.round == current]
+    finished = sum(a.status == A.COMPLETED for a in in_round)
+    started = sum(a.status == A.IN_REVIEW for a in in_round)
+    needed = max(report.award.judges_per_report, len(in_round))
+    round_obj = next((r for r in report.award.rounds.all() if r.number == current), None)
+    return {"round": current, "round_label": round_obj.get_kind_display() if round_obj else f"Round {current}",
+            "needed": needed, "finished": finished, "started": started,
+            "waiting": max(needed - finished - started, 0), "percent": report_progress(report)}
+
+
 def visible_to(user):
     qs = Evaluation.objects.select_related("assignment__judge", "assignment__report").prefetch_related("scores")
     if user.role == User.Role.JUDGE:

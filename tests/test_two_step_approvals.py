@@ -1,7 +1,8 @@
 """
-Changes after submitting need two confirmations: programme staff check the request, then a
-leader confirms it. Nothing changes until the leader's yes, nobody can skip a step, and
-"late" requests are blocked:
+Changes after submitting need two confirmations: programme staff on the award check the
+request, then it is confirmed: an applicant's edit by the award's manager (a leader only if
+the award has no manager), a judge's score change by a leader. Nothing changes until the
+final yes, nobody can skip a step, and "late" requests are blocked:
   - an applicant can only edit a submitted report before any judge starts on it;
   - a judge can only change a submitted score until the result is decided.
 """
@@ -14,31 +15,51 @@ from apps.evaluations import services as evaluations
 from apps.evaluations.models import ScoreChange
 from apps.notifications.models import Notification
 
-from .factories import ApplicationFactory, AwardFactory, JudgeFactory, LeaderFactory, StaffFactory
+from .factories import ApplicationFactory, AwardFactory, JudgeFactory, LeaderFactory, ManagerFactory, StaffFactory
 
 
 @pytest.fixture
 def people():
     award = AwardFactory(judges_per_report=1)
-    return {"award": award, "staff": StaffFactory(), "leader": LeaderFactory(), "judge": JudgeFactory(awards=[award])}
+    return {"award": award, "staff": StaffFactory(), "leader": LeaderFactory(), "judge": JudgeFactory(awards=[award]),
+            "manager": ManagerFactory(awards=[award])}
 
 
 # --- Applicant: edit a submitted report ----------------------------------------------------
 
 @pytest.mark.django_db
-def test_edit_needs_staff_then_leadership_and_only_then_takes_effect(people):
+def test_edit_needs_staff_then_the_award_manager_and_only_then_takes_effect(people):
     report = ApplicationFactory(award=people["award"])
     applications.request_edit(report, by=report.applicant, reason="Wrong turnover figure")
     applications.decide_edit(report, by=people["staff"], allow=True, note="Small fix")
     report.refresh_from_db()
     assert not report.edit_allowed and report.requests.get().status == "staff_approved"
-    assert "waiting for a leader to confirm" in Notification.objects.get(user=people["leader"]).message
+    to_manager = Notification.objects.filter(user=people["manager"]).latest("created_at")
+    assert "waiting for you to confirm" in to_manager.message
+    assert not Notification.objects.filter(user=people["leader"]).exists()          # leaders aren't involved
+    assert "passed it to the award manager" in Notification.objects.filter(
+        user=report.applicant).latest("created_at").message
 
-    applications.decide_edit(report, by=people["leader"], allow=True)
+    with pytest.raises(BusinessRuleError, match="needs the award manager"):
+        applications.decide_edit(report, by=people["leader"], allow=True)
+    applications.decide_edit(report, by=people["manager"], allow=True)
     report.refresh_from_db()
     assert report.edit_allowed and not report.edit_requested
-    assert "You can now change your application" in Notification.objects.filter(
-        user=report.applicant).latest("created_at").message
+    message = Notification.objects.filter(user=report.applicant).latest("created_at").message
+    assert "approved by the award manager" in message and "You can now change your application" in message
+
+
+@pytest.mark.django_db
+def test_a_leader_confirms_edits_only_when_the_award_has_no_manager(people):
+    people["award"].manager = None
+    people["award"].save()
+    report = ApplicationFactory(award=people["award"])
+    applications.request_edit(report, by=report.applicant, reason="Wrong turnover figure")
+    applications.decide_edit(report, by=people["staff"], allow=True)
+    assert "waiting for you to confirm" in Notification.objects.get(user=people["leader"]).message
+    applications.decide_edit(report, by=people["leader"], allow=True)
+    report.refresh_from_db()
+    assert report.edit_allowed
 
 
 @pytest.mark.django_db
@@ -58,10 +79,11 @@ def test_staff_refusal_ends_it_and_the_applicant_sees_why(people):
 def test_nobody_skips_a_step(people):
     report = ApplicationFactory(award=people["award"])
     applications.request_edit(report, by=report.applicant, reason="Wrong figure")
-    with pytest.raises(BusinessRuleError, match="staff check this request first"):
-        applications.decide_edit(report, by=people["leader"], allow=True)
+    for wrong in (people["leader"], people["manager"]):     # the manager can't check what they then confirm
+        with pytest.raises(BusinessRuleError, match="staff check this request first"):
+            applications.decide_edit(report, by=wrong, allow=True)
     applications.decide_edit(report, by=people["staff"], allow=True)
-    with pytest.raises(BusinessRuleError, match="needs a leader to confirm"):
+    with pytest.raises(BusinessRuleError, match="needs the award manager"):
         applications.decide_edit(report, by=StaffFactory(), allow=True)
 
 
@@ -86,7 +108,7 @@ def test_judges_wait_while_the_applicant_is_allowed_to_edit(people):
     assignment = assignments.assign(report, people["judge"], by=people["staff"])
     applications.request_edit(report, by=report.applicant, reason="Wrong figure")
     applications.decide_edit(report, by=people["staff"], allow=True)
-    applications.decide_edit(report, by=people["leader"], allow=True)
+    applications.decide_edit(report, by=people["manager"], allow=True)
     with pytest.raises(BusinessRuleError, match="submit it again"):
         assignments.start_review(assignment, judge=people["judge"])
     report.refresh_from_db()

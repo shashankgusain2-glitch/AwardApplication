@@ -61,26 +61,6 @@ def awards(request):
 
 
 @role_required("leader")
-def review(request):
-    """The full list: every submitted application, its status and its scores so far."""
-    reports = application_services.visible_to(request.user).exclude(status=Application.Status.DRAFT) \
-        .select_related("applicant__applicant_profile")
-    filters = {"status": request.GET.get("status", ""), "award": request.GET.get("award", "")}
-    if filters["status"]:
-        reports = reports.filter(status=filters["status"])
-    if filters["award"]:
-        reports = reports.filter(award__slug=filters["award"])
-    rows = _with_scores(reports).order_by("award__name", "-average")
-    return render(request, "dashboard/review.html", {
-        "role": ROLE,
-        "reports": rows,
-        "filters": filters,
-        "statuses": [c for c in Application.Status.choices if c[0] != Application.Status.DRAFT],
-        "awards": Award.objects.order_by("name"),
-    })
-
-
-@role_required("leader")
 def results(request):
     """Scored reports waiting for a decision, best first, with every judge's total."""
     reports = _with_scores(application_services.visible_to(request.user)
@@ -232,6 +212,6 @@ def requests_to_confirm(request):
     from apps.core import approvals
     return render(request, "dashboard/requests.html", {
         "role": ROLE,
-        "rows": approvals.waiting(approvals.T.WAITING_LEADER),
-        "with_staff": approvals.waiting(approvals.T.WAITING_STAFF),
+        "rows": approvals.for_leaders(approvals.waiting(approvals.T.WAITING_LEADER)),
+        "with_staff": approvals.for_leaders(approvals.waiting(approvals.T.WAITING_STAFF)),
     })

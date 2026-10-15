@@ -1,0 +1,65 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Re-evaluations{% endblock %}
+{% block heading %}Re-evaluations{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Applicants can ask once, with a reason, after their result is out. The award manager decides. Approving replaces the first judges' scores (kept as history) and you choose new judges; the result is then decided again and the results board updates.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:1.5rem">
+  <h2 style="font-size:1.05rem">Waiting for a decision ({{ waiting|length }})</h2>
+  {% for req in waiting %}
+    {% with app=req.application %}
+    <div class="settings-row" style="display:block">
+      <div class="row" style="gap:.5rem;margin-bottom:.25rem">
+        <strong>{{ app.reference }}</strong>
+        <span>{{ app.applicant.applicant_profile.organisation_name|default:app.applicant.email }}</span>
+        <span class="muted small">· {{ app.award.name }} · result: </span><span class="badge badge-{{ app.status }}">{{ req.previous }}</span>
+      </div>
+      <p class="small" style="margin:0">Asked {{ req.created_at|date:"j M Y" }}: “{{ req.reason }}”</p>
+      <p class="muted small" style="margin:.2rem 0 0">Judges' totals: {% for s in req.scores %}{{ s }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</p>
+      {% if req.can_decide %}
+        <form method="post" action="{% url 'awards:reevaluation_decide' req.pk %}" class="row" style="margin-top:.5rem">
+          {% csrf_token %}
+          <input name="note" type="text" placeholder="Note to the applicant (optional)" style="flex:1;min-width:220px" aria-label="Note">
+          <button class="btn btn-success btn-sm" name="decision" value="approve">Approve and choose new judges</button>
+          <button class="btn btn-outline btn-sm" name="decision" value="refuse">Refuse</button>
+        </form>
+      {% else %}
+        <p class="muted small" style="margin:.4rem 0 0">Waiting for {% if req.approver %}the award manager, {{ req.approver.display_name }}{% else %}a leader (this award has no manager){% endif %}.</p>
+      {% endif %}
+    </div>
+    {% endwith %}
+  {% empty %}
+    <p class="muted small" style="margin:0">None waiting.</p>
+  {% endfor %}
+</div>
+
+<div class="card" style="margin-bottom:1.5rem">
+  <h2 style="font-size:1.05rem">Being re-evaluated ({{ in_progress|length }})</h2>
+  {% for app in in_progress %}
+    <div class="settings-row">
+      <span><strong>{{ app.reference }}</strong> · {{ app.applicant.applicant_profile.organisation_name|default:app.applicant.email }} <span class="muted small">· {{ app.award.name }} · was {{ app.reevaluation_previous_result }}</span>
+        {% if app.progress %}<br><span class="muted small">{{ app.progress.finished }} of {{ app.progress.needed }} new judges finished</span>{% endif %}</span>
+      <span class="row">
+        <span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span>
+        {% if app.needed and can_assign %}<a class="btn btn-primary btn-sm" href="{% url 'awards:assign' app.pk %}">Choose {{ app.needed }} new judge{{ app.needed|pluralize }}</a>{% endif %}
+      </span>
+    </div>
+  {% empty %}
+    <p class="muted small" style="margin:0">None right now.</p>
+  {% endfor %}
+</div>
+
+{% if done %}
+<div class="card">
+  <h2 style="font-size:1.05rem">Decided</h2>
+  {% for req in done %}
+    <div class="settings-row">
+      <span><strong>{{ req.application.reference }}</strong> · {{ req.application.award.name }} <span class="muted small">· {{ req.get_status_display|lower }} by {{ req.decided_by.display_name|default:"—" }} on {{ req.decided_at|date:"j M Y" }}{% if req.decision_note %}: “{{ req.decision_note }}”{% endif %}</span></span>
+      <span class="badge badge-{{ req.application.status }}">{{ req.application.get_status_display }}</span>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

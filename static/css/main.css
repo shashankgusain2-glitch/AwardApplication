@@ -301,3 +301,10 @@ input[aria-invalid="true"], textarea[aria-invalid="true"], select[aria-invalid="
 .request-steps li.done::before { content: "✓ "; color: var(--success); }
 .request-steps li.current { font-weight: 700; }
 .request-steps li.current::before { content: "● "; color: var(--warning); }
+
+/* Entry screening and duplicate review */
+.badge-accepted { background: var(--success-soft); color: var(--success); }
+.badge-merged { background: var(--success-soft); color: var(--success); }
+details.decline summary { list-style: none; cursor: pointer; }
+details.decline summary::-webkit-details-marker { display: none; }
+a.badge { text-decoration: none; }

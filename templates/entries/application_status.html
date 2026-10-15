@@ -23,18 +23,22 @@
       </div>
       <ol class="timeline" style="margin-top:1rem">
         {% for step in row.timeline %}
-          <li class="{{ step.state }}"><span class="dot"></span><strong>{{ step.label }}</strong><span class="muted small">{{ step.date|date:"j M Y"|default:"" }}</span></li>
+          <li class="{{ step.state }}"><span class="dot"></span><strong>{{ step.label }}</strong><span class="muted small">{{ step.date|date:"j M Y"|default:"" }}</span>{% if step.detail %}{% include "entries/_judging_progress.html" with p=step.detail %}{% endif %}</li>
         {% endfor %}
       </ol>
 
       {% for req in row.requests %}
         <div class="callout {% if req.status == 'approved' %}callout-success{% elif req.status == 'declined' %}callout-warning{% else %}callout-info{% endif %}" style="margin-top:1rem">
-          <div><strong>{{ req.get_kind_display }} · {{ req.get_status_display }}</strong>
+          <div><strong>{{ req.get_kind_display }} · {% if req.kind == "reevaluation" and req.status == "requested" %}Waiting for the award manager{% else %}{{ req.stage_label }}{% endif %}</strong>
             Asked {{ req.created_at|date:"j M Y" }}: “{{ req.reason }}”
             <ol class="request-steps small">
               <li class="done">You asked</li>
-              <li class="{% if req.staff_at %}done{% elif req.status == 'requested' %}current{% endif %}">Programme staff check it{% if req.staff_at %} ({{ req.staff_at|date:"j M Y" }}){% endif %}</li>
-              <li class="{% if req.status == 'approved' %}done{% elif req.status == 'staff_approved' %}current{% endif %}">Leadership confirms it{% if req.status == 'approved' %} ({{ req.decided_at|date:"j M Y" }}){% endif %}</li>
+              {% if req.kind == "reevaluation" %}
+                <li class="{% if req.status == 'approved' %}done{% elif req.status == 'requested' %}current{% endif %}">The award manager decides{% if req.decided_at %} ({{ req.decided_at|date:"j M Y" }}){% endif %}</li>
+              {% else %}
+                <li class="{% if req.staff_at %}done{% elif req.status == 'requested' %}current{% endif %}">Programme staff check it{% if req.staff_at %} ({{ req.staff_at|date:"j M Y" }}){% endif %}</li>
+                <li class="{% if req.status == 'approved' %}done{% elif req.status == 'staff_approved' %}current{% endif %}">The award manager confirms it{% if req.status == 'approved' %} ({{ req.decided_at|date:"j M Y" }}){% endif %}</li>
+              {% endif %}
             </ol>
             {% if req.status == "approved" and req.kind == "reevaluation" %}
               {% if app.status == "approved" or app.status == "rejected" %}New judges scored your application and the result above is the new decision.{% else %}New judges are scoring your application; then the result will be decided again.{% endif %}
@@ -54,7 +58,7 @@
           <summary>Not happy with the result? Ask for a re-evaluation</summary>
           <form method="post" action="{% url 'entries:request_reevaluation' app.pk %}" class="stack" style="margin-top:.75rem">
             {% csrf_token %}
-            <p class="muted small" style="margin:0">The programme staff check your request, then leadership confirms it. If confirmed, new judges (not the ones who scored it before) score your application again, and the result is decided again. You can ask only once.</p>
+            <p class="muted small" style="margin:0">The award manager decides. If approved, new judges (not the ones who scored it before) score your application again, and the result is decided again. You can ask only once.</p>
             <div class="field" style="margin:0">
               <label for="reeval-{{ app.pk }}">Why should it be re-evaluated? *</label>
               <textarea id="reeval-{{ app.pk }}" name="reason" required placeholder="For example: evidence the judges may have missed, or a criterion that was misunderstood."></textarea>

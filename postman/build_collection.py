@@ -24,7 +24,8 @@ NAME = "Awards Platform API (v1)"
 
 # Role → token variable. None means "send no token".
 TOKEN = {"applicant": "applicant_token", "new_applicant": "new_applicant_token", "staff": "staff_token",
-         "judge": "judge_token", "judge2": "judge2_token", "leader": "leader_token", None: None}
+         "judge": "judge_token", "judge2": "judge2_token", "leader": "leader_token", "manager": "manager_token",
+         None: None}
 
 # --- Reusable test-script snippets (JavaScript, run by Postman after each request) ---
 
@@ -52,7 +53,8 @@ def login(role_key, email_var, extra=""):
     }
 
 
-ROLE_OF = {"applicant": "applicant", "staff": "staff", "judge": "judge", "judge2": "judge", "leader": "leader"}
+ROLE_OF = {"applicant": "applicant", "staff": "staff", "judge": "judge", "judge2": "judge", "leader": "leader",
+           "manager": "manager"}
 
 # Each request: folder, name, method, path (after {{base_url}}/), role (whose token), expect (status),
 # who (role shown in the checklist), body (dict / None), tests (extra JS), pre (pre-request JS).
@@ -68,6 +70,7 @@ REQUESTS = [
     login("judge", "judge_email"),
     login("judge2", "judge2_email"),
     login("leader", "leader_email"),
+    login("manager", "manager_email"),
     {"folder": "1. Auth", "name": "Login with the WRONG role (judge account, role=staff) → 401",
      "method": "POST", "path": "auth/login/", "role": None, "expect": 401, "who": "judge",
      "body": {"email": "{{judge_email}}", "password": "{{demo_password}}", "role": "staff"}},
@@ -85,7 +88,7 @@ REQUESTS = [
          save("new_password", "'Zq9-' + Math.random().toString(36).slice(2, 12) + '-Wx'"),
      ]),
      "body": {"email": "{{new_applicant_email}}", "name": "Postman Tester", "password": "{{new_password}}",
-              "organisation_name": "Postman Test Industries", "role": "leader"},
+              "organisation_name": "Postman Test Industries {{new_gstin}}", "role": "leader"},
      "tests": "\n".join([
          "const d = pm.response.json().data;",
          'pm.test("always an applicant, even if another role is sent", () => pm.expect(d.user.role).to.eql("applicant"));',
@@ -175,13 +178,6 @@ REQUESTS = [
      "role": "judge", "expect": 403, "who": "judge"},
     {"folder": "3. Profiles", "name": "List organisations waiting (staff)", "method": "GET",
      "path": "profiles/?verification_status=pending", "role": "staff", "expect": 200, "who": "staff, leader"},
-    {"folder": "3. Profiles", "name": "Verify with no body → 400", "method": "POST",
-     "path": "profiles/{{new_profile_id}}/verify/", "role": "staff", "expect": 400, "who": "staff, leader",
-     "body": {}},
-    {"folder": "3. Profiles", "name": "Verify the new organisation (staff)", "method": "POST",
-     "path": "profiles/{{new_profile_id}}/verify/", "role": "staff", "expect": 200, "who": "staff, leader",
-     "body": {"approve": True, "note": "Checked in Postman"},
-     "tests": 'pm.test("verified", () => pm.expect(pm.response.json().data.verification_status).to.eql("verified"));'},
 
     # ------------------------------------------------------------------ 4. Awards
     {"folder": "4. Awards", "name": "List awards (public)", "method": "GET", "path": "awards/", "role": None,
@@ -225,6 +221,14 @@ REQUESTS = [
      "path": "applications/{{application_id}}/submit/", "role": "new_applicant", "expect": 200,
      "who": "applicant",
      "tests": 'pm.test("submitted", () => pm.expect(pm.response.json().data.status).to.eql("submitted"));'},
+    # Staff only see organisations that applied to one of their awards, so they verify after the entry.
+    {"folder": "5. Applications", "name": "Verify with no body → 400", "method": "POST",
+     "path": "profiles/{{new_profile_id}}/verify/", "role": "staff", "expect": 400, "who": "staff, leader",
+     "body": {}},
+    {"folder": "5. Applications", "name": "Verify the new organisation (staff)", "method": "POST",
+     "path": "profiles/{{new_profile_id}}/verify/", "role": "staff", "expect": 200, "who": "staff, leader",
+     "body": {"approve": True, "note": "Checked in Postman"},
+     "tests": 'pm.test("verified", () => pm.expect(pm.response.json().data.verification_status).to.eql("verified"));'},
     {"folder": "5. Applications", "name": "Edit after submitting → 400", "method": "PATCH",
      "path": "applications/{{application_id}}/", "role": "new_applicant", "expect": 400, "who": "applicant",
      "body": {"title": "Too late"}},
@@ -264,6 +268,10 @@ REQUESTS = [
      "who": "staff, leader"},
 
     # ------------------------------------------------------------------ 6. Assignments
+    {"folder": "6. Assignments", "name": "Accept the entry (staff check)", "method": "POST",
+     "path": "applications/{{application_id}}/change-status/", "role": "staff", "expect": 200, "who": "staff",
+     "body": {"status": "accepted"},
+     "tests": 'pm.test("accepted for judging", () => pm.expect(pm.response.json().data.status).to.eql("accepted"));'},
     {"folder": "6. Assignments", "name": "Assign a judge (staff)", "method": "POST", "path": "assignments/",
      "role": "staff", "expect": 201, "who": "staff, leader",
      "body": {"report": "{{application_id}}", "judge": "{{judge_user_id}}", "round": 1},
@@ -405,12 +413,12 @@ REQUESTS = [
      "path": "applications/{{application_id}}/request-reevaluation/", "role": "new_applicant", "expect": 200,
      "who": "applicant", "body": {"reason": "Our energy data may have been missed."},
      "tests": 'pm.test("requested", () => pm.expect(pm.response.json().data.reevaluation_status).to.eql("requested"));'},
-    {"folder": "8. Decisions", "name": "Leader decides before staff check it → 400", "method": "POST",
-     "path": "applications/{{application_id}}/decide-reevaluation/", "role": "leader", "expect": 400,
-     "who": "staff first, then leader", "body": {"allow": True}},
-    {"folder": "8. Decisions", "name": "Refuse the re-evaluation (staff)", "method": "POST",
-     "path": "applications/{{application_id}}/decide-reevaluation/", "role": "staff", "expect": 200,
-     "who": "staff first, then leader", "body": {"allow": False, "note": "Scores were consistent."},
+    {"folder": "8. Decisions", "name": "Staff decide a re-evaluation → 400 (the award manager decides)",
+     "method": "POST", "path": "applications/{{application_id}}/decide-reevaluation/", "role": "staff",
+     "expect": 400, "who": "award manager", "body": {"allow": True}},
+    {"folder": "8. Decisions", "name": "Refuse the re-evaluation (award manager)", "method": "POST",
+     "path": "applications/{{application_id}}/decide-reevaluation/", "role": "manager", "expect": 200,
+     "who": "award manager", "body": {"allow": False, "note": "Scores were consistent."},
      "tests": 'pm.test("result unchanged", () => { const d = pm.response.json().data; pm.expect(d.status).to.eql("approved"); pm.expect(d.reevaluation_status).to.eql("refused"); });'},
 
     # ------------------------------------------------------------------ 9. Conflicts
@@ -514,7 +522,8 @@ def build():
                                 "environment to DEMO_PASSWORD from your .env first. See postman/README.md."},
         "item": [{"name": name, "item": items} for name, items in folders.items()],
         "variable": [{"key": k, "value": ""} for k in (
-            "applicant_token", "staff_token", "judge_token", "judge2_token", "leader_token", "new_applicant_token",
+            "applicant_token", "staff_token", "judge_token", "judge2_token", "leader_token", "manager_token",
+            "manager_user_id", "new_applicant_token",
             "applicant_user_id", "staff_user_id", "judge_user_id", "judge2_user_id", "leader_user_id",
             "new_applicant_user_id", "third_judge_id", "created_user_id", "new_profile_id", "application_id",
             "draft_id", "other_application_id", "assignment_id", "judge2_assignment_id", "third_assignment_id",
@@ -531,6 +540,7 @@ def build():
             {"key": "judge_email", "value": "kapoor@judges.example", "enabled": True},
             {"key": "judge2_email", "value": "rao@judges.example", "enabled": True},
             {"key": "leader_email", "value": "leader@awards.example", "enabled": True},
+            {"key": "manager_email", "value": "manager@awards.example", "enabled": True},
         ],
         "_postman_variable_scope": "environment",
     }

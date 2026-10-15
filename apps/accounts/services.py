@@ -27,7 +27,9 @@ def register_applicant(*, email, password, name, organisation_name=""):
     password_validation.validate_password(password, candidate)
     user = User.objects.create_user(email=email, password=password, name=name, role=User.Role.APPLICANT)
     if organisation_name:
-        ApplicantProfile.objects.create(user=user, organisation_name=organisation_name)
+        profile = ApplicantProfile.objects.create(user=user, organisation_name=organisation_name)
+        from .duplicates import scan
+        scan(profile)                          # flag a possible duplicate organisation for staff
     record(user, "create", user, changes={"role": user.role, "via": "sign-up"})
     return user
 
@@ -142,4 +144,6 @@ def save_profile(user, data, *, partial=True):
     serializer.is_valid(raise_exception=True)
     saved = serializer.save(user=user)
     record(user, "create" if profile is None else "update", saved)
+    from .duplicates import scan
+    scan(saved)                                # name or GSTIN may now match another organisation
     return saved

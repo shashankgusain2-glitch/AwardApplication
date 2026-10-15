@@ -2,27 +2,85 @@
 
 {% block title %}Duplicate review{% endblock %}
 {% block heading %}Possible duplicate organisations{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">The system never merges on its own. You decide, and every merge can be undone.</p>{% endblock %}
-{% block user %}{% include "partials/user_chip.html" with initials="MS" name="Meena Shah" detail="Programme staff" %}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Found automatically when an organisation profile is saved. The system never merges on its own: you decide, and every decision can be undone.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-<div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>Why this matters</strong>If one company exists twice, a judge's conflict with it could be missed. Merging keeps the conflict check correct.</div></div>
+<div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>Why this matters</strong>If one company exists twice, a judge's conflict with it could be missed, and it could enter the same award twice. After a merge, conflicts and verification of the main record apply to both. Both logins and their entries stay.</div></div>
+
+<div class="row-between" style="margin-bottom:1rem">
+  <div class="chips" style="margin:0">
+    {% for t in tabs %}
+      <a class="chip {% if tab and t.key == tab.key %}active{% endif %}" href="?award={{ t.key }}{% if decided %}&show=decided{% endif %}">{% if t.award %}{{ t.award.name }}{% else %}Not in the same award{% endif %} ({{ t.count }})</a>
+    {% empty %}
+      <span class="muted small">You aren't on any award yet.</span>
+    {% endfor %}
+  </div>
+  <div class="chips" style="margin:0">
+    <a class="chip {% if not decided %}active{% endif %}" href="?award={{ tab.key }}">Waiting for review</a>
+    <a class="chip {% if decided %}active{% endif %}" href="?award={{ tab.key }}&show=decided">Decided</a>
+  </div>
+</div>
+
+{% if tab and not tab.award and cards %}
+  <p class="muted small" style="margin:0 0 1rem">These two records haven't both entered one award, so nothing clashes yet. Deciding now still keeps judges' conflicts correct across awards.</p>
+{% endif %}
 
 <div class="stack">
-  {% for d in duplicates %}
+  {% for card in cards %}
+    {% with pair=card.pair %}
     <div class="card">
       <div class="row-between" style="margin-bottom:1rem">
-        <div class="row"><span class="badge badge-{{ d.level|slugify }}">{{ d.level }} match</span><span class="muted small">Similarity {{ d.score }} · {{ d.reason }}</span></div>
+        <div class="row">
+          <span class="badge badge-{{ pair.level }}">{{ pair.get_level_display }} match</span>
+          <span class="muted small">Similarity {{ pair.score }} · {{ pair.reason }}</span>
+        </div>
+        {% if pair.status != "open" %}<span class="badge badge-{% if pair.status == 'merged' %}approved{% else %}draft{% endif %}">{{ pair.get_status_display }}</span>{% endif %}
       </div>
+
       <div class="grid grid-2">
-        <div class="card" style="box-shadow:none;border:1px solid var(--border)"><p class="muted small" style="margin:0">Record A</p><strong>{{ d.a }}</strong></div>
-        <div class="card" style="box-shadow:none;border:1px solid var(--border)"><p class="muted small" style="margin:0">Record B</p><strong>{{ d.b }}</strong></div>
+        {% include "awards/_duplicate_side.html" with side=card.a label="Record A" %}
+        {% include "awards/_duplicate_side.html" with side=card.b label="Record B" %}
       </div>
-      <div class="row" style="margin-top:1rem">
-        <button class="btn btn-primary btn-sm" data-demo="Demo screen: merged into one profile (can be undone, logged).">Merge into one</button>
-        <button class="btn btn-outline btn-sm" data-demo="Demo screen: kept as separate organisations.">Keep separate</button>
-      </div>
+
+      {% if pair.status == "open" %}
+        {% if card.blockers %}
+          <div class="callout callout-warning" style="margin-top:1rem"><div>
+            <strong>Can't merge yet: both entered the same award</strong>
+            {% for award, a_entries, b_entries in card.blockers %}
+              {{ award.name }}: {% for e in a_entries %}{{ e.reference }}{% endfor %} and {% for e in b_entries %}{{ e.reference }}{% endfor %}.
+            {% endfor %}
+            One organisation enters an award once. Decline the extra entry {% if can_decline %}above{% else %}(staff do this on the Entries page){% endif %}, then merge.
+          </div></div>
+        {% endif %}
+        <form method="post" action="{% url 'awards:duplicate_decide' pair.pk %}" style="margin-top:1rem">
+          {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <div class="row" style="align-items:center;flex-wrap:wrap">
+            <span class="small"><strong>Keep as main record:</strong></span>
+            <div class="segmented">
+              <label><input type="radio" name="keep" value="{{ pair.profile_a_id }}" checked><span>A · {{ pair.profile_a.organisation_name }}</span></label>
+              <label><input type="radio" name="keep" value="{{ pair.profile_b_id }}"><span>B · {{ pair.profile_b.organisation_name }}</span></label>
+            </div>
+          </div>
+          <div class="row" style="margin-top:.75rem">
+            <input name="note" type="text" placeholder="Note (optional), e.g. confirmed by phone" style="width:320px">
+            <button class="btn btn-primary btn-sm" name="action" value="merge" {% if card.blockers %}disabled title="Decline one of the entries in the same award first"{% endif %}>Merge into one</button>
+            <button class="btn btn-outline btn-sm" name="action" value="separate">Keep separate</button>
+          </div>
+        </form>
+      {% else %}
+        <div class="row-between" style="margin-top:1rem">
+          <span class="muted small">{{ pair.get_status_display }} by {{ pair.decided_by.display_name|default:"—" }} on {{ pair.decided_at|date:"j M Y, H:i" }}{% if pair.note %} · “{{ pair.note }}”{% endif %}</span>
+          <form method="post" action="{% url 'awards:duplicate_decide' pair.pk %}" onsubmit="return confirm('Undo this decision? The pair goes back to waiting for review.')">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="btn btn-outline btn-sm" name="action" value="undo">Undo</button>
+          </form>
+        </div>
+      {% endif %}
     </div>
+    {% endwith %}
+  {% empty %}
+    <div class="card"><p class="muted small" style="margin:0">{% if decided %}No decided pairs here.{% else %}{% if tab.award %}No possible duplicates in {{ tab.award.name }}. A pair is listed under an award only when both organisations entered it.{% else %}No other possible duplicates.{% endif %}{% endif %}</p></div>
   {% endfor %}
 </div>
 {% endblock %}

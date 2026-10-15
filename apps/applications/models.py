@@ -14,6 +14,7 @@ class Application(TimeStampedModel, SoftDeleteModel):
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
         SUBMITTED = "submitted", "Submitted"
+        ACCEPTED = "accepted", "Accepted for judging"   # staff checked it; only these go to judges
         ASSIGNED = "assigned", "Assigned to judges"
         IN_REVIEW = "in_review", "In review"
         SCORED = "scored", "Scored"

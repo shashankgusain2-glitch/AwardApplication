@@ -79,10 +79,25 @@ def decide_request(request, type, pk):
     except BusinessRuleError as error:
         messages.error(request, str(error))
     else:
-        outcome = {T.WAITING_LEADER: "passed to leadership to confirm", T.APPROVED: "confirmed: it takes effect now",
-                   T.REFUSED: "refused"}[req.status]
+        outcome = {T.WAITING_LEADER: f"passed to {req.confirmer_label} to confirm",
+                   T.APPROVED: "confirmed: it takes effect now", T.REFUSED: "refused"}[req.status]
         messages.success(request, f"{reference}: {req.get_kind_display() if type == 'applicant' else 'score change'} "
                                   f"request {outcome}. The person who asked has been told.")
     target = request.POST.get("next", "")
     return redirect(target if target.startswith(("/staff/", "/leadership/")) else
                     ("dashboard:requests" if request.user.role == "leader" else "awards:entries"))
+
+
+@role_required("applicant", "judge", "staff", "manager", "leader")
+def results(request):
+    """The results board: decided results per award (what each role may see: apps/core/results.py)."""
+    from apps.applications.services import can_request_reevaluation
+
+    from . import results as board
+
+    awards = list(board.awards_with_results(request.user))
+    award = next((a for a in awards if a.slug == request.GET.get("award")), awards[0] if awards else None)
+    data = board.board(request.user, award) if award else {"rows": [], "in_progress": [], "full": False}
+    for report in data["rows"]:
+        report.can_reevaluate = report.mine and can_request_reevaluation(report)
+    return render(request, "core/results.html", {"role": request.user.role, "awards": awards, "award": award, **data})

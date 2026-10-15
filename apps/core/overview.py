@@ -14,6 +14,7 @@ from . import approvals
 
 S = Application.Status
 UNDER_EVALUATION = [S.ASSIGNED, S.IN_REVIEW]
+BEFORE_JUDGES = [S.SUBMITTED, S.ACCEPTED]          # submitted, not with judges yet
 
 
 def _per_award(awards=None):
@@ -21,7 +22,8 @@ def _per_award(awards=None):
     awards = (Award.objects.all() if awards is None else awards)
     awards = awards.select_related("manager").prefetch_related("rounds").annotate(
         drafts=Count("applications", filter=Q(applications__status=S.DRAFT, applications__is_deleted=False)),
-        submitted=Count("applications", filter=Q(applications__status=S.SUBMITTED, applications__is_deleted=False)),
+        submitted=Count("applications", filter=Q(applications__status__in=BEFORE_JUDGES,
+                                                 applications__is_deleted=False)),
         evaluating=Count("applications", filter=Q(applications__status__in=UNDER_EVALUATION,
                                                   applications__is_deleted=False)),
         scored=Count("applications", filter=Q(applications__status=S.SCORED, applications__is_deleted=False)),
@@ -73,18 +75,28 @@ def organisations_for(user):
 
 
 def organisations_to_verify(user):
-    """Organisations waiting for the staff check, among the ones this person may check."""
-    return organisations_for(user).filter(verification_status=ApplicantProfile.Verification.PENDING)
+    """
+    Organisations waiting for the staff check, among the ones this person may check.
+    A record merged into another takes the main record's verification, so it isn't listed.
+    """
+    return organisations_for(user).filter(verification_status=ApplicantProfile.Verification.PENDING,
+                                          merged_into__isnull=True)
 
 
 def staff_home(user):
     """The staff / award manager home page: only the awards this person is on."""
+    from apps.accounts.duplicates import candidates_for
+    from apps.accounts.models import DuplicateCandidate
+    from apps.applications.services import visible_to as reports_for
     from apps.awards.access import awards_for
     return {
         "to_verify": organisations_to_verify(user),
+        "to_accept": reports_for(user).filter(status=S.SUBMITTED).count(),
+        "duplicates": candidates_for(user, status=DuplicateCandidate.Status.OPEN).count(),
         "needing_judges": needing_judges(user),
         "staff_requests": len(approvals.waiting(approvals.T.WAITING_STAFF, user)),
         "leader_requests": len(approvals.waiting(approvals.T.WAITING_LEADER, user)),
+        "to_confirm": len(approvals.to_confirm(user, approvals.waiting(approvals.T.WAITING_LEADER, user))),
         "awards": _per_award(awards_for(user)),
     }
 
@@ -96,7 +108,7 @@ def leader_overview():
         "evaluating": reports.filter(status__in=UNDER_EVALUATION).count(),
         "awaiting_approval": reports.filter(status=S.SCORED).count(),
         "decided": reports.filter(status__in=[S.APPROVED, S.REJECTED]).count(),
-        "leader_requests": len(approvals.waiting(approvals.T.WAITING_LEADER)),
+        "leader_requests": len(approvals.for_leaders(approvals.waiting(approvals.T.WAITING_LEADER))),
         "awards": _per_award(),
     }
 
@@ -144,7 +156,8 @@ def summary_for(user):
         "total": reports.exclude(status=S.DRAFT).count(),
         "applications_by_status": _counts(reports, "status", S.choices),
         "organisations_to_verify": organisations_to_verify(user).count(),
-        "submitted_without_judges": reports.filter(status=S.SUBMITTED).count(),
+        "entries_to_accept": reports.filter(status=S.SUBMITTED).count(),
+        "submitted_without_judges": reports.filter(status__in=BEFORE_JUDGES).count(),
         "score_change_requests": ScoreChangeRequest.objects.filter(
             status=ScoreChangeRequest.Status.REQUESTED,
             evaluation__in=evaluations_visible_to(user)).count(),

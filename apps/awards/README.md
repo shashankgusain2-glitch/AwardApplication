@@ -19,8 +19,9 @@ Staff and award managers run their awards from here, with no code changes. **Eve
 | Edit questions | `/staff/form-builder/<award>/new-version/` | Change, add or remove questions and publish them as the **next version**. The current version never changes; applications already started keep their version (Rule 4) |
 | Entries | `/staff/entries/` | Every application on this person's awards (search and filter by status and award), plus the decisions waiting: **verify organisations**, **allow or refuse edit requests**, **allow or refuse judges' score-change requests**, reject an ineligible report |
 | Assign judges | `/staff/assign/` | Reports that still need judges |
+| Re-evaluations | `/staff/re-evaluations/` | Applicants' re-evaluation requests on these awards. **The award manager decides** in one step (a leader, if the award has no manager); *Approve and choose new judges* goes straight to the assign page, where the first judges aren't offered. Staff see the list and progress but don't decide |
 | | `/staff/assign/<id>/` | The eligible judges for one report, best first (on the panel, no recorded conflict, under their workload limit). Assign the ones ticked, or "fill with the best". Conflicted judges are never offered |
-| Duplicate review | `/staff/duplicates/` | Merge or separate companies with similar names. **Still sample data**: there is no duplicate-detection model yet |
+| Duplicate review | `/staff/duplicates/` | Possible duplicate organisations (found automatically; `apps/accounts/duplicates.py`), one tab per award: a pair is listed under an award only when **both** records entered it, the rest under *Not in the same award*. **Merge** (pick the main record; conflicts and verification then cover both), **Keep separate**, **Undo**. Merging is blocked while both have an active entry in the same award: *Decline as duplicate* on the card first. **Programme staff only** (not award managers or leaders) |
 
 ## Files
 

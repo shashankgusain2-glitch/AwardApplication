@@ -15,6 +15,7 @@
           <p class="muted small" style="margin:0">{{ r.award.name }} · {{ r.reference }}</p>
           <h2 style="font-size:1.1rem;margin:.25rem 0">{{ r.applicant.applicant_profile.organisation_name|default:r.applicant.email }}</h2>
           <p class="small" style="margin:0">{{ r.title }}</p>
+          {% if r.reevaluation_status == "allowed" %}<span class="badge badge-results" style="margin-top:.35rem">Re-evaluation: new judges' scores · was {% if r.reevaluation_previous_result == "approved" %}successful{% else %}not successful{% endif %}</span>{% endif %}
         </div>
         <div style="text-align:right">
           <p class="muted small" style="margin:0">Average</p>

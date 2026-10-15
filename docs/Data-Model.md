@@ -217,6 +217,21 @@ Legend: **N** = `null=True`, **B** = `blank=True`, **UK** = unique, **IX** = ind
 | `verified_by` | FK → User | **SET_NULL**, N |
 | `verified_at` | DateTimeField | N |
 | `verification_note` | TextField | B |
+| `merged_into` | FK → self | **PROTECT**, N, `related_name="merged_profiles"`; set when staff merge this duplicate into the main record. Conflicts and verification then follow the main record |
+
+### 3.2a `accounts.DuplicateCandidate` (TimeStamped)
+
+| Field | Type | Rules |
+|---|---|---|
+| `profile_a` · `profile_b` | FK → ApplicantProfile | **CASCADE**; `UniqueConstraint(profile_a, profile_b)`; `CheckConstraint(profile_a < profile_b)` so a pair is stored once |
+| `score` | Decimal(3,2) | 1.00 for a high match, else the name similarity |
+| `reason` | CharField(200) | e.g. "Same PAN in the GSTIN" |
+| `level` | CharField(10, choices) | **IX** · `high` (same PAN, or same cleaned name) · `possible` (similar name ≥ 0.80) |
+| `status` | CharField(10, choices) | default `open`, **IX** · `open` · `merged` · `separate` |
+| `merged_profile` | FK → ApplicantProfile | **SET_NULL**, N; the one merged into the other (for undo) |
+| `decided_by` · `decided_at` · `note` | FK → User (SET_NULL) / DateTime / Text | N / N / B |
+
+Found by `apps/accounts/duplicates.scan()` on every profile save; never merged automatically.
 
 *Assumption:* these are the organisation-profile fields already on the applicant screen. `verification_*` answers the 13 Oct finding: **staff verify each new organisation before its applications go to judges.**
 
@@ -293,7 +308,7 @@ Replaces the session/`AwardSetting` settings with real columns (data migrated).
 | `form_version` | FK → FormVersion | **PROTECT**: the questions the answers belong to (Rule 4) |
 | `title` | CharField(200) | |
 | `content` | JSONField | default `{}`; answers keyed by question key |
-| `status` | CharField(20, choices) | default `draft`, **IX** · `draft` · `submitted` · `assigned` · `in_review` · `scored` · `rejected` · `approved` |
+| `status` | CharField(20, choices) | default `draft`, **IX** · `draft` · `submitted` · `accepted` (staff check passed; only these go to judges) · `assigned` · `in_review` · `scored` · `rejected` · `approved` |
 | `submitted_at` | DateTimeField | N |
 | `edit_requested` / `edit_allowed` | BooleanField | default False (changes after submit need staff OK, 12 Oct meeting) |
 | `edit_reason` | TextField | B |
@@ -430,4 +445,6 @@ Indexes: `(entity, entity_id)`, `(user, -timestamp)`. `save()` refuses updates; 
 - A judge can only evaluate **their own** assignments; a submitted evaluation changes only through an **approved ScoreChangeRequest**, and every change writes a **ScoreChange**.
 - Published form versions are read-only; editing questions publishes a **new version**.
 - Blind judging hides `identifying` answers from judges in **desk** rounds only.
+- Staff **accept** a submitted report before it can go to judges, only for a verified organisation and only when no undecided duplicate of it entered the same award; **declining** needs a reason the applicant sees.
+- Two duplicate records can't be merged while both have an active entry in the same award; after a merge, conflicts and verification follow the main record.
 - Every assignment, score, score change and status change writes an **AuditLog** row.

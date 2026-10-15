@@ -137,8 +137,10 @@ def submitted(setup):
     attachment = files.attach(setup["draft"], by=setup["applicant"], question_key="evidence", upload=pdf())
     services.update(setup["draft"], by=setup["applicant"], content={"org": "X", "city": "Y", "story": "Z"})
     services.submit(setup["draft"], by=setup["applicant"])
+    staff = StaffFactory()
+    services.accept_entry(setup["draft"], by=staff)
     judge_a, judge_b = JudgeFactory(awards=[setup["award"]]), JudgeFactory(awards=[setup["award"]])
-    assignment = assignment_services.assign(setup["draft"], judge_a, by=StaffFactory())
+    assignment = assignment_services.assign(setup["draft"], judge_a, by=staff)
     return {**setup, "attachment": attachment, "judge_a": judge_a, "judge_b": judge_b, "assignment": assignment}
 
 

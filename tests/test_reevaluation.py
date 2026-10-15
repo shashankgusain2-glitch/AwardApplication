@@ -1,14 +1,14 @@
 """
-Re-evaluation: once the result is out, an applicant may ask once (with a reason); every staff
-member is notified; staff confirm or refuse. Confirmed → the first judges' work is kept as
-history but stops counting, new judges (never the same ones, Rule 2 still applies) score it
-again, and leadership decides again.
+Re-evaluation: once the result is out, an applicant may ask once (with a reason), from the
+results board or their status page. The award's manager decides in one step (a leader, if
+the award has no manager). Approved → the first judges' work is kept as history but stops
+counting, the manager chooses new judges (never the same ones; Rule 2 still applies),
+leadership decides the result again, and the results board shows the new result.
 """
 import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from apps.accounts.models import User
 from apps.applications import services as applications
 from apps.assignments import services as assignments
 from apps.assignments.models import ConflictOfInterest, JudgeAssignment
@@ -19,7 +19,14 @@ from apps.evaluations.models import Evaluation
 from apps.notifications.models import Notification
 
 from .conftest import login
-from .factories import ApplicationFactory, AwardFactory, JudgeFactory, LeaderFactory, StaffFactory
+from .factories import (
+    ApplicationFactory,
+    AwardFactory,
+    JudgeFactory,
+    LeaderFactory,
+    ManagerFactory,
+    StaffFactory,
+)
 
 A = JudgeAssignment.Status
 
@@ -35,26 +42,28 @@ def _score(report, judge, staff, value):
 def decided():
     """A report scored 3/10 by judges A and B, then rejected by leadership. Judges C and D are free."""
     award = AwardFactory(judges_per_report=2)
+    manager = ManagerFactory(awards=[award])
     staff, leader = StaffFactory(), LeaderFactory()
     judges = [JudgeFactory(awards=[award]) for _ in range(4)]
     report = ApplicationFactory(award=award)
     first = [_score(report, judges[0], staff, 3), _score(report, judges[1], staff, 3)]
     report.refresh_from_db()
     applications.change_status(report, by=leader, new_status="rejected")
-    return {"report": report, "staff": staff, "leader": leader, "judges": judges, "first": first}
+    return {"report": report, "award": award, "manager": manager, "staff": staff, "leader": leader,
+            "judges": judges, "first": first}
 
 
 @pytest.mark.django_db
-def test_applicant_asks_once_after_the_result_and_every_staff_member_is_told(decided):
-    report, staff = decided["report"], decided["staff"]
-    other_staff = StaffFactory()
+def test_applicant_asks_once_and_the_award_manager_is_told(decided):
+    report = decided["report"]
     applications.request_reevaluation(report, by=report.applicant, reason="Our energy data was missed.")
     report.refresh_from_db()
     assert (report.reevaluation_status, report.reevaluation_previous_result) == ("requested", "rejected")
-    assert report.status == "rejected"                                     # nothing changes until staff decide
-    for person in (staff, other_staff):
-        note = Notification.objects.get(user=person, kind=Notification.Kind.REQUEST)
-        assert "Re-evaluation" in note.message and "Our energy data was missed." in note.message
+    assert report.status == "rejected"                                     # nothing changes until the manager decides
+    note = Notification.objects.get(user=decided["manager"], kind=Notification.Kind.REQUEST)
+    assert "Re-evaluation" in note.message and "Our energy data was missed." in note.message
+    assert note.link == reverse("awards:reevaluations")
+    assert Notification.objects.filter(user=decided["staff"], message__contains="the award manager decides").exists()
     with pytest.raises(BusinessRuleError, match="already asked"):
         applications.request_reevaluation(report, by=report.applicant, reason="Again")
 
@@ -74,7 +83,7 @@ def test_cannot_ask_before_the_result_without_a_reason_or_for_someone_else(decid
 def test_refused_request_keeps_the_result_and_tells_the_applicant(decided):
     report = decided["report"]
     applications.request_reevaluation(report, by=report.applicant, reason="Please check again.")
-    applications.decide_reevaluation(report, by=decided["staff"], allow=False, note="Scores were consistent.")
+    applications.decide_reevaluation(report, by=decided["manager"], allow=False, note="Scores were consistent.")
     report.refresh_from_db()
     assert (report.status, report.reevaluation_status) == ("rejected", "refused")
     message = Notification.objects.filter(user=report.applicant).latest("created_at").message
@@ -84,34 +93,42 @@ def test_refused_request_keeps_the_result_and_tells_the_applicant(decided):
 
 
 @pytest.mark.django_db
-def test_staff_check_first_then_a_leader_confirms_and_nobody_skips_a_step(decided):
-    report, staff, leader = decided["report"], decided["staff"], decided["leader"]
+def test_only_the_award_manager_decides_in_one_step(decided):
+    report, manager = decided["report"], decided["manager"]
     with pytest.raises(BusinessRuleError, match="no re-evaluation request waiting"):
-        applications.decide_reevaluation(report, by=staff, allow=True)
+        applications.decide_reevaluation(report, by=manager, allow=True)
     applications.request_reevaluation(report, by=report.applicant, reason="Please check again.")
-    for wrong in (report.applicant, leader):                         # only staff take the first step
-        with pytest.raises(BusinessRuleError, match="staff check this request first"):
+    other_manager = ManagerFactory(awards=[AwardFactory()])
+    for wrong in (report.applicant, decided["staff"], decided["leader"], other_manager):
+        with pytest.raises(BusinessRuleError):
             applications.decide_reevaluation(report, by=wrong, allow=True)
-    applications.decide_reevaluation(report, by=staff, allow=True, note="Looks fair.")
+    applications.decide_reevaluation(report, by=manager, allow=True, note="New judges will look.")
     report.refresh_from_db()
-    assert report.status == "rejected"                               # nothing happens yet
-    assert report.requests.get().status == "staff_approved"
-    with pytest.raises(BusinessRuleError, match="needs a leader to confirm"):
-        applications.decide_reevaluation(report, by=StaffFactory(), allow=True)
-    applications.decide_reevaluation(report, by=leader, allow=True)
-    report.refresh_from_db()
-    assert report.status == "submitted" and report.reevaluation_status == "allowed"
+    assert report.status == "accepted" and report.reevaluation_status == "allowed"
+    assert report.requests.get().decided_by == manager
 
 
 @pytest.mark.django_db
-def test_confirmed_reevaluation_uses_fresh_judges_and_keeps_the_old_scores_as_history(decided):
-    report, staff, judges, first = decided["report"], decided["staff"], decided["judges"], decided["first"]
-    applications.request_reevaluation(report, by=report.applicant, reason="Our energy data was missed.")
-    applications.decide_reevaluation(report, by=staff, allow=True, note="New judges will look.")
+def test_a_leader_decides_when_the_award_has_no_manager(decided):
+    award, report = decided["award"], decided["report"]
+    award.manager = None
+    award.save()
+    report.refresh_from_db()
+    applications.request_reevaluation(report, by=report.applicant, reason="Please check again.")
+    assert Notification.objects.filter(user=decided["leader"], kind=Notification.Kind.REQUEST).exists()
     applications.decide_reevaluation(report, by=decided["leader"], allow=True)
     report.refresh_from_db()
+    assert report.status == "accepted"
 
-    assert report.status == "submitted" and report.reevaluation_status == "allowed"
+
+@pytest.mark.django_db
+def test_approved_reevaluation_uses_fresh_judges_and_keeps_the_old_scores_as_history(decided):
+    report, staff, judges, first = decided["report"], decided["staff"], decided["judges"], decided["first"]
+    applications.request_reevaluation(report, by=report.applicant, reason="Our energy data was missed.")
+    applications.decide_reevaluation(report, by=decided["manager"], allow=True)
+    report.refresh_from_db()
+
+    assert report.status == "accepted" and report.reevaluation_status == "allowed"
     assert {a.status for a in report.assignments.all()} == {A.SUPERSEDED}
     assert Evaluation.objects.filter(assignment__in=first, status="submitted").count() == 2   # history kept
     assert assignments.judges_still_needed(report) == 2
@@ -122,7 +139,7 @@ def test_confirmed_reevaluation_uses_fresh_judges_and_keeps_the_old_scores_as_hi
     with pytest.raises(BusinessRuleError, match="re-evaluated by other judges"):
         evaluations.request_change(Evaluation.objects.get(assignment=first[0]), judge=judges[0], reason="Fix it")
 
-    _score(report, judges[2], staff, 8)
+    _score(report, judges[2], decided["manager"], 8)
     _score(report, judges[3], staff, 9)
     report.refresh_from_db()
     assert report.status == "scored" and evaluations.report_progress(report) == 100
@@ -140,8 +157,7 @@ def test_conflicts_still_apply_to_the_new_judges(decided):
     ConflictOfInterest.objects.create(judge=judges[2], applicant_profile=report.applicant.applicant_profile,
                                       reason="Former employee")
     applications.request_reevaluation(report, by=report.applicant, reason="Please check again.")
-    applications.decide_reevaluation(report, by=decided["staff"], allow=True)
-    applications.decide_reevaluation(report, by=decided["leader"], allow=True)
+    applications.decide_reevaluation(report, by=decided["manager"], allow=True)
     assert assignments.eligible_judges(report) == [judges[3]]
 
 
@@ -149,60 +165,75 @@ def _as(client, user):
     user.set_password("Test-pass-2026!")
     user.save()
     client.post(reverse("accounts:logout"))
-    login(client, user.email)
+    login(client, user.email, "Test-pass-2026!")
 
 
 @pytest.mark.django_db
 def test_the_whole_flow_on_the_web_pages(decided, client):
-    report = decided["report"]
-    _as(client, report.applicant)
-    assert "Ask for a re-evaluation" in client.get(reverse("entries:status")).content.decode()
-    client.post(reverse("entries:request_reevaluation", args=[report.pk]), {"reason": "Our data was missed."})
-    page = client.get(reverse("entries:status")).content.decode()
-    assert "Re-evaluate the result · Waiting for staff" in page
+    report, award, manager, judges = decided["report"], decided["award"], decided["manager"], decided["judges"]
+    board = reverse("core:results") + f"?award={award.slug}"
 
+    # The applicant sees their result on the board and asks from there
+    _as(client, report.applicant)
+    page = client.get(board).content.decode()
+    assert "Not successful" in page and "Ask for re-evaluation" in page
+    response = client.post(reverse("entries:request_reevaluation", args=[report.pk]),
+                           {"reason": "Our data was missed.", "next": board}, follow=True)
+    assert "sent to the award manager" in response.content.decode()
+    assert "waiting for the award manager" in response.content.decode()
+
+    # Staff see it but can't decide; the manager approves and goes straight to choosing judges
     _as(client, decided["staff"])
-    assert "1 request waiting for staff" in client.get(reverse("awards:staff_home")).content.decode()
-    entries = client.get(reverse("awards:entries")).content.decode()
-    assert "Requests waiting for staff (1)" in entries and "Our data was missed." in entries
+    page = client.get(reverse("awards:reevaluations")).content.decode()
+    assert "Our data was missed." in page and f"the award manager, {manager.display_name}" in page
+    assert "Approve and choose new judges" not in page
+    _as(client, manager)
+    page = client.get(reverse("awards:reevaluations")).content.decode()
+    assert "Waiting for a decision (1)" in page and "Approve and choose new judges" in page
     req = report.requests.get()
-    url = reverse("core:decide_request", args=["applicant", req.pk])
-    response = client.post(url, {"decision": "approve", "note": "Fair point."}, follow=True)
-    assert "passed to leadership to confirm" in response.content.decode()
+    response = client.post(reverse("awards:reevaluation_decide", args=[req.pk]), {"decision": "approve"})
+    assert response["Location"] == reverse("awards:assign", args=[report.pk])
+    page = client.get(response["Location"]).content.decode()
+    offered = [f'name="judges" value="{j.pk}"' in page for j in judges]
+    assert offered == [False, False, True, True]                      # fresh judges only
+    client.post(reverse("awards:assign", args=[report.pk]), {"judges": [judges[2].pk, judges[3].pk]})
     report.refresh_from_db()
-    assert report.status == "rejected"                                  # not yet: leadership must confirm
+    assert report.status == "assigned"
 
-    _as(client, decided["leader"])
-    assert "1 request waiting for your confirmation" in client.get(reverse("dashboard:overview")).content.decode()
-    waiting = client.get(reverse("dashboard:requests")).content.decode()
-    assert "Waiting for you (1)" in waiting and "Fair point." in waiting
-    response = client.post(url, {"decision": "approve"}, follow=True)
-    assert "confirmed: it takes effect now" in response.content.decode()
-    report.refresh_from_db()
-    assert report.status == "submitted"
-
+    # While it is re-judged the board lists it as being re-evaluated
     _as(client, report.applicant)
-    assert "Re-evaluate the result · Approved" in client.get(reverse("entries:status")).content.decode()
-    _as(client, decided["staff"])
-    assert report.reference in client.get(reverse("awards:assign")).content.decode()
+    page = client.get(board).content.decode()
+    assert "Being re-evaluated" in page and "was not successful" in page
+
+    # New judges score it, leadership decides again: the board shows the new result
+    for judge, value in ((judges[2], 8), (judges[3], 9)):
+        assignment = report.assignments.get(judge=judge)
+        assignments.start_review(assignment, judge=judge)
+        evaluations.save(assignment, judge=judge, scores={"approach": value, "results": value}, submit=True)
+    report.refresh_from_db()
+    _as(client, decided["leader"])
+    assert "Re-evaluation: new judges" in client.get(reverse("dashboard:results")).content.decode()
+    client.post(reverse("dashboard:decide", args=[report.pk]), {"decision": "approve"})
+    _as(client, report.applicant)
+    page = client.get(board).content.decode()
+    assert "Successful" in page and "8.50" in page and "Re-evaluated · was not successful" in page
+    assert "Ask for re-evaluation" not in page                           # once only
 
 
 @pytest.mark.django_db
 def test_the_api_endpoints(decided):
     report = decided["report"]
-    applicant, staff, leader = APIClient(), APIClient(), APIClient()
+    applicant, staff, manager = APIClient(), APIClient(), APIClient()
     applicant.force_authenticate(report.applicant)
     staff.force_authenticate(decided["staff"])
-    leader.force_authenticate(decided["leader"])
+    manager.force_authenticate(decided["manager"])
     url = f"/api/v1/applications/{report.pk}/"
     assert staff.post(url + "request-reevaluation/", {"reason": "x"}).status_code == 403   # applicants only
     response = applicant.post(url + "request-reevaluation/", {"reason": "Our data was missed."}, format="json")
     assert response.status_code == 200 and response.json()["data"]["reevaluation_status"] == "requested"
     assert applicant.post(url + "decide-reevaluation/", {"allow": True}).status_code == 403
-    response = staff.post(url + "decide-reevaluation/", {"allow": True, "note": "OK"}, format="json")
+    assert staff.post(url + "decide-reevaluation/", {"allow": True}, format="json").status_code == 400
+    response = manager.post(url + "decide-reevaluation/", {"allow": True, "note": "OK"}, format="json")
     data = response.json()["data"]
-    assert response.status_code == 200 and data["status"] == "rejected"
-    assert data["requests"][0]["status"] == "staff_approved" and data["requests"][0]["staff_note"] == "OK"
-    response = leader.post(url + "decide-reevaluation/", {"allow": True}, format="json")
-    assert response.status_code == 200 and response.json()["data"]["status"] == "submitted"
-    assert User.objects.filter(pk=report.applicant.pk).exists()
+    assert response.status_code == 200 and data["status"] == "accepted"
+    assert data["requests"][0]["status"] == "approved" and data["requests"][0]["decision_note"] == "OK"

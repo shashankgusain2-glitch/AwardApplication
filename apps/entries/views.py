@@ -20,6 +20,7 @@ from apps.applications.models import Application
 from apps.audit.models import AuditLog
 from apps.awards.models import Award
 from apps.core.services import BusinessRuleError
+from apps.evaluations.services import applicant_progress
 
 ROLE = "applicant"
 
@@ -219,6 +220,7 @@ def application_form(request, slug=None):
 STEPS = [  # what the applicant sees on the timeline, in order
     (Application.Status.DRAFT, "Draft started"),
     (Application.Status.SUBMITTED, "Submitted"),
+    (Application.Status.ACCEPTED, "Accepted for judging"),
     (Application.Status.ASSIGNED, "Judges assigned"),
     (Application.Status.IN_REVIEW, "Being judged"),
     (Application.Status.SCORED, "Scored, waiting for the decision"),
@@ -240,6 +242,9 @@ def _timeline(application):
              for i, (status, label) in enumerate(STEPS)]
     if not final and reached:
         steps[reached - 1]["state"] = "current"
+        progress = applicant_progress(application)
+        if progress:
+            steps[reached - 1]["detail"] = progress
     if final:
         steps.append({"label": application.get_status_display(), "date": dates.get(application.status),
                       "state": "done"})
@@ -280,5 +285,6 @@ def request_reevaluation(request, pk):
         messages.error(request, str(error))
     else:
         messages.success(request, f"{application.reference}: your request for a re-evaluation was sent to the "
-                                  f"programme staff. You'll get a notification when they decide.")
-    return redirect("entries:status")
+                                  f"award manager. You'll get a notification when they decide.")
+    target = request.POST.get("next", "")
+    return redirect(target if target.startswith("/results/") else "entries:status")

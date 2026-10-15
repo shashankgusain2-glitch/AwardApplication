@@ -352,6 +352,66 @@
           ]
         },
         {
+          "name": "Login as manager",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login",
+                ""
+              ]
+            },
+            "description": "Who: manager. Expected: 200.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{manager_email}}\",\n  \"password\": \"{{demo_password}}\",\n  \"role\": \"manager\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"body is {success, data, message, errors}\", () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
+                  "  pm.expect(j.success).to.eql(true);",
+                  "});",
+                  "const d = pm.response.json().data;",
+                  "pm.test(\"returns access + refresh tokens and the user\", () => {",
+                  "  pm.expect(d.access).to.be.a('string'); pm.expect(d.refresh).to.be.a('string');",
+                  "  pm.expect(d.user.role).to.eql('manager');",
+                  "});",
+                  "pm.collectionVariables.set(\"manager_token\", d.access);",
+                  "pm.collectionVariables.set(\"manager_refresh\", d.refresh);",
+                  "pm.collectionVariables.set(\"manager_user_id\", d.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Login with the WRONG role (judge account, role=staff) \u2192 401",
           "request": {
             "method": "POST",
@@ -534,7 +594,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{new_applicant_email}}\",\n  \"name\": \"Postman Tester\",\n  \"password\": \"{{new_password}}\",\n  \"organisation_name\": \"Postman Test Industries\",\n  \"role\": \"leader\"\n}",
+              "raw": "{\n  \"email\": \"{{new_applicant_email}}\",\n  \"name\": \"Postman Tester\",\n  \"password\": \"{{new_password}}\",\n  \"organisation_name\": \"Postman Test Industries {{new_gstin}}\",\n  \"role\": \"leader\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1962,127 +2022,6 @@
               }
             }
           ]
-        },
-        {
-          "name": "Verify with no body \u2192 400",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/profiles/{{new_profile_id}}/verify/",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "profiles",
-                "{{new_profile_id}}",
-                "verify",
-                ""
-              ]
-            },
-            "description": "Who: staff, leader. Expected: 400.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{staff_token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"body is {success, data, message, errors}\", () => {",
-                  "  const j = pm.response.json();",
-                  "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
-                  "  pm.expect(j.success).to.eql(false);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Verify the new organisation (staff)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/profiles/{{new_profile_id}}/verify/",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "profiles",
-                "{{new_profile_id}}",
-                "verify",
-                ""
-              ]
-            },
-            "description": "Who: staff, leader. Expected: 200.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{staff_token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"approve\": true,\n  \"note\": \"Checked in Postman\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"body is {success, data, message, errors}\", () => {",
-                  "  const j = pm.response.json();",
-                  "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
-                  "  pm.expect(j.success).to.eql(true);",
-                  "});",
-                  "pm.test(\"verified\", () => pm.expect(pm.response.json().data.verification_status).to.eql(\"verified\"));"
-                ]
-              }
-            }
-          ]
         }
       ]
     },
@@ -2653,6 +2592,127 @@
                   "  pm.expect(j.success).to.eql(true);",
                   "});",
                   "pm.test(\"submitted\", () => pm.expect(pm.response.json().data.status).to.eql(\"submitted\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify with no body \u2192 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/profiles/{{new_profile_id}}/verify/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profiles",
+                "{{new_profile_id}}",
+                "verify",
+                ""
+              ]
+            },
+            "description": "Who: staff, leader. Expected: 400.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staff_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"body is {success, data, message, errors}\", () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
+                  "  pm.expect(j.success).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify the new organisation (staff)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/profiles/{{new_profile_id}}/verify/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "profiles",
+                "{{new_profile_id}}",
+                "verify",
+                ""
+              ]
+            },
+            "description": "Who: staff, leader. Expected: 200.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staff_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approve\": true,\n  \"note\": \"Checked in Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"body is {success, data, message, errors}\", () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
+                  "  pm.expect(j.success).to.eql(true);",
+                  "});",
+                  "pm.test(\"verified\", () => pm.expect(pm.response.json().data.verification_status).to.eql(\"verified\"));"
                 ]
               }
             }
@@ -3242,6 +3302,67 @@
     {
       "name": "6. Assignments",
       "item": [
+        {
+          "name": "Accept the entry (staff check)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/applications/{{application_id}}/change-status/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "applications",
+                "{{application_id}}",
+                "change-status",
+                ""
+              ]
+            },
+            "description": "Who: staff. Expected: 200.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staff_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"accepted\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"body is {success, data, message, errors}\", () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
+                  "  pm.expect(j.success).to.eql(true);",
+                  "});",
+                  "pm.test(\"accepted for judging\", () => pm.expect(pm.response.json().data.status).to.eql(\"accepted\"));"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "Assign a judge (staff)",
           "request": {
@@ -5594,7 +5715,7 @@
           ]
         },
         {
-          "name": "Leader decides before staff check it \u2192 400",
+          "name": "Staff decide a re-evaluation \u2192 400 (the award manager decides)",
           "request": {
             "method": "POST",
             "header": [
@@ -5615,13 +5736,13 @@
                 ""
               ]
             },
-            "description": "Who: staff first, then leader. Expected: 400.",
+            "description": "Who: award manager. Expected: 400.",
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{leader_token}}",
+                  "value": "{{staff_token}}",
                   "type": "string"
                 }
               ]
@@ -5654,7 +5775,7 @@
           ]
         },
         {
-          "name": "Refuse the re-evaluation (staff)",
+          "name": "Refuse the re-evaluation (award manager)",
           "request": {
             "method": "POST",
             "header": [
@@ -5675,13 +5796,13 @@
                 ""
               ]
             },
-            "description": "Who: staff first, then leader. Expected: 200.",
+            "description": "Who: award manager. Expected: 200.",
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{staff_token}}",
+                  "value": "{{manager_token}}",
                   "type": "string"
                 }
               ]
@@ -6471,6 +6592,14 @@
     },
     {
       "key": "leader_token",
+      "value": ""
+    },
+    {
+      "key": "manager_token",
+      "value": ""
+    },
+    {
+      "key": "manager_user_id",
       "value": ""
     },
     {

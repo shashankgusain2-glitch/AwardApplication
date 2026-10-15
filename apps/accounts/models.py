@@ -125,6 +125,10 @@ class ApplicantProfile(TimeStampedModel):
     verified_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     verified_at = models.DateTimeField(null=True, blank=True)
     verification_note = models.TextField(blank=True, default="")
+    # Set when staff merge this profile into another one for the same organisation (duplicate
+    # review). Both logins and their entries stay; conflicts and verification follow the main one.
+    merged_into = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT,
+                                    related_name="merged_profiles")
 
     class Meta:
         constraints = [
@@ -156,3 +160,45 @@ class JudgeProfile(TimeStampedModel):
 
     def __str__(self):
         return f"Judge profile: {self.user}"
+
+
+class DuplicateCandidate(TimeStampedModel):
+    """
+    Two applicant profiles that may be the same organisation, found automatically
+    (apps.accounts.duplicates) and decided by staff: merge them or keep them separate.
+    The system never merges on its own. profile_a always has the lower id.
+    """
+
+    class Level(models.TextChoices):
+        HIGH = "high", "High"              # same PAN, or the same name once cleaned
+        POSSIBLE = "possible", "Possible"  # similar name
+
+    class Status(models.TextChoices):
+        OPEN = "open", "Waiting for review"
+        MERGED = "merged", "Merged"
+        SEPARATE = "separate", "Kept separate"
+
+    profile_a = models.ForeignKey(ApplicantProfile, on_delete=models.CASCADE, related_name="+")
+    profile_b = models.ForeignKey(ApplicantProfile, on_delete=models.CASCADE, related_name="+")
+    score = models.DecimalField(max_digits=3, decimal_places=2)
+    reason = models.CharField(max_length=200)
+    level = models.CharField(max_length=10, choices=Level.choices, db_index=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.OPEN, db_index=True)
+    merged_profile = models.ForeignKey(ApplicantProfile, null=True, blank=True, on_delete=models.SET_NULL,
+                                       related_name="+", help_text="The one merged into the other (for undo)")
+    decided_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    decided_at = models.DateTimeField(null=True, blank=True)
+    note = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["status", "-score"]
+        constraints = [
+            models.UniqueConstraint(fields=["profile_a", "profile_b"], name="duplicate_unique_pair"),
+            models.CheckConstraint(condition=Q(profile_a__lt=models.F("profile_b")), name="duplicate_a_before_b"),
+        ]
+
+    def __str__(self):
+        return f"{self.profile_a} ~ {self.profile_b} ({self.score})"
+
+    def profiles(self):
+        return [self.profile_a, self.profile_b]

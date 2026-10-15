@@ -16,5 +16,6 @@
 | `form_edit.html` | Edit the questions (text, section, type, required, hidden in blind judging, remove, add new) and publish as a new version |
 | `entries.html` | Every application (search, filter) plus the decisions waiting: verify organisations, edit requests, score-change requests |
 | `assign_list.html` | Reports that still need judges |
+| `reevaluations.html` | Re-evaluation requests waiting for the award manager (reason, result, judges' totals; approve and choose new judges, or refuse), entries being re-evaluated (with a link to choose judges), and recent decisions |
 | `assign.html` | The eligible judges for one report, best first; assign the ones ticked or fill with the best. Conflicted judges are never shown |
-| `duplicates.html` | Possible duplicate companies, with Merge or Keep separate (sample data) |
+| `duplicates.html` | Possible duplicate organisations, one tab per award (only pairs that both entered it), with Merge / Keep separate / Undo; `_duplicate_side.html` is one organisation with its entries and a *Decline as duplicate* button |

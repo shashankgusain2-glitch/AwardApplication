@@ -1,0 +1,5 @@
+{# What the applicant sees while judges work (p from evaluations.services.applicant_progress): counts only. #}
+<div class="small" style="margin-top:.35rem;min-width:180px">
+  <div class="progress" style="height:6px;margin-bottom:.25rem"><span style="width:{{ p.percent }}%"></span></div>
+  <span class="muted">{{ p.round_label }}: {{ p.finished }} of {{ p.needed }} judge{{ p.needed|pluralize }} finished{% if p.started %} · {{ p.started }} reviewing now{% endif %}{% if p.waiting %} · {{ p.waiting }} not started yet{% endif %}</span>
+</div>

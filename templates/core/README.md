@@ -9,3 +9,4 @@
 | `awards.html` | All awards, with sector filter buttons |
 | `award_detail.html` | One award: who can apply, the steps (built from its round types), judging criteria, key dates, FAQs, apply button |
 | `login.html` | Log in, plus demo buttons that open each portal |
+| `results.html` | **Results board** (`/results/`, every logged-in role): decided results per award, ranked, with "Re-evaluated · was …" on entries judged again. Applicants ask for a re-evaluation from their own row |

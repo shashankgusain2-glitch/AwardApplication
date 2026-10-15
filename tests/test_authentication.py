@@ -189,7 +189,7 @@ PROTECTED = [
     ("judging:assignments", "judge"), ("judging:score", "judge"),
     ("awards:staff_home", "staff"), ("awards:settings", "staff"), ("awards:form_builder", "staff"),
     ("awards:entries", "staff"), ("awards:duplicates", "staff"), ("awards:assign", "staff"),
-    ("dashboard:overview", "leader"), ("dashboard:review", "leader"), ("dashboard:results", "leader"),
+    ("dashboard:overview", "leader"), ("dashboard:results", "leader"),
 ]
 
 

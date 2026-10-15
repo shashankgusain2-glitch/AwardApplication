@@ -112,7 +112,7 @@ class ApplicantProfileFactory(factory.django.DjangoModelFactory):
 
 
 class ApplicationFactory(factory.django.DjangoModelFactory):
-    """A submitted report from a verified organisation."""
+    """A report from a verified organisation that staff accepted: ready for judges."""
     class Meta:
         model = Application
 
@@ -122,5 +122,5 @@ class ApplicationFactory(factory.django.DjangoModelFactory):
     reference = factory.Sequence(lambda n: f"TST-2026-{n:05d}")
     title = factory.Sequence(lambda n: f"Report {n}")
     content = factory.LazyAttribute(lambda o: {"org": "Secret Org Ltd", "city": "Pune", "story": "We cut waste."})
-    status = Application.Status.SUBMITTED
+    status = Application.Status.ACCEPTED
     submitted_at = factory.LazyFunction(timezone.now)

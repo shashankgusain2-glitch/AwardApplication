@@ -3,18 +3,23 @@
 
 {% block title %}Entries{% endblock %}
 {% block heading %}Entries{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Every application, and the decisions waiting for staff.</p>{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Every application, and the decisions waiting for staff. Check each submitted entry: <strong>Accept</strong> sends it on to judges, <strong>Decline</strong> tells the applicant why.</p>{% endblock %}
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-{% if staff_requests or leader_requests or to_verify %}
+{% if staff_requests or confirm_requests or leader_requests or to_verify %}
 <div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(260px,1fr);align-items:start;margin-bottom:1.5rem">
   <div class="card" {% if staff_requests %}style="border-left:4px solid var(--warning)"{% endif %}>
     <h2 style="font-size:1.05rem">Requests waiting for staff ({{ staff_requests|length }})</h2>
-    <p class="muted small" style="margin:0 0 .5rem">Applicants asking to edit a submitted report or for a re-evaluation, and judges asking to change a submitted score. Check each one: <strong>Pass to leadership</strong> sends it to a leader to confirm (nothing changes until they do), or <strong>Refuse</strong> it with a note.</p>
-    {% for row in staff_requests %}{% include "partials/request_row.html" with step="staff" %}{% empty %}<p class="muted small" style="margin:0">None waiting.</p>{% endfor %}
+    <p class="muted small" style="margin:0 0 .5rem">Applicants asking to edit a submitted report, and judges asking to change a submitted score. Staff on the award check each one: <strong>Pass on</strong> sends it for the final confirmation (an edit to the <strong>award manager</strong>, a score change to leadership; nothing changes until they confirm), or <strong>Refuse</strong> it with a note. Re-evaluations are on the <a href="{% url 'awards:reevaluations' %}">Re-evaluations</a> page.</p>
+    {% for row in staff_requests %}{% if row.can_check %}{% include "partials/request_row.html" with step="staff" %}{% else %}{% include "partials/request_row.html" with step="" %}{% endif %}{% empty %}<p class="muted small" style="margin:0">None waiting.</p>{% endfor %}
+    {% if confirm_requests %}
+      <h2 style="font-size:1.05rem;margin-top:1.25rem">Waiting for you to confirm ({{ confirm_requests|length }})</h2>
+      <p class="muted small" style="margin:0 0 .5rem">Staff have checked these. Confirming lets the applicant change their report and submit it again.</p>
+      {% for row in confirm_requests %}{% include "partials/request_row.html" with step="final" %}{% endfor %}
+    {% endif %}
     {% if leader_requests %}
-      <details style="margin-top:.75rem"><summary class="small"><strong>Waiting for leadership to confirm ({{ leader_requests|length }})</strong></summary>
+      <details style="margin-top:.75rem"><summary class="small"><strong>Checked, waiting for the final confirmation ({{ leader_requests|length }})</strong></summary>
         {% for row in leader_requests %}{% include "partials/request_row.html" with step="" %}{% endfor %}
       </details>
     {% endif %}
@@ -53,18 +58,28 @@
         {% for r in reports %}
           <tr>
             <td><strong>{{ r.reference }}</strong><br><span class="muted small">{{ r.title }}</span></td>
-            <td>{{ r.applicant.applicant_profile.organisation_name|default:r.applicant.email }}{% if r.applicant.applicant_profile.verification_status != "verified" %}<br><span class="badge badge-pending">Not verified</span>{% endif %}</td>
+            <td>{{ r.applicant.applicant_profile.organisation_name|default:r.applicant.email }}{% if r.applicant.applicant_profile.pk not in verified_ids %}<br><span class="badge badge-pending">Not verified</span>{% endif %}{% if r.applicant.applicant_profile.pk in duplicate_ids %} {% if role == "staff" %}<a class="badge badge-possible-duplicate" href="{% url 'awards:duplicates' %}?award={{ r.award.slug }}" title="Decide it on Duplicate review">Possible duplicate</a>{% else %}<span class="badge badge-possible-duplicate" title="Programme staff decide it on Duplicate review">Possible duplicate</span>{% endif %}{% endif %}</td>
             <td class="small">{{ r.award.name }}</td>
             <td class="muted small">{{ r.submitted_at|date:"j M Y"|default:"—" }}</td>
             <td><span class="badge badge-{{ r.status }}">{{ r.get_status_display }}</span></td>
             <td>{% if r.status != "draft" and r.status != "rejected" %}{% judged_bar r %}{% else %}<span class="muted small">—</span>{% endif %}</td>
             <td class="row">
-              {% if r.status in "submitted assigned in_review" %}<a class="btn btn-primary btn-sm" href="{% url 'awards:assign' r.pk %}">Judges</a>{% endif %}
+              {% if r.status == "accepted" or r.status == "assigned" or r.status == "in_review" %}<a class="btn btn-primary btn-sm" href="{% url 'awards:assign' r.pk %}">Judges</a>{% endif %}
               {% if r.status == "submitted" %}
-                <form method="post" action="{% url 'awards:reject_report' r.pk %}" onsubmit="return confirm('Reject {{ r.reference }}? The applicant will see it as rejected.')">
-                  {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="note" value="Not eligible (staff check)">
-                  <button class="btn btn-outline btn-sm" type="submit">Reject</button>
+                <form method="post" action="{% url 'awards:accept_report' r.pk %}">
+                  {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <button class="btn btn-success btn-sm" type="submit" {% if r.applicant.applicant_profile.pk not in verified_ids %}disabled title="Verify the organisation first"{% endif %}>Accept</button>
                 </form>
+              {% endif %}
+              {% if r.status == "submitted" or r.status == "accepted" %}
+                <details class="decline">
+                  <summary class="btn btn-outline btn-sm">Decline</summary>
+                  <form method="post" action="{% url 'awards:reject_report' r.pk %}" class="row" style="margin-top:.4rem">
+                    {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <input name="note" type="text" required placeholder="Reason (the applicant sees it)" style="width:220px">
+                    <button class="btn btn-danger btn-sm" type="submit">Decline entry</button>
+                  </form>
+                </details>
               {% endif %}
             </td>
           </tr>

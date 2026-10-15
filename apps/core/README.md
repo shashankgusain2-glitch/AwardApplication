@@ -5,7 +5,7 @@
 ## What it does in the application
 
 - Shows the **public pages**: Home, About us, Awards list (with sector filter), each Award's page, and Log in.
-- Holds the **sample content** for the public pages (award descriptions, stats, past winners) and the duplicate-review screen. Every portal screen for the five roles reads the real database.
+- Holds the **sample content** for the public pages (award descriptions, stats, past winners). Every portal screen for the five roles reads the real database.
 - Adds the organisation name and the portal menus to **every page** automatically.
 
 ## Files
@@ -14,8 +14,9 @@
 |---|---|
 | `views.py` | Builds the public pages (home, about, awards, award detail, login) |
 | `urls.py` | Addresses: `/`, `/about/`, `/awards/`, `/awards/<name>/`, `/login/` |
+| `results.py` | The results board: which awards and rows each role sees (staff and managers the full ranking of their awards, leaders every award, applicants the successful entries plus their own, judges the successful entries), ranking, and entries being re-evaluated. Entries declined at the staff check were never judged and aren't listed |
 | `overview.py` | Real counts for the staff home and the leadership overview (per award: drafts, submitted, being judged, scored, approved, rejected, judging progress), and `summary_for(user)` behind `GET /api/v1/dashboard/summary/` |
-| `demo_data.py` | Sample content: the organisation, the 8-award catalogue for the public pages (2 fully built, used by `seed_data`), the portal menus, and the duplicate-review examples. Award settings staff change are saved in the database, not here |
+| `demo_data.py` | Sample content: the organisation, the 8-award catalogue for the public pages (2 fully built, used by `seed_data`) and the portal menus. Award settings staff change are saved in the database, not here |
 | `context_processors.py` | Sends the organisation details, portal menus and a CSS/JS version number to every page |
 | `models.py` | `TimeStampedModel`: a shared building block that adds "created" and "updated" times |
 | [templatetags/](templatetags/) | A small helper for templates |
