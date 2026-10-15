@@ -3,13 +3,10 @@ Leadership screens, on the real database. Leaders see everything and
 approve results; they never change scores (that is the judges' job, with
 staff permission: Rule 3).
 """
-from datetime import date
-from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.core.paginator import Paginator
 from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import Avg, Count, Max, Min, Q
@@ -21,7 +18,6 @@ from apps.accounts.models import User
 from apps.accounts.permissions import role_required
 from apps.applications import services as application_services
 from apps.applications.models import Application
-from apps.audit.models import AuditLog
 from apps.awards.models import Award
 from apps.core import overview as summaries
 from apps.core.services import BusinessRuleError
@@ -178,32 +174,6 @@ def person_action(request, pk):
     except BusinessRuleError as error:
         messages.error(request, str(error))
     return redirect("dashboard:people")
-
-
-# --- Audit log viewer -----------------------------------------------------------------
-
-@role_required("leader")
-def audit(request):
-    """Who did what, to which record, and when (read-only: entries can never change)."""
-    entries = AuditLog.objects.select_related("user").order_by("-timestamp")
-    filters = {k: request.GET.get(k, "").strip() for k in ("who", "action", "entity", "since")}
-    if filters["who"]:
-        entries = entries.filter(Q(user__email__icontains=filters["who"]) | Q(user__name__icontains=filters["who"]))
-    if filters["action"] in AuditLog.Action.values:
-        entries = entries.filter(action=filters["action"])
-    if filters["entity"]:
-        entries = entries.filter(entity=filters["entity"])
-    if filters["since"]:
-        try:
-            entries = entries.filter(timestamp__date__gte=date.fromisoformat(filters["since"]))
-        except ValueError:
-            messages.error(request, "Use a date like 2026-10-14.")
-    page = Paginator(entries, 50).get_page(request.GET.get("page"))
-    return render(request, "dashboard/audit.html", {
-        "role": ROLE, "page": page, "filters": filters, "actions": AuditLog.Action.choices,
-        "entities": AuditLog.objects.order_by().values_list("entity", flat=True).distinct(),
-        "querystring": urlencode({k: v for k, v in filters.items() if v}),
-    })
 
 
 @role_required("leader")

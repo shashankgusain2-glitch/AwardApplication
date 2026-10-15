@@ -257,3 +257,14 @@ Each decision: the options, the one we picked, why, and what would change our mi
 | Old notifications | Leave vs. clean | **Data migration** deletes leaders' edit and old-rule re-evaluation notifications, and points their score-change notifications at the request's own page | Runs on the next deploy, so the live site is cleaned too |
 | Opening a leader's notification | The general list vs. the one request | **The one request** (`/leadership/requests/score/<id>/`): reason, staff check, the judge's scores, Confirm / Refuse; "Already decided" once done | The request |
 
+---
+
+## D15. No Audit log page for leaders
+
+**Date:** 16 Oct 2026 · Asked by the user: remove the audit log from the leader
+
+| Choice | Options | Picked | Why |
+|---|---|---|---|
+| The page | Hide the menu item vs. remove the page | **Removed** (menu item, address `/leadership/audit/`, template); leaders were its only users | A hidden page that still opens by address isn't really removed |
+| The audit trail itself | Stop recording vs. keep | **Kept**: every important action is still recorded (Rule 3 and the applicant's timeline depend on it) and stays read-only in `/admin/` for a superuser | Removing the page mustn't remove the record |
+

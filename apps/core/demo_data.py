@@ -595,7 +595,6 @@ PORTAL_NAV = {
         ("Re-evaluations", "awards:reevaluations"),
         ("Requests to confirm", "dashboard:requests"),
         ("People", "dashboard:people"),
-        ("Audit log", "dashboard:audit"),
     ],
 }
 

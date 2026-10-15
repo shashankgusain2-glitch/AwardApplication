@@ -151,7 +151,7 @@ Production starts **empty**: no demo people, no demo awards. `seed_data` refuses
    
    Then set the status to **Open**. The page lists anything still missing.
 4. Applicants can now see the award on their dashboard and apply. Staff verify each organisation, then assign judges.
-5. Check **Audit log** (leadership menu) to confirm actions are being recorded.
+5. To confirm actions are being recorded, a superuser can open **Audit logs** in `/admin/` (leaders no longer have an Audit log page).
 
 ### Or: import people and awards from CSV files
 
@@ -188,7 +188,7 @@ Restore into a **new, empty** database (never over production), point a copy of 
 ```bash
 pg_restore --no-owner --dbname "$SCRATCH_DATABASE_URL" awards-backup.dump
 ```
-The test passes if you can log in as a leader and the Audit log and applications look right. Note the date in the runbook.
+The test passes if you can log in as a leader, the applications look right, and the audit entries are there in `/admin/`. Note the date in the runbook.
 
 ## Check before going live
 
