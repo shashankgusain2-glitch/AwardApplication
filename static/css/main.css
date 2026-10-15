@@ -67,7 +67,6 @@ img { max-width: 100%; }
 .stack > * + * { margin-top: 1rem; }
 
 /* 4. Public site ----------------------------------------------------------- */
-.demo-banner { background: var(--gold); color: var(--navy); font-size: .85rem; text-align: center; padding: .4rem 1rem; font-weight: 600; }
 .site-header { background: var(--navy); position: sticky; top: 0; z-index: 20; }
 .site-header .container { display: flex; align-items: center; justify-content: space-between; height: 68px; }
 .brand { display: flex; align-items: center; gap: .6rem; color: #fff; text-decoration: none; font-weight: 700; }
