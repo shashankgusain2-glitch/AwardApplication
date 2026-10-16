@@ -28,13 +28,13 @@ The four rules are visible in the UI, not only enforced in the background:
 | **Public website** | `/` | Home, About us, Awards (with sector filter), Award detail, Log in, Sign up |
 | **Applicant** | `/applicant/` | Dashboard, Organisation profile, Application form, Application status, Results, Notifications |
 | **Judge** | `/judge/` | My assignments, Score an entry, Results, Notifications |
-| **Programme staff** | `/staff/` | My awards, Awards, Award settings, Form builder, Entries, Duplicate review, Assign judges, Prepare results (view), Re-evaluations (view), Results, Notifications |
-| **Award manager** | `/staff/` (their awards only) | My awards, Awards and teams, Award settings, Entries, Assign judges, Prepare results, Re-evaluations, Results, Notifications |
+| **Programme staff** | `/staff/` | My awards, Awards, Form builder, Entries, Duplicate review, Assign judges, Prepare results (view), Re-evaluations (view), Results, Notifications |
+| **Award manager** | `/staff/` (their awards only) | My awards, Awards and teams, Entries, Assign judges, Prepare results, Re-evaluations, Results, Notifications |
 | **Leadership** | `/leadership/` | Overview, Awards and managers, Approve award results, Results board, People, Notifications |
 
 Each role only sees its own menu; any other role's page answers **403 Access denied**, and another user's record answers **404**. Staff and award managers only see the awards they are on.
 
-**Award settings** (staff and managers) is an older screen that edits the two demo awards side by side; the award's own page (*Details and rounds*) edits any award, including new ones. Retiring the older screen is planned (R8).
+An award's settings (rounds, blind judging, judges per entry, who applies, fee, dates) are edited on the award's own page, *Details and rounds*, for every award. (A separate *Award settings* screen for the two demo awards was removed on 16 Oct.)
 
 ## Style
 

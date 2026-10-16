@@ -9,7 +9,6 @@ through the services.
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
@@ -25,7 +24,6 @@ from apps.awards import services as award_services
 from apps.awards.access import awards_for
 from apps.awards.models import Award
 from apps.core import approvals, overview
-from apps.core import demo_data as d
 from apps.core.services import BusinessRuleError
 
 OPEN = DuplicateCandidate.Status.OPEN
@@ -35,91 +33,6 @@ OPEN = DuplicateCandidate.Status.OPEN
 def staff_home(request):
     """Home page: what needs staff today, from the database."""
     return render(request, "awards/staff_home.html", {"role": request.user.role, **overview.staff_home(request.user)})
-
-
-def _clean_settings(post):
-    """Check the submitted settings. Returns (settings, errors)."""
-    errors = []
-    settings = {}
-
-    round1 = post.get("round1_type", "")
-    round2 = post.get("round2_type", "none")
-    if round1 not in d.ROUND_TYPES:
-        errors.append("Choose how Round 1 is judged.")
-    if round2 != "none" and round2 not in d.ROUND_TYPES:
-        errors.append("Choose how Round 2 is judged, or 'No Round 2'.")
-    settings["round_types"] = [round1] + ([round2] if round2 != "none" else [])
-
-    settings["blind"] = post.get("blind") == "on"
-    if settings["blind"] and not d.blind_possible(settings["round_types"]):
-        errors.append(
-            "Blind judging isn't possible: every round is in person (site visit or live presentation), "
-            "so judges meet the applicant. Add a desk review round or turn blind judging off."
-        )
-
-    try:
-        settings["judges_per_entry"] = int(post.get("judges_per_entry", ""))
-        if not 1 <= settings["judges_per_entry"] <= 7:
-            raise ValueError
-    except ValueError:
-        errors.append("Judges per entry must be a number from 1 to 7.")
-
-    settings["applicant_type"] = post.get("applicant_type", "")
-    if settings["applicant_type"] not in d.APPLICANT_TYPES:
-        errors.append("Choose who applies from the list.")
-
-    try:
-        settings["fee_amount"] = int(post.get("fee_amount") or 0)
-        if settings["fee_amount"] < 0:
-            raise ValueError
-    except ValueError:
-        errors.append("Entry fee must be 0 or more (0 means no fee).")
-
-    settings["deadline"] = post.get("deadline", "").strip()
-    if not settings["deadline"] or len(settings["deadline"]) > 40:
-        errors.append("Enter a closing date (up to 40 characters).")
-
-    return settings, errors
-
-
-def _settings_slugs(user):
-    """The demo awards on the Award settings screen that this person is on."""
-    return set(awards_for(user).filter(slug__in=d.BUILT_AWARDS).values_list("slug", flat=True))
-
-
-@role_required("staff", "manager")
-@require_http_methods(["GET", "POST"])
-def settings(request):
-    """Award settings. Saved into the Award tables; the descriptions shown come from the award catalogue."""
-    if request.method == "POST":
-        slug = request.POST.get("slug")
-        award = d.get_award(slug, request)
-        if award is None or slug not in _settings_slugs(request.user):
-            raise Http404("Award not found")
-
-        if "reset" in request.POST:
-            award_services.reset_screen_settings(slug, request.user)
-            messages.success(request, f"{award['name']} is back to its default settings.")
-        else:
-            new_settings, errors = _clean_settings(request.POST)
-            if errors:
-                for error in errors:
-                    messages.error(request, f"{award['name']}: {error}")
-                return redirect("awards:settings")
-            try:
-                award_services.save_screen_settings(slug, new_settings, request.user)
-            except BusinessRuleError as error:
-                messages.error(request, f"{award['name']}: {error}")
-                return redirect("awards:settings")
-            messages.success(request, f"Saved {award['name']}. Every screen now follows these settings.")
-        return redirect("awards:settings")
-
-    return render(request, "awards/settings.html", {
-        "role": request.user.role,
-        "awards": [a for a in d.built_awards(request) if a["slug"] in _settings_slugs(request.user)],
-        "applicant_types": d.APPLICANT_TYPES,
-        "round_types": d.ROUND_TYPES,
-    })
 
 
 @role_required("staff")

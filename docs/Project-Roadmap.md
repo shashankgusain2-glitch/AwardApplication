@@ -24,7 +24,7 @@
 | 2 | Skeleton | ✅ Done (11–13 Oct) | Clickable screens for every role, reviewed |
 | 3 | Core Development | ✅ Done (14 Oct) | All main features working on real data |
 | 3+ | Changes after the client reviews | ✅ Done (15–16 Oct) | Award managers, duplicates, entry checks, results board, award-level approval |
-| 4 | Testing | 🔄 In progress | 448 automated tests and the Postman collection pass; load, security and UAT still to do |
+| 4 | Testing | 🔄 In progress | 441 automated tests and the Postman collection pass; load, security and UAT still to do |
 | 5 | Deployment | 🔄 Demo site live (15 Oct) | Live for real users: domain, email, backups, real accounts |
 | 6 | Maintenance and Updates | ⏳ Not started | Steady support and regular updates |
 
@@ -192,7 +192,7 @@ Make the app handle bad situations without crashing:
 
 Testing happens in two ways:
 
-1. **Continuous testing:** after each change, the automated tests run (448 passing, 0 skipped) and CI runs lint, the migration check and the tests on every push.
+1. **Continuous testing:** after each change, the automated tests run (441 passing, 0 skipped) and CI runs lint, the migration check and the tests on every push.
 2. **Full testing phase**, before real users:
    - [x] Each user flow from start to finish (`tests/test_web_workflow.py`, `tests/test_award_admin.py`, `tests/test_reevaluation.py`)
    - [x] Every role and its permissions (parametrised role tests; the Postman collection's wrong-role and no-token checks)

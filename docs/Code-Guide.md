@@ -84,7 +84,7 @@ AwardApplication/
 
 - **Templates:** `base.html` (public website) and `portal_base.html` (every portal: sidebar menu for the role, notifications, messages). One folder per area: `accounts/`, `core/`, `entries/`, `judging/`, `awards/` (staff and award managers), `dashboard/` (leadership), `notifications/`, and `partials/` for shared pieces. See [templates/README.md](../templates/README.md).
 - **Static:** `css/main.css` (all styles, colours as CSS variables), `js/main.js` (mobile menu, a few small helpers), `js/form_editor.js` (adding and moving questions in the form builder). See [static/js/README.md](../static/js/README.md).
-- **Tests:** `tests/rules/` has one file per rule; `tests/api/` covers the REST API; the other files cover each role's screens and flows. 448 tests, run with `docker compose exec web pytest`. See [testing.md](testing.md).
+- **Tests:** `tests/rules/` has one file per rule; `tests/api/` covers the REST API; the other files cover each role's screens and flows. 441 tests, run with `docker compose exec web pytest`. See [testing.md](testing.md).
 - **Docs:** setup, API, data model, architecture, deployment runbook, workflows, roadmaps and the decision log. See [docs/README.md](README.md).
 
 ---
@@ -96,5 +96,5 @@ AwardApplication/
 | Every portal screen (applicant, judge, programme staff, award manager, leadership) | ✅ Real database, through the services |
 | Saving, submitting, assigning, scoring, deciding, approving | ✅ Real, audited, tested |
 | Public marketing pages (home, about, award catalogue text) | ⏳ Sample content from `apps/core/demo_data.py` (planned: R8) |
-| *Award settings* screen | Real data, but only for the two demo awards; the award's own page covers every award (retiring the old screen is planned: R8) |
+| Award settings | Edited on each award's own page (*Details and rounds*) for every award; the old demo-only *Award settings* screen was removed on 16 Oct |
 | Demo accounts and awards | `python manage.py seed_data` for local development and the demo site only; real data loads with `import_csv` |

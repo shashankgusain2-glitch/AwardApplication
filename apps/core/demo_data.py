@@ -5,9 +5,9 @@ Everything here is FAKE and only exists so every page can be clicked
 through before the real database models are built. Each screen will
 switch to real data as its app is built (see docs/Product-Roadmap.md).
 
-Award settings changed on the staff "Award settings" screen are kept in
-the browser session (see award_overrides) and applied on top of AWARDS,
-so every screen follows them. This stands in for the database for now.
+The public award pages start from AWARDS and apply the settings saved
+in the Award tables on top (see award_overrides), so they follow what
+each award's team set on the award's own page.
 """
 
 ORGANISATION = {
@@ -63,7 +63,7 @@ BUSINESS_EXCELLENCE = {
     "deadline": "30 Nov 2026",
     "summary": "Our flagship award for organisations that show excellence across leadership, processes and results.",
     "icon": "🏆",
-    # Settings staff can change on the Award settings screen
+    # Defaults; the award's team changes them on the award's own page
     "round_types": ["desk", "live"],
     "blind": True,
     "judges_per_entry": 3,
@@ -134,7 +134,7 @@ KAIZEN = {
     "deadline": "15 Dec 2026",
     "summary": "For shop-floor teams that made a small change with a big, measurable result.",
     "icon": "⚙️",
-    # Settings staff can change on the Award settings screen
+    # Defaults; the award's team changes them on the award's own page
     # Assumption (to confirm with the client): written entries are screened
     # at a desk first, then judges visit the shortlisted teams on site.
     "round_types": ["desk", "site"],
@@ -248,14 +248,12 @@ AWARDS = [
 
 BUILT_AWARDS = ["business-excellence", "kaizen"]
 
-# --- Award settings: defaults + what staff changed -------------------------
-
-EDITABLE_SETTINGS = ["round_types", "blind", "judges_per_entry", "applicant_type", "fee_amount", "deadline"]
+# --- Award settings: defaults + what the award's team changed -----------------
 
 
 def award_overrides(request=None):
     """
-    Settings staff saved on the Award settings screen, read from the Award
+    Settings the award's team saved on the award's own page, read from the Award
     tables, so every user (staff, judges, the public site) sees the same settings.
     `request` is kept for callers that pass it; it isn't needed any more.
     """
@@ -568,7 +566,6 @@ PORTAL_NAV = {
     "staff": [
         ("My awards", "awards:staff_home"),
         ("Awards", "awards:award_list"),
-        ("Award settings", "awards:settings"),
         ("Form builder", "awards:form_builder"),
         ("Entries", "awards:entries"),
         ("Duplicate review", "awards:duplicates"),
@@ -581,7 +578,6 @@ PORTAL_NAV = {
     "manager": [
         ("My awards", "awards:staff_home"),
         ("Awards and teams", "awards:award_list"),
-        ("Award settings", "awards:settings"),
         ("Entries", "awards:entries"),
         ("Assign judges", "awards:assign"),
         ("Prepare results", "awards:prepare_results"),

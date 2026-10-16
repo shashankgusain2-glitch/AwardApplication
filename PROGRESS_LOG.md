@@ -62,7 +62,7 @@ The four rules from the brief:
 | 3.6 Feature slices | Done | 8 | 14 Oct | `tests/test_web_workflow.py`, `tests/test_award_admin.py` |
 | 3.7 Validation and edge cases | Done | 3 | 14 Oct | `tests/test_bad_input.py`; services raise `BusinessRuleError` with a clear message |
 | 3.8 Mid-point review and cleanup | Done | 2 | 14 Oct | Docs and folder READMEs updated; known gaps in §7 |
-| Phase 4 Testing | In progress (448 automated tests, Postman 124 requests; load, security scan and UAT to do) | n/a | ongoing | `.github/workflows/ci.yml`, `docs/testing.md` |
+| Phase 4 Testing | In progress (441 automated tests, Postman 124 requests; load, security scan and UAT to do) | n/a | ongoing | `.github/workflows/ci.yml`, `docs/testing.md` |
 | Phase 5 Deployment | Demo site live (15 Oct); real-user set-up to do | n/a | 15 Oct → | Render + Supabase; `render.yaml`, `docs/Deployment.md` |
 | Phase 3+ Client-review changes (award managers, duplicates, entry checks, results, award-level approval) | Done | n/a | 15–16 Oct | §4, decisions D9–D16 |
 | Phase 6 Maintenance | Not started | n/a | after launch | n/a |
@@ -214,7 +214,7 @@ Only questions marked identifying (and file names) mention the organisation.
 
 | Kind | Where | Result |
 |---|---|---|
-| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **448 passed, 0 skipped** (16 Oct) |
+| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **441 passed, 0 skipped** (16 Oct) |
 | Postman | `postman/` (collection, environment, `CHECKLIST.md`) | **124 requests, 280 checks, 0 failures** with Newman on fresh seed data; repeatable |
 | End-to-end | `tests/test_web_workflow.py`, `tests/test_award_admin.py`, `tests/test_reevaluation.py` and browser runs | Sign up → organisation → submit → staff verify and accept → judges grade → the award manager decides → leadership approves the award → results board → re-evaluation with fresh judges → approved again |
 | Rules | `tests/rules/` | Rules 1–4 all running, no skipped tests (Rule 2 includes conflicts across merged duplicate organisations) |
@@ -262,6 +262,7 @@ Only questions marked identifying (and file names) mention the organisation.
 | 16 Oct | **Audit log page removed for leaders** (menu, address, template); actions are still recorded and readable in `/admin/` | The request | `apps/dashboard/`, `apps/core/demo_data.py` |
 | 16 Oct | **Leaders approve each award's result as a whole**: the award manager decides every scored entry on *Prepare results* and sends the award's result once nothing is with staff or judges; a leader approves it (published: results board, applicants told) or sends it back with a note. Applicants see "waiting for the decision" until then. Score changes are confirmed by the award manager; leaders keep Overview, Awards and managers, People, Results board and Approve award results | The request | `apps/awards/results.py`, `apps/dashboard/`, `templates/awards/prepare_results.html` |
 | 16 Oct | Form builder is programme-staff only: removed from the award manager's menu, the pages refuse managers, the set-up checklist shows "2. Application form (staff)" | The request | `apps/core/demo_data.py`, `apps/awards/views.py` |
+| 16 Oct | **Award settings screen removed** (staff and award managers): it only covered the two demo awards and duplicated the award's own *Details and rounds* page; its tests moved to that page | The request | `apps/awards/views.py`, `tests/test_award_settings.py` |
 
 ---
 
@@ -317,7 +318,7 @@ Only questions marked identifying (and file names) mention the organisation.
 | 2 | ~~No document upload~~ Done (R2): PDF/JPG/PNG uploads with permission-checked downloads. Files are stored locally until an S3 bucket is configured | n/a |
 | 3 | ~~Notifications in-app only~~ Done (R4): email for every notification and a Notifications page. Real delivery needs an SMTP account (development prints emails to the console) | n/a |
 | 4 | ~~Duplicate review~~ Real since 15 Oct. The **public marketing pages** still use sample content (`apps/core/demo_data.py`) | Not real data |
-| 5 | ~~No screen to create awards~~ Done (R1). Remaining: the older *Award settings* screen still edits only the 2 demo awards and overlaps with the award page (both save to the same tables) | Two places to change the same settings |
+| 5 | ~~No screen to create awards~~ Done (R1). ~~The older *Award settings* screen overlapped with the award page~~ Removed 16 Oct; every award is edited on its own page | n/a |
 | 6 | ~~No account screen~~ Done (R5). The audit-log viewer was removed on 16 Oct (D15); the trail is read-only in `/admin/`. Invites need a real email service to arrive | n/a |
 | 7 | No CSV or PDF export of results; ~~no results publication~~ done (results board, award-level approval) | Reporting gap |
 | 8 | ~~Rule 2/3 placeholder tests~~ Done (real tests), including conflicts across merged duplicate organisations (15 Oct) | n/a |

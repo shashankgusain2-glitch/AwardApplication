@@ -17,7 +17,6 @@ PAGES = [
     "entries:status",
     "judging:assignments",
     "awards:staff_home",
-    "awards:settings",
     "awards:form_builder",
     "awards:entries",
     "awards:duplicates",
