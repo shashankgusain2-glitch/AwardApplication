@@ -122,7 +122,7 @@ def settings(request):
     })
 
 
-@role_required("staff", "manager")
+@role_required("staff")
 def form_builder(request, slug=None):
     """Each award's published form versions and their questions (read-only: published versions never change)."""
     awards = awards_for(request.user).order_by("name")
@@ -147,7 +147,7 @@ def form_builder(request, slug=None):
     })
 
 
-@role_required("staff", "manager")
+@role_required("staff")
 @require_http_methods(["GET", "POST"])
 def form_edit(request, slug):
     """

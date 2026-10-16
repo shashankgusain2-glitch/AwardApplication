@@ -233,3 +233,19 @@ def test_manager_lands_on_the_staff_portal_with_a_team_step(two):
     staff_page = web(two["s_alpha"]).get(reverse("awards:award_edit", args=[two["alpha"].slug])).content.decode()
     assert reverse("awards:award_team", args=[two["alpha"].slug]) not in staff_page
     assert web(two["s_alpha"]).get(reverse("awards:award_team", args=[two["alpha"].slug])).status_code == 403
+
+
+@pytest.mark.django_db
+def test_award_managers_have_no_form_builder(two, client):
+    from .conftest import login
+    manager = two["m_alpha"]
+    manager.set_password("Test-pass-2026!")
+    manager.save()
+    login(client, manager.email, "Test-pass-2026!")
+    home = client.get(reverse("awards:staff_home")).content.decode()
+    assert "Form builder" not in home
+    slug = two["r_alpha"].award.slug
+    assert client.get(reverse("awards:form_builder")).status_code == 403
+    assert client.get(reverse("awards:form_edit", args=[slug])).status_code == 403
+    page = client.get(reverse("awards:award_edit", args=[slug])).content.decode()
+    assert "2. Application form (staff)" in page and reverse("awards:form_edit", args=[slug]) not in page

@@ -62,7 +62,7 @@
       <div class="row" style="margin-top:1rem">
         <button class="btn btn-primary" type="submit">Save settings</button>
         <button class="btn btn-outline" type="submit" name="reset" value="1">Reset to default</button>
-        <a class="btn btn-outline" href="{% url 'awards:form_builder' award.slug %}">Edit form →</a>
+        {% if role == "staff" %}<a class="btn btn-outline" href="{% url 'awards:form_builder' award.slug %}">Edit form →</a>{% endif %}
       </div>
     </form>
   {% endfor %}
