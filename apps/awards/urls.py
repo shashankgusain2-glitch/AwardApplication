@@ -26,6 +26,7 @@ urlpatterns = [
     path("re-evaluations/", views.reevaluations, name="reevaluations"),
     path("re-evaluations/<int:pk>/", views.reevaluation_decide, name="reevaluation_decide"),
     path("assign/<int:pk>/", views.assign, name="assign"),
+    path("assign/<int:pk>/replace/<int:assignment_pk>/", views.replace_judge, name="replace_judge"),
     path("organisations/<int:pk>/verify/", views.verify_organisation, name="verify_organisation"),
     path("entries/<int:pk>/accept/", views.accept_report, name="accept_report"),
     path("entries/<int:pk>/reject/", views.reject_report, name="reject_report"),

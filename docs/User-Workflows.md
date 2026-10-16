@@ -78,7 +78,7 @@ Each award has **one award manager**, chosen by leadership, and the **programme 
 1. **Verify organisations** (staff, GSTIN).
 2. **Accept or decline each submitted entry** (staff). Declining needs a reason the applicant sees. Only accepted entries go to judges.
 3. **Duplicate review** (programme staff): possible duplicate organisations are found automatically and listed under each award both entered. Staff merge them (conflicts and verification then cover both) or keep them separate; an entry can't be accepted while an undecided duplicate also entered the award.
-4. **Assign judges** (programme staff). Only eligible judges are offered (see the rules below); staff tick them or fill with the best.
+4. **Assign judges** (programme staff). Only eligible judges are offered (see the rules below); staff tick them or fill with the best. A judge who isn't responding can be **replaced** from the same page: any pending or in-review assignment goes to another eligible judge (optional reason); the old one is kept as declined, audited, and both judges are notified.
 5. **Record conflicts of interest** (staff). A conflict recorded after assignment withdraws it.
 6. **Requests after submitting:** staff check an applicant's edit request or a judge's score-change request first; **the award manager confirms** it. (If the award has no manager, the staff check decides.)
 7. **Ask the manager** (escalations): when staff shouldn't decide alone (a doubtful GSTIN, an applicant disputing a decline), they pass the case up, optionally about one entry. The manager answers on *Escalations*; staff are told and act on it.

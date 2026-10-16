@@ -105,16 +105,28 @@ def assign(report, judge, *, by, round=1):
 
 
 @transaction.atomic
-def reassign(assignment, new_judge, *, by):
-    """Move an unfinished assignment to another judge; the old one is kept as declined."""
+def reassign(assignment, new_judge, *, by, reason=""):
+    """
+    Move an unfinished assignment to another judge (e.g. one who isn't responding);
+    the old one is kept as declined. The new judge is notified as for any assignment,
+    and the old judge is told theirs was withdrawn.
+    """
     _check_can_assign(by, assignment.report)
     if assignment.status in (A.COMPLETED, A.SUPERSEDED):
         raise BusinessRuleError("A completed or replaced evaluation can't be reassigned.")
-    old_judge = assignment.judge
+    if assignment.status == A.DECLINED:
+        raise BusinessRuleError("This assignment was already declined: assign another judge instead.")
+    old_judge, report = assignment.judge, assignment.report
     assignment.status = A.DECLINED
     assignment.save(update_fields=["status", "updated_at"])
-    new = assign(assignment.report, new_judge, by=by, round=assignment.round)
-    record(by, "reassign", new, changes={"from": old_judge.email, "to": new_judge.email})
+    new = assign(report, new_judge, by=by, round=assignment.round)
+    changes = {"from": old_judge.email, "to": new_judge.email}
+    if reason:
+        changes["reason"] = reason
+    record(by, "reassign", new, changes=changes)
+    notify(old_judge, f"Your assignment for {report.reference} ({report.award.name}) was withdrawn "
+                      f"and given to another judge. You don't need to do anything.",
+           kind="assignment", link=reverse("judging:assignments"))
     return new
 
 

@@ -600,11 +600,18 @@ def assign(request, pk=None):
         return redirect("awards:assign", pk=report.pk)
 
     profile = ApplicantProfile.objects.filter(user=report.applicant).first()
+    current = list(report.assignments.select_related("judge").order_by("round", "assigned_at"))
+    candidates = {}                       # per round: who may take over an unfinished assignment
+    for a in current:
+        if a.status in assignment_services.OPEN_STATUSES:
+            if a.round not in candidates:
+                candidates[a.round] = assignment_services.eligible_judges(report, a.round)
+            a.replacements = candidates[a.round]
     return render(request, "awards/assign.html", {
         "role": request.user.role,
         "report": report,
         "profile": profile,
-        "current": report.assignments.select_related("judge").order_by("round", "assigned_at"),
+        "current": current,
         "eligible": assignment_services.eligible_judges(report),
         "needed": assignment_services.judges_still_needed(report),
         "assignable": report.status in assignment_services.ASSIGNABLE,
@@ -612,6 +619,29 @@ def assign(request, pk=None):
         "verified": bool(profile and profile.verification_status == ApplicantProfile.Verification.VERIFIED),
         "next_reports": [r for r in needing if r.pk != report.pk][:5],
     })
+
+
+@role_required("staff")
+@require_POST
+def replace_judge(request, pk, assignment_pk):
+    """
+    Give an unfinished assignment (pending or in review) to another eligible judge,
+    e.g. when the judge isn't responding. The old assignment is kept as declined.
+    """
+    report = get_object_or_404(application_services.visible_to(request.user), pk=pk)
+    assignment = get_object_or_404(assignment_services.visible_to(request.user), pk=assignment_pk, report=report)
+    try:
+        new_judge = User.objects.filter(pk__in=_ids([request.POST.get("judge", "")]), role=User.Role.JUDGE).first()
+        if new_judge is None:
+            raise BusinessRuleError("Choose the judge who takes over.")
+        old_name = assignment.judge.display_name
+        assignment_services.reassign(assignment, new_judge, by=request.user,
+                                     reason=request.POST.get("reason", "").strip()[:500])
+        messages.success(request, f"{report.reference}: {new_judge.display_name} replaces {old_name}. "
+                                  f"Both have been notified.")
+    except BusinessRuleError as error:
+        messages.error(request, str(error))
+    return redirect("awards:assign", pk=report.pk)
 
 
 NOT_SHARED = "other"   # the tab for pairs that didn't both enter one award

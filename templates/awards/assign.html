@@ -58,6 +58,28 @@
       {% if current %}<div style="margin-bottom:.5rem">{% judged_bar report "of the report judged" %}</div>{% endif %}
       {% for a in current %}
         <div class="settings-row"><span><strong>{{ a.judge.display_name }}</strong><br><span class="muted small">Round {{ a.round }} · assigned {{ a.assigned_at|date:"j M Y" }}</span></span><span class="row" style="gap:.5rem">{% if a.status == "in_review" or a.status == "completed" %}{% judged_bar a "" %}{% endif %}<span class="badge badge-{{ a.status }}">{{ a.get_status_display }}</span></span></div>
+        {% if a.status == "pending" or a.status == "in_review" %}
+          <details style="margin:0 0 .75rem">
+            <summary class="small">Replace judge</summary>
+            {% if a.replacements %}
+              <form method="post" action="{% url 'awards:replace_judge' report.pk a.pk %}" class="stack" style="gap:.5rem;margin-top:.5rem">
+                {% csrf_token %}
+                <label class="small">New judge
+                  <select name="judge" required>
+                    {% for j in a.replacements %}<option value="{{ j.pk }}">{{ j.display_name }} · {{ j.open_count }} of {{ j.judge_profile.max_open_assignments }} open</option>{% endfor %}
+                  </select>
+                </label>
+                <label class="small">Reason (optional)
+                  <input type="text" name="reason" maxlength="500" placeholder="e.g. not responding">
+                </label>
+                <p class="muted small" style="margin:0">{{ a.judge.display_name }}'s assignment is kept as declined{% if a.status == "in_review" %} and their draft scores no longer count{% endif %}. Both judges are notified.</p>
+                <div><button class="btn btn-outline" type="submit">Replace {{ a.judge.display_name }}</button></div>
+              </form>
+            {% else %}
+              <p class="muted small" style="margin:.5rem 0 0">No eligible judge can take over (panel, conflicts or workload).</p>
+            {% endif %}
+          </details>
+        {% endif %}
       {% empty %}<p class="muted small" style="margin:0">No judges yet. Needs {{ needed }}.</p>{% endfor %}
     </div>
     {% if next_reports %}
