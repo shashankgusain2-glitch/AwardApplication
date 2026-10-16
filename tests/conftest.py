@@ -119,3 +119,24 @@ def seeded_client(key):
     c = Client()
     assert login(c, ACCOUNTS[key]).status_code == 302, f"demo login failed for {key}"
     return c
+
+
+def save_award(client, slug, **changes):
+    """
+    Save an award's own page (Details and rounds) the way its team does, starting from the
+    award's current values. Pass round1=/round2= to change rounds ("" removes a round),
+    blind_judging=True/False, or any other field of the form.
+    """
+    from apps.awards.models import Award
+    award = Award.objects.get(slug=slug)
+    data = {"name": award.name, "sector": award.sector, "summary": award.summary,
+            "opens_on": award.opens_on.isoformat() if award.opens_on else "",
+            "closes_on": award.closes_on.isoformat() if award.closes_on else "",
+            "applicant_type": award.applicant_type, "judges_per_report": str(award.judges_per_report),
+            "entry_fee": str(award.entry_fee), "blind_judging": award.blind_judging}
+    for number, round_ in enumerate(award.rounds.all(), start=1):
+        data[f"round{number}"] = round_.kind
+    data.update(changes)
+    if data.pop("blind_judging"):
+        data["blind_judging"] = "on"
+    return client.post(reverse("awards:award_edit", args=[slug]), data, follow=True)

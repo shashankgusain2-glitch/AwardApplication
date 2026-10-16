@@ -14,7 +14,6 @@ Staff and award managers run their awards from here, with no code changes. **Eve
 | | `/staff/awards/<award>/panel/` | Which judges may be assigned this award's reports |
 | Team | `/staff/awards/<award>/team/` | **Award managers and leaders:** choose which programme staff work on this award, and invite a new staff member straight onto the team. A leader also picks the award manager here. New team members are notified |
 | My awards | `/staff/` | Real work waiting today on this person's awards: organisations to verify, reports with no judges yet, open requests, and each award's counts |
-| Award settings | `/staff/settings/` | Set round types (desk review, site visit, live presentation), blind judging, judges per entry, who applies, fee, closing date. **This is where the two awards are made to work differently.** Blind judging is blocked if every round is in person |
 | Form builder | `/staff/form-builder/<award>/` | Each award's published form versions and their questions (which are required, which are hidden in blind judging, how many applications use each version). Published versions are read-only (Rule 4). **Programme staff only** (award managers see the step as "2. Application form (staff)") |
 | Edit questions | `/staff/form-builder/<award>/new-version/` | Change, add or remove questions and publish them as the **next version**. The current version never changes; applications already started keep their version (Rule 4) |
 | Entries | `/staff/entries/` | Every application on this person's awards (search and filter by status and award), plus the decisions waiting: **verify organisations**, **allow or refuse edit requests**, **allow or refuse judges' score-change requests**, reject an ineligible report |
@@ -32,7 +31,7 @@ Staff and award managers run their awards from here, with no code changes. **Eve
 | `urls.py` | The `/staff/...` addresses |
 | `access.py` | **Who works on which award**: `awards_for(user)` (leader: all; manager: the ones they manage; staff: the ones they are allocated to). Every staff page, service, API view, file download and request list filters through it |
 | `models.py` | `Award` (settings incl. blind judging, judges per report; its `manager` and allocated `staff`; soft delete), `AwardRound` (desk, site, live), `FormVersion` (read-only once published; Rule 4), `Criterion` (weights) |
-| `services.py` | Award settings from the staff screen, form versions, criteria checks, creating awards (leaders only), choosing an award's team (`set_team`) |
+| `services.py` | Settings the public award pages read (`screen_overrides`), form versions, criteria checks, creating awards (leaders only), choosing an award's team (`set_team`) |
 | `api/` | `/api/v1/awards/` (read-only, public) |
 | [migrations/](migrations/) | Database changes for this app |
 

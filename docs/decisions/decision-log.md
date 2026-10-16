@@ -285,3 +285,15 @@ Each decision: the options, the one we picked, why, and what would change our mi
 | After a re-evaluation | Publish automatically vs. approve again | **The manager decides the entry again and sends the award's updated result; leadership approves it** | The result is always a leadership approval |
 | Results decided before this change | Hide vs. keep | **Kept published** (data migration), their awards marked approved | Nothing disappears from the live board |
 
+---
+
+## D17. Form builder for programme staff only; the Award settings screen removed
+
+**Date:** 16 Oct 2026 · Asked by the user: remove the Form builder from award managers, and asked what Award settings was for
+
+| Choice | Options | Picked | Why |
+|---|---|---|---|
+| Form builder | Staff and managers vs. staff only | **Programme staff only**; the manager's set-up checklist shows "2. Application form (staff)" | The request |
+| Award settings screen | Keep vs. remove | **Removed** for staff and managers | It only covered the two demo awards and duplicated the award's own *Details and rounds* page, which works for every award (R1) |
+| Its tests | Delete vs. move | **Moved** to the award's own page (`tests/conftest.py` → `save_award`) | The behaviour (public page follows the settings, blind needs a desk round, one award doesn't change another) still matters |
+

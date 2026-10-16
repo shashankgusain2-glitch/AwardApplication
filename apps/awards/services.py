@@ -53,41 +53,8 @@ def set_rounds(award, kinds):
     AwardRound.objects.bulk_create([AwardRound(award=award, number=i, kind=k) for i, k in enumerate(kinds, start=1)])
 
 
-@transaction.atomic
-def save_screen_settings(slug, settings, by):
-    """Save what staff chose on the Award settings screen into the Award tables."""
-    award = get_or_create_from_demo(slug)
-    before = {"blind_judging": award.blind_judging, "judges_per_report": award.judges_per_report,
-              "rounds": [r.kind for r in award.rounds.all()]}
-    award.blind_judging = settings["blind"]
-    award.judges_per_report = settings["judges_per_entry"]
-    award.applicant_type = APPLICANT_TYPE_FROM_LABEL.get(settings["applicant_type"], award.applicant_type)
-    award.entry_fee = settings["fee_amount"]
-    award.closes_on = parse_display_date(settings["deadline"])
-    if award.opens_on and award.closes_on < award.opens_on:
-        raise BusinessRuleError("The closing date can't be before the opening date.")
-    award.save()
-    set_rounds(award, settings["round_types"])
-    record(by, "update", award, changes={"before": before, "after": {
-        "blind_judging": award.blind_judging, "judges_per_report": award.judges_per_report,
-        "rounds": settings["round_types"]}})
-    return award
-
-
-@transaction.atomic
-def reset_screen_settings(slug, by):
-    """Put the award's settings back to their defaults (its forms, criteria and reports are kept)."""
-    from apps.core import demo_data
-    base = next(a for a in demo_data.AWARDS if a["slug"] == slug)
-    return save_screen_settings(slug, {
-        "blind": base["blind"], "judges_per_entry": base["judges_per_entry"],
-        "applicant_type": base["applicant_type"], "fee_amount": base.get("fee_amount", 0),
-        "deadline": base["deadline"], "round_types": base["round_types"],
-    }, by)
-
-
 def screen_overrides():
-    """Settings saved in the Award tables, in the shape the portal screens expect."""
+    """Settings saved in the Award tables, in the shape the public award pages expect."""
     out = {}
     for award in Award.objects.prefetch_related("rounds"):
         values = {

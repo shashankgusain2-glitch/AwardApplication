@@ -10,22 +10,6 @@
     });
   }
 
-  // Award settings: blind judging is only possible if a round is a desk review.
-  // (The server checks this too; this just gives instant feedback.)
-  document.querySelectorAll("form[data-award-settings]").forEach(function (form) {
-    var blind = form.querySelector("input[name=blind]");
-    var note = form.querySelector("[data-blind-note]");
-    function update() {
-      var types = Array.prototype.map.call(form.querySelectorAll("[data-round-type]"), function (s) { return s.value; });
-      var possible = types.indexOf("desk") !== -1;
-      blind.disabled = !possible;
-      if (!possible) blind.checked = false;
-      if (note) note.hidden = possible;
-    }
-    form.addEventListener("change", update);
-    update();
-  });
-
   // Buttons marked data-demo show a message instead of saving anything yet.
   var toast = document.createElement("div");
   toast.className = "toast";

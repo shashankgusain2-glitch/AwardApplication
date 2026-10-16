@@ -37,7 +37,7 @@ def test_staff_forms_survive_junk(seeded):
                        ("awards:award_panel", [award.slug]), ("awards:form_edit", [award.slug]),
                        ("awards:assign", [report.pk]), ("awards:verify_organisation", [1]),
                        ("core:decide_request", ["applicant", 99999]), ("awards:reject_report", [report.pk]),
-                       ("core:decide_request", ["score", 99999]), ("awards:settings", [])]:
+                       ("core:decide_request", ["score", 99999])]:
         _no_crash(staff, "post", reverse(name, args=args), JUNK)
     for name, query in [("awards:entries", {"status": "x", "award": "x", "q": "%' OR 1=1 --"}),
                         ("awards:form_builder", {"version": "abc"})]:

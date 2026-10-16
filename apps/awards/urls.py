@@ -6,7 +6,6 @@ app_name = "awards"
 
 urlpatterns = [
     path("", views.staff_home, name="staff_home"),
-    path("settings/", views.settings, name="settings"),
     path("awards/", views.award_list, name="award_list"),
     path("awards/<slug:slug>/", views.award_edit, name="award_edit"),
     path("awards/<slug:slug>/status/", views.award_status, name="award_status"),
