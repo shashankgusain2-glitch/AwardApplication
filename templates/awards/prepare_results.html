@@ -1,0 +1,90 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Prepare results{% endblock %}
+{% block heading %}Prepare results{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Decide each scored entry, then send the award's result to leadership. Leadership approves the result of the whole award; only then is it published and are applicants told.</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+{% if awards %}
+  <div class="chips" style="margin-bottom:1rem">
+    {% for a in awards %}<a class="chip {% if a == award %}active{% endif %}" href="?award={{ a.slug }}">{{ a.name }}</a>{% endfor %}
+  </div>
+{% endif %}
+
+{% if award %}
+  {% if award.results_status == "submitted" %}
+    <div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>Waiting for leadership</strong>Sent {{ award.results_submitted_at|date:"j M Y, H:i" }} by {{ award.results_submitted_by.display_name }}. Nothing can change until a leader approves it or sends it back.</div></div>
+  {% elif award.results_status == "returned" %}
+    <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>Sent back by leadership</strong>“{{ award.results_note }}” ({{ award.results_decided_by.display_name }}, {{ award.results_decided_at|date:"j M Y" }}). Change what's needed below, then send it again.</div></div>
+  {% elif award.results_status == "approved" %}
+    <div class="callout callout-success" style="margin-bottom:1.5rem"><div><strong>Approved by leadership</strong>{% if award.results_decided_at %}{{ award.results_decided_at|date:"j M Y" }}: {% endif %}{{ state.published|length }} result{{ state.published|length|pluralize }} on the <a href="{% url 'core:results' %}?award={{ award.slug }}">results board</a>. After a re-evaluation, decide that entry again and send the updated result.</div></div>
+  {% endif %}
+  {% if not can_prepare %}
+    <p class="muted small">{{ preparer }} decides the results for {{ award.name }}; you can follow along here.</p>
+  {% endif %}
+
+  <div class="grid grid-4" style="margin-bottom:1.5rem">
+    <div class="kpi"><span>Still with staff or judges</span><strong>{{ state.in_pipeline|length }}</strong></div>
+    <div class="kpi"><span>Scored, to decide</span><strong>{{ to_decide|length }}</strong></div>
+    <div class="kpi"><span>Decided, not yet approved</span><strong>{{ decided|length }}</strong></div>
+    <div class="kpi"><span>Published</span><strong>{{ state.published|length }}</strong></div>
+  </div>
+
+  <div class="card" style="margin-bottom:1.5rem">
+    <h2 style="font-size:1.05rem">Scored entries to decide ({{ to_decide|length }})</h2>
+    {% for r in to_decide %}
+      <div class="settings-row">
+        <span><strong>{{ r.applicant.applicant_profile.organisation_name|default:r.applicant.email }}</strong> · {{ r.reference }}{% if r.reevaluation_status == "allowed" %} <span class="badge badge-results">Re-evaluated</span>{% endif %}<br>
+          <span class="muted small">Average {{ r.average|floatformat:2 }} / 10 · judges' totals {% for t in r.totals %}{{ t }}{% if not forloop.last %}, {% endif %}{% endfor %}</span></span>
+        {% if can_prepare and award.results_status != "submitted" %}
+          <form method="post" action="{% url 'awards:decide_result' r.pk %}" class="row">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="btn btn-success btn-sm" name="decision" value="successful">Successful</button>
+            <button class="btn btn-outline btn-sm" name="decision" value="not">Not successful</button>
+          </form>
+        {% endif %}
+      </div>
+    {% empty %}
+      <p class="muted small" style="margin:0">None waiting.</p>
+    {% endfor %}
+  </div>
+
+  <div class="card" style="margin-bottom:1.5rem">
+    <h2 style="font-size:1.05rem">Decided, not yet approved ({{ decided|length }})</h2>
+    {% for r in decided %}
+      <div class="settings-row">
+        <span><strong>{{ r.applicant.applicant_profile.organisation_name|default:r.applicant.email }}</strong> · {{ r.reference }} <span class="badge badge-{{ r.status }}">{% if r.status == "approved" %}Successful{% else %}Not successful{% endif %}</span><br>
+          <span class="muted small">Average {{ r.average|floatformat:2 }} / 10</span></span>
+        {% if can_prepare and award.results_status != "submitted" %}
+          <form method="post" action="{% url 'awards:decide_result' r.pk %}">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="btn btn-outline btn-sm" name="decision" value="{% if r.status == 'approved' %}not{% else %}successful{% endif %}">Change to {% if r.status == "approved" %}not successful{% else %}successful{% endif %}</button>
+          </form>
+        {% endif %}
+      </div>
+    {% empty %}
+      <p class="muted small" style="margin:0">None.</p>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:1.05rem">Send the award's result to leadership</h2>
+    {% if state.can_send %}
+      {% if can_prepare %}
+        <form method="post" action="{% url 'awards:send_results' award.slug %}" class="row">
+          {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <input name="note" type="text" placeholder="Note for leadership (optional)" style="flex:1;min-width:260px" aria-label="Note">
+          <button class="btn btn-primary btn-sm" type="submit">Send results to leadership</button>
+        </form>
+      {% else %}
+        <p class="muted small" style="margin:0">Ready: {{ preparer }} can send it.</p>
+      {% endif %}
+    {% else %}
+      <ul class="small" style="margin:0">{% for b in state.blockers %}<li>{{ b }}</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+{% else %}
+  <div class="card"><p class="muted small" style="margin:0">You aren't on any award yet.</p></div>
+{% endif %}
+{% endblock %}

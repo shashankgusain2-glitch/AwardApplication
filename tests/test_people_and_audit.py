@@ -113,26 +113,25 @@ def test_leader_cannot_deactivate_themselves():
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("name", ["dashboard:people", "dashboard:audit"])
-def test_only_leaders_open_people_and_audit(client_for, name):
+@pytest.mark.parametrize("name", ["dashboard:people"])
+def test_only_leaders_open_people(client_for, name):
     for page in ("entries:dashboard", "judging:assignments", "awards:staff_home"):
         assert client_for(page).get(reverse(name)).status_code == 403
     assert client_for("dashboard:overview").get(reverse(name)).status_code == 200
 
 
 @pytest.mark.django_db
-def test_audit_log_lists_and_filters_entries(saved):
+def test_leaders_have_no_audit_log_page_but_actions_are_still_recorded(saved):
+    from django.urls import NoReverseMatch
+
+    from apps.audit.models import AuditLog
+    with pytest.raises(NoReverseMatch):
+        reverse("dashboard:audit")
     client, leader = leader_client()
+    assert "Audit log" not in client.get(reverse("dashboard:overview")).content.decode()
     with saved():
         client.post(reverse("dashboard:people"), NEW_JUDGE)
-    page = client.get(reverse("dashboard:audit")).content.decode()
-    assert "Create" in page and "user #" in page
-    filtered = client.get(reverse("dashboard:audit"), {"action": "verify"}).content.decode()
-    assert "No entries match" in filtered
-    by_who = client.get(reverse("dashboard:audit"), {"who": leader.email}).content.decode()
-    assert "user #" in by_who
-    bad = client.get(reverse("dashboard:audit"), {"since": "yesterday"}, follow=True).content.decode()
-    assert "Use a date like" in bad
+    assert AuditLog.objects.filter(user=leader, action="create").exists()   # still written (read in /admin/)
 
 
 @pytest.mark.django_db

@@ -2,25 +2,25 @@
 
 {% block title %}Overview{% endblock %}
 {% block heading %}All awards at a glance{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Live from the database. Leadership can see everything but doesn't change scores.</p>{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Live from the database: how far each award has got. Leadership approves each award's result as a whole.</p>{% endblock %}
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-{% if leader_requests %}
-  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>{{ leader_requests }} request{{ leader_requests|pluralize }} waiting for your confirmation</strong>Checked by staff. <a href="{% url 'dashboard:requests' %}">Confirm or refuse them</a>.</div></div>
+{% if results_to_approve %}
+  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>{{ results_to_approve }} award result{{ results_to_approve|pluralize }} waiting for your approval</strong>The award manager has decided every entry. <a href="{% url 'dashboard:results' %}">Approve or send back</a>.</div></div>
 {% endif %}
 <div class="grid grid-4" style="margin-bottom:1.5rem">
   <div class="kpi"><span>Reports submitted</span><strong>{{ total }}</strong></div>
   <div class="kpi"><span>Under evaluation</span><strong>{{ evaluating }}</strong></div>
-  <div class="kpi"><span>Scored, waiting for approval</span><strong>{{ awaiting_approval }}</strong></div>
-  <div class="kpi"><span>Requests to confirm</span><strong>{{ leader_requests }}</strong></div>
+  <div class="kpi"><span>Award results to approve</span><strong>{{ results_to_approve }}</strong></div>
+  <div class="kpi"><span>Award results approved</span><strong>{{ results_approved }}</strong></div>
 </div>
 
 <div class="card">
-  <div class="card-head"><h2>Awards</h2><a class="btn btn-primary btn-sm" href="{% url 'dashboard:results' %}">Approve results</a></div>
+  <div class="card-head"><h2>Awards</h2><a class="btn btn-primary btn-sm" href="{% url 'dashboard:results' %}">Approve award results</a></div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Award</th><th>Stage</th><th>Entries</th><th>Being judged</th><th>Scored</th><th>Approved / rejected</th><th style="width:20%">Judging progress</th></tr></thead>
+      <thead><tr><th>Award</th><th>Stage</th><th>Entries</th><th>Being judged</th><th>Scored</th><th>Successful / not</th><th>Award result</th><th style="width:20%">Judging progress</th></tr></thead>
       <tbody>
         {% for row in awards %}
           <tr>
@@ -30,10 +30,11 @@
             <td>{{ row.award.evaluating }}</td>
             <td>{{ row.award.scored }}</td>
             <td>{{ row.award.approved }} / {{ row.award.rejected }}</td>
+            <td><span class="badge badge-{% if row.award.results_status == 'approved' %}approved{% elif row.award.results_status == 'returned' %}rejected{% else %}pending{% endif %}">{{ row.award.get_results_status_display }}</span></td>
             <td><div class="progress"><span style="width:{{ row.progress }}%"></span></div><span class="muted small">{{ row.progress }}%</span></td>
           </tr>
         {% empty %}
-          <tr><td colspan="7" class="muted small">No awards yet.</td></tr>
+          <tr><td colspan="8" class="muted small">No awards yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>

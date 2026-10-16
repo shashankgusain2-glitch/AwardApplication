@@ -5105,7 +5105,7 @@
           ]
         },
         {
-          "name": "Leader confirms before staff check it \u2192 400",
+          "name": "Leaders don't decide score changes \u2192 403",
           "request": {
             "method": "POST",
             "header": [
@@ -5126,7 +5126,7 @@
                 ""
               ]
             },
-            "description": "Who: staff first, then leader. Expected: 400.",
+            "description": "Who: staff, then the award manager. Expected: 403.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -5153,7 +5153,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));",
                   "pm.test(\"body is {success, data, message, errors}\", () => {",
                   "  const j = pm.response.json();",
                   "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
@@ -5165,7 +5165,7 @@
           ]
         },
         {
-          "name": "Check the change and pass it to leadership (staff)",
+          "name": "Check the change and pass it to the award manager (staff)",
           "request": {
             "method": "POST",
             "header": [
@@ -5219,7 +5219,7 @@
                   "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
                   "  pm.expect(j.success).to.eql(true);",
                   "});",
-                  "pm.test(\"waiting for leadership\", () => pm.expect(pm.response.json().data.status).to.eql(\"staff_approved\"));"
+                  "pm.test(\"waiting for the award manager\", () => pm.expect(pm.response.json().data.status).to.eql(\"staff_approved\"));"
                 ]
               }
             }
@@ -5286,7 +5286,7 @@
           ]
         },
         {
-          "name": "Confirm the change (leader)",
+          "name": "Confirm the change (award manager)",
           "request": {
             "method": "POST",
             "header": [
@@ -5313,7 +5313,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{leader_token}}",
+                  "value": "{{manager_token}}",
                   "type": "string"
                 }
               ]
@@ -5413,7 +5413,7 @@
       "name": "8. Decisions",
       "item": [
         {
-          "name": "Staff approve a result \u2192 400 (leaders only)",
+          "name": "Staff decide a result \u2192 400 (the award manager decides)",
           "request": {
             "method": "POST",
             "header": [
@@ -5434,7 +5434,7 @@
                 ""
               ]
             },
-            "description": "Who: staff. Expected: 400.",
+            "description": "Who: award manager. Expected: 400.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -5473,7 +5473,7 @@
           ]
         },
         {
-          "name": "Approve the result (leader)",
+          "name": "A leader decides a single entry \u2192 400 (leaders approve whole awards)",
           "request": {
             "method": "POST",
             "header": [
@@ -5494,7 +5494,7 @@
                 ""
               ]
             },
-            "description": "Who: leader. Expected: 200.",
+            "description": "Who: award manager. Expected: 400.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -5507,7 +5507,67 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"approved\",\n  \"note\": \"Approved in Postman\"\n}",
+              "raw": "{\n  \"status\": \"approved\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"body is {success, data, message, errors}\", () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
+                  "  pm.expect(j.success).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Decide the entry: successful (award manager)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/applications/{{application_id}}/change-status/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "applications",
+                "{{application_id}}",
+                "change-status",
+                ""
+              ]
+            },
+            "description": "Who: award manager. Expected: 200.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{manager_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\",\n  \"note\": \"Decided in Postman\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5527,7 +5587,7 @@
                   "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
                   "  pm.expect(j.success).to.eql(true);",
                   "});",
-                  "pm.test(\"approved\", () => pm.expect(pm.response.json().data.status).to.eql(\"approved\"));"
+                  "pm.test(\"decided, not published yet\", () => pm.expect(pm.response.json().data.status).to.eql(\"approved\"));"
                 ]
               }
             }
@@ -5555,13 +5615,13 @@
                 ""
               ]
             },
-            "description": "Who: leader. Expected: 400.",
+            "description": "Who: award manager. Expected: 400.",
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{leader_token}}",
+                  "value": "{{manager_token}}",
                   "type": "string"
                 }
               ]
@@ -5588,6 +5648,52 @@
                   "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
                   "  pm.expect(j.success).to.eql(false);",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The applicant still sees it waiting for the decision",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/applications/{{application_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "applications",
+                "{{application_id}}",
+                ""
+              ]
+            },
+            "description": "Who: applicant. Expected: 200.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{new_applicant_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"body is {success, data, message, errors}\", () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
+                  "  pm.expect(j.success).to.eql(true);",
+                  "});",
+                  "pm.test(\"provisional result hidden\", () => pm.expect(pm.response.json().data.status).to.eql(\"scored\"));"
                 ]
               }
             }
@@ -5654,7 +5760,7 @@
           ]
         },
         {
-          "name": "Ask for a re-evaluation of the result (applicant)",
+          "name": "Ask for a re-evaluation before the award's result is approved \u2192 400",
           "request": {
             "method": "POST",
             "header": [
@@ -5675,7 +5781,7 @@
                 ""
               ]
             },
-            "description": "Who: applicant. Expected: 200.",
+            "description": "Who: applicant. Expected: 400.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -5702,20 +5808,19 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
                   "pm.test(\"body is {success, data, message, errors}\", () => {",
                   "  const j = pm.response.json();",
                   "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
-                  "  pm.expect(j.success).to.eql(true);",
-                  "});",
-                  "pm.test(\"requested\", () => pm.expect(pm.response.json().data.reevaluation_status).to.eql(\"requested\"));"
+                  "  pm.expect(j.success).to.eql(false);",
+                  "});"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Staff decide a re-evaluation \u2192 400 (the award manager decides)",
+          "name": "Decide a re-evaluation nobody asked for \u2192 400",
           "request": {
             "method": "POST",
             "header": [
@@ -5742,7 +5847,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{staff_token}}",
+                  "value": "{{manager_token}}",
                   "type": "string"
                 }
               ]
@@ -5769,67 +5874,6 @@
                   "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
                   "  pm.expect(j.success).to.eql(false);",
                   "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Refuse the re-evaluation (award manager)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/applications/{{application_id}}/decide-reevaluation/",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "applications",
-                "{{application_id}}",
-                "decide-reevaluation",
-                ""
-              ]
-            },
-            "description": "Who: award manager. Expected: 200.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{manager_token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"allow\": false,\n  \"note\": \"Scores were consistent.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"body is {success, data, message, errors}\", () => {",
-                  "  const j = pm.response.json();",
-                  "  pm.expect(j).to.have.all.keys('success', 'data', 'message', 'errors');",
-                  "  pm.expect(j.success).to.eql(true);",
-                  "});",
-                  "pm.test(\"result unchanged\", () => { const d = pm.response.json().data; pm.expect(d.status).to.eql(\"approved\"); pm.expect(d.reevaluation_status).to.eql(\"refused\"); });"
                 ]
               }
             }

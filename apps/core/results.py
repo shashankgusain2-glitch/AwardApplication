@@ -6,12 +6,12 @@ The results board (/results/): decided results per award, for every role.
     applicants       the successful entries, plus their own entry whatever its result
     judges           the successful entries
 
-A result is out once a leader approves (successful) or rejects (not successful) a
-scored report. Entries declined at the staff check were never judged and aren't listed.
-The score is the average of the judges' submitted totals. After a re-evaluation is
-approved the first judges' scores stop counting (they are "Replaced"), so the board shows
-the new score once the new judges finish and the result is decided again. While that
-happens the entry is listed as being re-evaluated, with its old result.
+A result is out once leadership approves the award's result (the award manager decided each
+scored entry: successful or not successful), which publishes it. Entries declined at the
+staff check were never judged and aren't listed. The score is the average of the judges'
+submitted totals. After a re-evaluation is approved the first judges' scores stop counting
+(they are "Replaced"); the entry is listed as being re-evaluated, with its old result, until
+leadership approves the award's updated result.
 """
 from django.db.models import Avg, Count, Q
 
@@ -35,9 +35,9 @@ def sees_full_board(user, award):
 
 
 def _on_board():
-    """Entries with a result (judged, then decided), or being re-evaluated after one."""
+    """Published results (leadership approved the award's result), or entries being re-evaluated after one."""
     judged = Application.objects.filter(JUDGED).values("pk")
-    return (Q(status__in=DECIDED) & Q(pk__in=judged)) | Q(reevaluation_status=R.ALLOWED)
+    return (Q(status__in=DECIDED) & Q(result_published=True) & Q(pk__in=judged)) | Q(reevaluation_status=R.ALLOWED)
 
 
 def awards_with_results(user):
@@ -55,7 +55,7 @@ def board(user, award):
                .prefetch_related("requests")
                .annotate(average=Avg("assignments__evaluation__total_score", filter=COUNTED),
                          judged=Count("assignments__evaluation", filter=COUNTED, distinct=True)))
-    decided = sorted([r for r in reports if r.status in DECIDED],
+    decided = sorted([r for r in reports if r.status in DECIDED and r.result_published],
                      key=lambda r: (r.status != S.APPROVED, -(r.average or 0), r.reference))
     rank, previous = 0, None
     for n, report in enumerate(decided, start=1):
@@ -69,7 +69,7 @@ def board(user, award):
         report.mine = report.applicant_id == user.pk
         report.open_request = next((q for q in report.requests.all()
                                     if q.kind == "reevaluation" and q.waiting), None)
-    in_progress = [r for r in reports if r.status not in DECIDED]
+    in_progress = [r for r in reports if not (r.status in DECIDED and r.result_published)]
     for report in in_progress:
         report.previous_label = RESULT_LABEL.get(report.reevaluation_previous_result, "")
         report.mine = report.applicant_id == user.pk

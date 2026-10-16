@@ -52,6 +52,16 @@ class ApplicationSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "reference", "status", "submitted_at", "edit_requested", "edit_allowed",
                             "edit_reason", *REEVALUATION_FIELDS, "created_at", "updated_at"]
 
+    def to_representation(self, instance):
+        """The applicant sees a provisional result as "scored" until leadership approves the award's result."""
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        if request is not None and getattr(request.user, "role", "") == "applicant":
+            from apps.applications.services import provisional
+            if provisional(instance):
+                data["status"] = Application.Status.SCORED
+        return data
+
 
 class ApplicationCreateSerializer(serializers.Serializer):
     award = serializers.SlugRelatedField(slug_field="slug", queryset=Award.objects.all())

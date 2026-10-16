@@ -116,11 +116,23 @@ def test_leader_creates_a_third_award_and_its_team_runs_it_end_to_end(seeded):
     report.refresh_from_db()
     assert report.status == "scored"
 
-    # A leader approves; the overview lists the new award
+    # Its manager decides the entry and sends the award's result; a leader approves the whole award
+    manager = Client()
+    manager.force_login(manager_user)
+    session = manager.session
+    session["role"] = "manager"
+    session.save()
+    manager.post(reverse("awards:decide_result", args=[report.pk]), {"decision": "successful"})
+    manager.post(reverse("awards:send_results", args=[award.slug]), {"note": "One strong entry"})
+    award.refresh_from_db()
+    assert award.results_status == "submitted"
     leader = seeded_client("leader")
-    leader.post(reverse("dashboard:decide", args=[report.pk]), {"decision": "approve"})
+    page = leader.get(reverse("dashboard:results")).content.decode()
+    assert "Energy Efficiency Award" in page and "One strong entry" in page
+    leader.post(reverse("dashboard:decide_award", args=[award.slug]), {"decision": "approve"})
     report.refresh_from_db()
-    assert report.status == "approved"
+    award.refresh_from_db()
+    assert report.status == "approved" and report.result_published and award.results_status == "approved"
     assert "Energy Efficiency Award" in leader.get(reverse("dashboard:overview")).content.decode()
 
 

@@ -15,19 +15,20 @@ from apps.core.services import BusinessRuleError
 from apps.evaluations import services as evaluations
 from apps.evaluations.models import ScoreChange
 
-from ..factories import ApplicationFactory, AwardFactory, JudgeFactory, LeaderFactory, StaffFactory
+from ..factories import ApplicationFactory, AwardFactory, JudgeFactory, LeaderFactory, ManagerFactory, StaffFactory
 
 
 @pytest.fixture
 def submitted(db):
-    """A judge's submitted evaluation (approach 6, results 7); staff checked and a leader confirmed a change."""
+    """A judge's submitted evaluation (approach 6, results 7); the award manager confirmed a change after staff."""
     award = AwardFactory(judges_per_report=1)
     staff, judge = StaffFactory(), JudgeFactory(awards=[award])
+    manager = ManagerFactory(awards=[award])
     assignment = assignments.assign(ApplicationFactory(award=award), judge, by=staff)
     evaluation = evaluations.save(assignment, judge=judge, scores={"approach": 6, "results": 7}, submit=True)
     request = evaluations.request_change(evaluation, judge=judge, reason="Misread the results section")
     evaluations.decide_change(request, by=staff, approve=True)
-    evaluations.decide_change(request, by=LeaderFactory(), approve=True)
+    evaluations.decide_change(request, by=manager, approve=True)
     return {"evaluation": evaluation, "judge": judge, "staff": staff}
 
 

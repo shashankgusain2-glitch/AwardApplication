@@ -40,6 +40,24 @@ class Award(TimeStampedModel, SoftDeleteModel):
     staff = models.ManyToManyField("accounts.User", blank=True, related_name="staff_awards",
                                    limit_choices_to={"role": "staff"})
 
+    # The award's result, approved by leadership as a whole (apps/awards/results.py): the award
+    # manager decides each entry and sends the result; a leader approves it (published) or sends it back.
+    class Results(models.TextChoices):
+        NOT_SENT = "", "Not sent yet"
+        SUBMITTED = "submitted", "Waiting for leadership"
+        APPROVED = "approved", "Approved"
+        RETURNED = "returned", "Sent back to the award manager"
+
+    results_status = models.CharField(max_length=20, choices=Results.choices, blank=True, default="",
+                                      db_index=True)
+    results_note = models.TextField(blank=True, default="", help_text="The manager's note, or why it was sent back")
+    results_submitted_by = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL,
+                                             related_name="+")
+    results_submitted_at = models.DateTimeField(null=True, blank=True)
+    results_decided_by = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL,
+                                           related_name="+")
+    results_decided_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         ordering = ["name"]
         constraints = [

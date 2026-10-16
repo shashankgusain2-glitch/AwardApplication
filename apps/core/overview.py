@@ -108,7 +108,8 @@ def leader_overview():
         "evaluating": reports.filter(status__in=UNDER_EVALUATION).count(),
         "awaiting_approval": reports.filter(status=S.SCORED).count(),
         "decided": reports.filter(status__in=[S.APPROVED, S.REJECTED]).count(),
-        "leader_requests": len(approvals.for_leaders(approvals.waiting(approvals.T.WAITING_LEADER))),
+        "results_to_approve": Award.objects.filter(results_status=Award.Results.SUBMITTED).count(),
+        "results_approved": Award.objects.filter(results_status=Award.Results.APPROVED).count(),
         "awards": _per_award(),
     }
 

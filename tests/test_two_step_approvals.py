@@ -15,7 +15,15 @@ from apps.evaluations import services as evaluations
 from apps.evaluations.models import ScoreChange
 from apps.notifications.models import Notification
 
-from .factories import ApplicationFactory, AwardFactory, JudgeFactory, LeaderFactory, ManagerFactory, StaffFactory
+from .factories import (
+    ApplicationFactory,
+    AwardFactory,
+    JudgeFactory,
+    LeaderFactory,
+    ManagerFactory,
+    StaffFactory,
+    decide,
+)
 
 
 @pytest.fixture
@@ -146,7 +154,7 @@ def _scored(people):
 
 
 @pytest.mark.django_db
-def test_score_change_needs_staff_then_leadership(people):
+def test_score_change_needs_staff_then_the_award_manager(people):
     report, evaluation = _scored(people)
     req = evaluations.request_change(evaluation, judge=people["judge"], reason="Misread the results")
     with pytest.raises(BusinessRuleError, match="staff check this request first"):
@@ -154,7 +162,10 @@ def test_score_change_needs_staff_then_leadership(people):
     evaluations.decide_change(req, by=people["staff"], approve=True, note="Fair")
     with pytest.raises(BusinessRuleError, match="Ask for permission"):           # staff alone isn't enough
         evaluations.change_scores(evaluation, judge=people["judge"], scores={"results": 9}, reason="Misread")
-    evaluations.decide_change(req, by=people["leader"], approve=True)
+    with pytest.raises(BusinessRuleError, match="needs the award manager"):      # leaders aren't involved
+        evaluations.decide_change(req, by=people["leader"], approve=True)
+    assert not Notification.objects.filter(user=people["leader"]).exists()
+    evaluations.decide_change(req, by=people["manager"], approve=True)
     evaluations.change_scores(evaluation, judge=people["judge"], scores={"results": 9}, reason="Misread")
     assert ScoreChange.objects.get().new_score == 9
 
@@ -164,14 +175,14 @@ def test_score_change_is_blocked_once_the_result_is_decided(people):
     report, evaluation = _scored(people)
     req = evaluations.request_change(evaluation, judge=people["judge"], reason="Misread")
     evaluations.decide_change(req, by=people["staff"], approve=True)
-    evaluations.decide_change(req, by=people["leader"], approve=True)
+    evaluations.decide_change(req, by=people["manager"], approve=True)
     report.refresh_from_db()
-    applications.change_status(report, by=people["leader"], new_status="approved")   # result decided meanwhile
+    decide(report)                                                    # result decided meanwhile
     with pytest.raises(BusinessRuleError, match="already been decided"):
         evaluations.change_scores(evaluation, judge=people["judge"], scores={"results": 9}, reason="Misread")
 
     other_report, other = _scored({**people, "judge": JudgeFactory(awards=[people["award"]])})
-    applications.change_status(other_report, by=people["leader"], new_status="rejected")
+    decide(other_report, successful=False)
     with pytest.raises(BusinessRuleError, match="already been decided"):
         evaluations.request_change(other, judge=other.assignment.judge, reason="Too late")
 
@@ -181,43 +192,9 @@ def test_a_waiting_score_change_cannot_be_approved_after_the_result(people):
     report, evaluation = _scored(people)
     req = evaluations.request_change(evaluation, judge=people["judge"], reason="Misread")
     report.refresh_from_db()
-    applications.change_status(report, by=people["leader"], new_status="approved")
+    decide(report)
     with pytest.raises(BusinessRuleError, match="Refuse this request"):
         evaluations.decide_change(req, by=people["staff"], approve=True)
     evaluations.decide_change(req, by=people["staff"], approve=False, note="Result already decided")
     assert "Result already decided" in Notification.objects.filter(
         user=people["judge"]).latest("created_at").message
-
-
-@pytest.mark.django_db
-def test_a_leader_opens_a_score_change_from_the_notification_and_decides_it(people, client):
-    from django.urls import reverse
-
-    from .conftest import login
-    report, evaluation = _scored(people)
-    req = evaluations.request_change(evaluation, judge=people["judge"], reason="I misread the energy table")
-    evaluations.decide_change(req, by=people["staff"], approve=True, note="Fair")
-    note = Notification.objects.get(user=people["leader"])
-    assert note.link == reverse("dashboard:request_detail", args=["score", req.pk])
-
-    people["leader"].set_password("Test-pass-2026!")
-    people["leader"].save()
-    login(client, people["leader"].email, "Test-pass-2026!")
-    page = client.post(reverse("notifications:open", args=[note.pk]), follow=True).content.decode()
-    assert "I misread the energy table" in page and "Confirm" in page and "Refuse" in page
-    client.post(reverse("core:decide_request", args=["score", req.pk]), {"decision": "approve"})
-    req.refresh_from_db()
-    assert req.status == "approved"
-    assert "Nothing to confirm: this request was already confirmed" in client.get(note.link).content.decode()
-    assert client.get(reverse("dashboard:request_detail", args=["applicant", req.pk])).status_code == 404
-
-
-@pytest.mark.django_db
-def test_deciding_a_score_change_clears_the_leaders_reminder(people):
-    report, evaluation = _scored(people)
-    other_leader = LeaderFactory()
-    req = evaluations.request_change(evaluation, judge=people["judge"], reason="Misread the results")
-    evaluations.decide_change(req, by=people["staff"], approve=True)
-    assert Notification.objects.filter(user__role="leader", is_read=False).count() == 2
-    evaluations.decide_change(req, by=other_leader, approve=False, note="Scores stand")
-    assert not Notification.objects.filter(user__role="leader", is_read=False).exists()   # no stale "waiting"

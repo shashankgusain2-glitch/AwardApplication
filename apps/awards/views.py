@@ -652,7 +652,7 @@ def duplicate_decide(request, pk):
 
 # --- Re-evaluations: the award manager decides, then chooses fresh judges ----------------
 
-@role_required("staff", "manager", "leader")
+@role_required("staff", "manager")
 def reevaluations(request):
     """
     Re-evaluation requests on this person's awards. The award manager (a leader, if the award
@@ -688,7 +688,7 @@ def reevaluations(request):
     })
 
 
-@role_required("staff", "manager", "leader")
+@role_required("staff", "manager")
 @require_POST
 def reevaluation_decide(request, pk):
     from apps.applications.models import ApplicantRequest
@@ -711,3 +711,61 @@ def reevaluation_decide(request, pk):
     if request.user.role in ("staff", "manager"):
         return redirect("awards:assign", pk=req.application.pk)
     return redirect("awards:reevaluations")
+
+
+# --- Results: the award manager decides each entry, then sends the award's result -----------
+
+@role_required("staff", "manager")
+def prepare_results(request):
+    """
+    One tab per award: entries still with staff or judges, scored entries to decide
+    (Successful / Not successful, with every judge's total), decided entries, and
+    "Send results to leadership". Leadership approves the award's result as a whole.
+    """
+    from apps.awards import results
+    from apps.dashboard.views import _with_scores
+    from apps.evaluations.models import Evaluation
+
+    awards = list(awards_for(request.user).select_related("manager", "results_decided_by").order_by("name"))
+    award = next((a for a in awards if a.slug == request.GET.get("award")), awards[0] if awards else None)
+    context = {"role": request.user.role, "awards": awards, "award": award}
+    if award:
+        st = results.state(award)
+        ids = [r.pk for r in st["to_decide"] + st["decided"]]
+        scored = {r.pk: r for r in _with_scores(Application.objects.filter(pk__in=ids)
+                                                .select_related("applicant__applicant_profile"))}
+        for report in scored.values():
+            report.totals = list(Evaluation.objects.filter(assignment__report=report, status="submitted")
+                                 .exclude(assignment__status="superseded")
+                                 .values_list("total_score", flat=True))
+        context.update({
+            "state": st, "can_prepare": results.can_prepare(request.user, award),
+            "preparer": results.preparer_label(award),
+            "to_decide": sorted((scored[r.pk] for r in st["to_decide"]), key=lambda r: -(r.average or 0)),
+            "decided": sorted((scored[r.pk] for r in st["decided"]),
+                              key=lambda r: (r.status != Application.Status.APPROVED, -(r.average or 0))),
+        })
+    return render(request, "awards/prepare_results.html", context)
+
+
+@role_required("staff", "manager")
+@require_POST
+def decide_result(request, pk):
+    from apps.awards import results
+
+    report = get_object_or_404(application_services.visible_to(request.user), pk=pk)
+    successful = request.POST.get("decision") == "successful"
+    return _decide(request, lambda: results.decide_entry(report, by=request.user, successful=successful),
+                   f"{report.reference}: {'successful' if successful else 'not successful'} (not published until "
+                   f"leadership approves the award's result).")
+
+
+@role_required("staff", "manager")
+@require_POST
+def send_results(request, slug):
+    from apps.awards import results
+
+    award = get_object_or_404(awards_for(request.user), slug=slug)
+    return _decide(request, lambda: results.send_to_leadership(award, by=request.user,
+                                                              note=request.POST.get("note", "")),
+                   f"{award.name}: result sent to leadership for approval.")

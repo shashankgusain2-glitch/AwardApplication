@@ -12,6 +12,7 @@ from rest_framework.test import APIClient
 from apps.applications import services as applications
 from apps.assignments import services as assignments
 from apps.assignments.models import ConflictOfInterest, JudgeAssignment
+from apps.awards import results
 from apps.core.services import BusinessRuleError
 from apps.dashboard.views import _with_scores
 from apps.evaluations import services as evaluations
@@ -40,7 +41,10 @@ def _score(report, judge, staff, value):
 
 @pytest.fixture
 def decided():
-    """A report scored 3/10 by judges A and B, then rejected by leadership. Judges C and D are free."""
+    """
+    A report scored 3/10 by judges A and B; its manager marked it not successful and leadership
+    approved the award's result (published). Judges C and D are free.
+    """
     award = AwardFactory(judges_per_report=2)
     manager = ManagerFactory(awards=[award])
     staff, leader = StaffFactory(), LeaderFactory()
@@ -48,7 +52,10 @@ def decided():
     report = ApplicationFactory(award=award)
     first = [_score(report, judges[0], staff, 3), _score(report, judges[1], staff, 3)]
     report.refresh_from_db()
-    applications.change_status(report, by=leader, new_status="rejected")
+    results.decide_entry(report, by=manager, successful=False)
+    results.send_to_leadership(award, by=manager)
+    results.approve(award, by=leader)
+    report.refresh_from_db()
     return {"report": report, "award": award, "manager": manager, "staff": staff, "leader": leader,
             "judges": judges, "first": first}
 
@@ -109,14 +116,18 @@ def test_only_the_award_manager_decides_in_one_step(decided):
 
 
 @pytest.mark.django_db
-def test_a_leader_decides_when_the_award_has_no_manager(decided):
+def test_without_a_manager_the_awards_staff_decide_never_a_leader(decided):
     award, report = decided["award"], decided["report"]
     award.manager = None
     award.save()
     report.refresh_from_db()
+    leaders_before = Notification.objects.filter(user=decided["leader"]).count()
     applications.request_reevaluation(report, by=report.applicant, reason="Please check again.")
-    assert Notification.objects.filter(user=decided["leader"], kind=Notification.Kind.REQUEST).exists()
-    applications.decide_reevaluation(report, by=decided["leader"], allow=True)
+    assert Notification.objects.filter(user=decided["staff"], kind=Notification.Kind.REQUEST).exists()
+    assert Notification.objects.filter(user=decided["leader"]).count() == leaders_before
+    with pytest.raises(BusinessRuleError):
+        applications.decide_reevaluation(report, by=decided["leader"], allow=True)
+    applications.decide_reevaluation(report, by=decided["staff"], allow=True)
     report.refresh_from_db()
     assert report.status == "accepted"
 
@@ -145,9 +156,11 @@ def test_approved_reevaluation_uses_fresh_judges_and_keeps_the_old_scores_as_his
     assert report.status == "scored" and evaluations.report_progress(report) == 100
     row = _with_scores(type(report).objects.filter(pk=report.pk)).get()
     assert (row.judged, float(row.average)) == (2, 8.5)                  # the old 3/10 scores don't count
-    applications.change_status(report, by=decided["leader"], new_status="approved")
+    results.decide_entry(report, by=decided["manager"], successful=True)
+    results.send_to_leadership(decided["award"], by=decided["manager"])
+    results.approve(decided["award"], by=decided["leader"])
     report.refresh_from_db()
-    assert report.status == "approved"
+    assert report.status == "approved" and report.result_published
     assert not applications.can_request_reevaluation(report)            # once only
 
 
@@ -205,15 +218,24 @@ def test_the_whole_flow_on_the_web_pages(decided, client):
     page = client.get(board).content.decode()
     assert "Being re-evaluated" in page and "was not successful" in page
 
-    # New judges score it, leadership decides again: the board shows the new result
+    # New judges score it; the manager decides it again and sends the award's updated result
     for judge, value in ((judges[2], 8), (judges[3], 9)):
         assignment = report.assignments.get(judge=judge)
         assignments.start_review(assignment, judge=judge)
         evaluations.save(assignment, judge=judge, scores={"approach": value, "results": value}, submit=True)
     report.refresh_from_db()
+    _as(client, manager)
+    client.post(reverse("awards:decide_result", args=[report.pk]), {"decision": "successful"})
+    client.post(reverse("awards:send_results", args=[award.slug]), {"note": "Re-evaluated entry"})
+    award.refresh_from_db()
+    assert award.results_status == "submitted", results.state(award)["blockers"]
+    _as(client, report.applicant)
+    assert "Being re-evaluated" in client.get(board).content.decode()   # not out until leadership approves
+    # ...and leadership approves the award's result: the board shows the new result
     _as(client, decided["leader"])
-    assert "Re-evaluation: new judges" in client.get(reverse("dashboard:results")).content.decode()
-    client.post(reverse("dashboard:decide", args=[report.pk]), {"decision": "approve"})
+    page = client.get(reverse("dashboard:results")).content.decode()
+    assert "re-evaluated, was not successful" in page and "Re-evaluated entry" in page
+    client.post(reverse("dashboard:decide_award", args=[award.slug]), {"decision": "approve"})
     _as(client, report.applicant)
     page = client.get(board).content.decode()
     assert "Successful" in page and "8.50" in page and "Re-evaluated · was not successful" in page

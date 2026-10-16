@@ -39,7 +39,7 @@ Most lists also accept **filters** (e.g. `?status=submitted&award=kaizen`), **se
 | `/applications/{id}/submit/` | POST | applicant (own) | Checks required answers, then locks it |
 | `/applications/{id}/request-edit/` | POST | applicant (own) | `{reason}`: ask staff to allow changes |
 | `/applications/{id}/decide-edit/` | POST | staff, leader | `{allow}` |
-| `/applications/{id}/change-status/` | POST | staff, manager, leader | `{status: accepted\|rejected\|approved, note}`: accept a submitted entry (verified organisation, no undecided duplicate in the award), decline it (`rejected`, note required) or approve a scored one (leader only) |
+| `/applications/{id}/change-status/` | POST | staff, manager | `{status: accepted\|rejected\|approved, note}`: staff accept a submitted entry or decline it (`rejected`, note required); the **award manager** decides a scored entry (`approved` = successful, `rejected` = not successful; published only when leadership approves the award's result on the web) |
 | `/applications/{id}/attachments/` | POST (multipart) | applicant (own, while editable) | `{question_key, file}`: PDF/JPG/PNG up to 10 MB on a file question; replaces an earlier file. Returns `download_url` |
 | `/attachments/{id}/download/` | GET | owner, staff, leader, judges assigned to the report | The file. Blind rounds give judges a neutral file name; anyone else gets 404 |
 | `/applications/{id}/eligible-judges/` | GET | staff, leader | Judges who may take it: panel, no conflict, under limit, best first |

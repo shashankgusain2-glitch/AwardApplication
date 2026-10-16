@@ -30,6 +30,11 @@ class IsLeader(HasRole):
     roles = ("leader",)
 
 
+class IsStaffOrManager(HasRole):
+    """Programme staff and award managers (the people who run an award day to day)."""
+    roles = ("staff", "manager")
+
+
 class IsStaffOrLeader(HasRole):
     """Staff, award managers and leaders. What each sees is narrowed by apps/awards/access.py."""
     roles = ("staff", "manager", "leader")

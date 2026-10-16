@@ -5,10 +5,9 @@ Two-step confirmation for requests made after submitting (TwoStepApproval models
       │                          │
       └──staff refuse──▶ refused └──refused──▶ refused
 
-Who gives the final confirmation (confirmer()):
-    an applicant's edit request   the award's manager; if the award has no active manager, the
-                                  staff check is the final step (leaders are never involved)
-    a judge's score change        a leader
+Who gives the final confirmation (confirmer()): the award's manager, for an applicant's edit
+request and a judge's score change alike. If the award has no active manager, the staff check
+is the final step. Leaders are never involved (they approve each award's result as a whole).
 
 Staff on that award check first (the award manager may, only if the award has no staff, and
 not for an edit they would then confirm themselves); nobody can skip that step, and staff
@@ -24,7 +23,7 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.audit.services import record
 from apps.notifications.models import Notification
-from apps.notifications.services import notify, notify_role
+from apps.notifications.services import notify
 
 from .models import TwoStepApproval as T
 from .services import BusinessRuleError
@@ -41,29 +40,23 @@ def is_edit(request):
 
 
 def confirmer(request):
-    """Who gives the final confirmation: a user (the award manager), or None (leaders, or staff for an edit)."""
-    return award_manager(award_of(request)) if is_edit(request) else None
+    """Who gives the final confirmation: the award manager, or None (then the staff check is final)."""
+    return award_manager(award_of(request))
 
 
 def staff_only(request):
-    """An edit on an award with no active manager: the staff check is the final step."""
-    return is_edit(request) and confirmer(request) is None
+    """An award with no active manager: the staff check is the final step."""
+    return confirmer(request) is None
 
 
 def confirmer_label(request):
     person = confirmer(request)
-    if person:
-        return f"the award manager ({person.display_name})"
-    return "programme staff" if staff_only(request) else "leadership"
+    return f"the award manager ({person.display_name})" if person else "programme staff"
 
 
 def can_confirm(user, request):
     person = confirmer(request)
-    if person:
-        return user.pk == person.pk
-    if staff_only(request):
-        return can_check(user, request)
-    return user.role == User.Role.LEADER
+    return user.pk == person.pk if person else can_check(user, request)
 
 
 def can_check(user, request):
@@ -106,15 +99,7 @@ def step(request, *, by, approve, note=""):
         raise BusinessRuleError("This request has already been decided.")
     request.save()
     record(by, "update", request, changes={"status": request.status, "note": note})
-    if request.status in (T.APPROVED, T.REFUSED) and not is_edit(request):
-        _clear_leader_reminders(request)
     return request.status
-
-
-def _clear_leader_reminders(request):
-    """Decided: the leaders' "waiting for you" notifications about it are no longer work to do."""
-    from django.utils import timezone as tz
-    Notification.objects.filter(link=_leader_link(request), is_read=False).update(is_read=True, read_at=tz.now())
 
 
 def reevaluation_approver(award):
@@ -123,10 +108,11 @@ def reevaluation_approver(award):
 
 
 def can_decide_reevaluation(user, award):
+    """The award manager; the award's programme staff if it has no active manager. Never leaders."""
     approver = reevaluation_approver(award)
     if approver is not None:
         return user.pk == approver.pk
-    return user.role == User.Role.LEADER
+    return user.role == User.Role.STAFF and award.staff.filter(pk=user.pk).exists()
 
 
 def manager_step(request, *, by, approve, note=""):
@@ -138,7 +124,7 @@ def manager_step(request, *, by, approve, note=""):
         approver = reevaluation_approver(award)
         raise BusinessRuleError(f"The award manager ({approver.display_name}) decides re-evaluations for "
                                 f"{award.name}." if approver else
-                                f"{award.name} has no award manager, so a leader decides re-evaluations.")
+                                f"{award.name} has no award manager, so its programme staff decide re-evaluations.")
     note = (note or "").strip()
     request.decided_by, request.decided_at, request.decision_note = by, timezone.now(), note
     request.status = T.APPROVED if approve else T.REFUSED
@@ -157,12 +143,10 @@ def tell(request, *, requester, what, link, effect=""):
                    + (f" Staff note: {request.staff_note}" if request.staff_note else ""))
         if person:
             notify(person, message, kind=Notification.Kind.REQUEST, link=_staff_link())
-        elif not is_edit(request):                  # leaders only ever hear about score changes
-            notify_role(User.Role.LEADER, message, kind=Notification.Kind.REQUEST, link=_leader_link(request))
         notify(requester, f"{what}: the programme staff checked your request and passed it to {label} "
                f"to confirm.", kind=Notification.Kind.STATUS_CHANGE, link=link)
     elif request.status == T.APPROVED:
-        by_whom = "the award manager" if person else "programme staff" if staff_only(request) else "leadership"
+        by_whom = "the award manager" if person else "programme staff"
         notify(requester, f"{what}: approved by {by_whom}. {effect}{note}".replace("  ", " "),
                kind=Notification.Kind.STATUS_CHANGE, link=link)
         if request.staff_by:
@@ -171,13 +155,6 @@ def tell(request, *, requester, what, link, effect=""):
     elif request.status == T.REFUSED:
         notify(requester, f"{what}: your request was refused.{note}", kind=Notification.Kind.STATUS_CHANGE,
                link=link)
-
-
-def _leader_link(request):
-    """The leader's page for this one request, with Confirm and Refuse."""
-    from django.urls import reverse
-    kind = "applicant" if hasattr(request, "application") else "score"
-    return reverse("dashboard:request_detail", args=[kind, request.pk])
 
 
 def _staff_link():
@@ -223,16 +200,11 @@ def waiting(status, user=None):
             "evaluation__assignment__report__award", "evaluation__assignment__judge", "staff_by"):
         assignment = req.evaluation.assignment
         rows.append({"kind": "score", "label": "Change a submitted score", "request": req, "type": "score",
-                     "confirmer": None, "confirmer_label": "leadership",
+                     "confirmer": confirmer(req), "confirmer_label": confirmer_label(req),
                      "reference": assignment.report.reference, "award": assignment.report.award.name,
                      "report_status": assignment.report.get_status_display(),
                      "who": assignment.judge.display_name, "who_role": "Judge"})
     return sorted(rows, key=lambda r: r["request"].created_at)
-
-
-def for_leaders(rows):
-    """The rows a leader confirms: judges' score changes (never applicants' edits)."""
-    return [r for r in rows if r["confirmer"] is None and r["kind"] == "score"]
 
 
 def to_confirm(user, rows):
