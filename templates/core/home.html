@@ -8,7 +8,6 @@
     <p>{{ org.name }} runs more than 80 awards for business excellence, energy, safety, design, innovation, sustainability and the shop floor. One place to apply, one fair process for everyone.</p>
     <div class="row">
       <a class="btn btn-primary" href="{% url 'core:awards' %}">Explore awards</a>
-      <a class="btn btn-outline-light" href="{% url 'accounts:login' %}">Start your application</a>
     </div>
     <div class="hero-badges">
       {% for sector in sectors %}<span>{{ sector }}</span>{% endfor %}
