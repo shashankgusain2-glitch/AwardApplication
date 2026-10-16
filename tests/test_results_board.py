@@ -23,7 +23,7 @@ def _decided(award, name, average, status):
     """A decided report whose two judges both gave `average`."""
     from apps.assignments.models import JudgeAssignment
     profile = ApplicantProfileFactory(organisation_name=name)
-    report = ApplicationFactory(award=award, applicant=profile.user, status=status)
+    report = ApplicationFactory(award=award, applicant=profile.user, status=status, result_published=True)
     for _ in range(2):
         judge = JudgeFactory(awards=[award])
         assignment = JudgeAssignment.objects.create(judge=judge, report=report, round=1,
@@ -102,3 +102,12 @@ def test_every_role_has_the_results_link(board, client):
 def test_logged_out_visitors_are_sent_to_login(client):
     response = client.get(reverse("core:results"))
     assert response.status_code == 302 and reverse("accounts:login") in response["Location"]
+
+
+def test_a_provisional_result_is_not_on_the_board(board, client):
+    pending = _decided(board["award"], "Pending Ltd", 9.5, S.APPROVED)
+    pending.result_published = False                                     # the manager decided; leadership hasn't
+    pending.save()
+    page = _page(client, board["staff"], board["award"])
+    assert "Pending Ltd" not in page and "Gold Ltd" in page
+

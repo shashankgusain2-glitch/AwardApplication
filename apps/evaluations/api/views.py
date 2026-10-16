@@ -10,7 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.assignments.models import JudgeAssignment
-from apps.core.api.permissions import HasRole, IsJudge, IsStaffOrLeader
+from apps.core.api.permissions import HasRole, IsJudge, IsStaffOrLeader, IsStaffOrManager
 from apps.evaluations import services
 from apps.evaluations.models import Evaluation, ScoreChangeRequest
 
@@ -95,6 +95,11 @@ class ScoreChangeRequestViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin
         # Staff and award managers: only requests on their awards (leaders: all).
         return (ScoreChangeRequest.objects.filter(evaluation__in=services.visible_to(self.request.user))
                 .select_related("evaluation__assignment__judge", "evaluation__assignment__report"))
+
+    def get_permissions(self):
+        if self.action == "decide":       # staff check, the award manager confirms; leaders aren't involved
+            return [IsStaffOrManager()]
+        return super().get_permissions()
 
     @extend_schema(request=ChangeDecisionSerializer, responses=ChangeRequestSerializer)
     @action(detail=True, methods=["post"])

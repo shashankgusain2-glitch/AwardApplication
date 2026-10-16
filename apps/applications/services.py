@@ -25,9 +25,10 @@ MANUAL_TRANSITIONS = {
     (S.SUBMITTED, S.ACCEPTED): ("staff", "manager", "leader"),     # passed the staff check
     (S.SUBMITTED, S.REJECTED): ("staff", "manager", "leader"),     # failed the staff check
     (S.ACCEPTED, S.REJECTED): ("staff", "manager", "leader"),      # found out later (e.g. a duplicate)
-    (S.SCORED, S.APPROVED): ("leader",),                # leaders approve results
-    (S.SCORED, S.REJECTED): ("staff", "manager", "leader"),
 }
+# An entry's result (successful / not) is the award manager's decision, published only when
+# leadership approves the award's result as a whole (apps/awards/results.py).
+OUTCOME_FROM = (S.SCORED, S.APPROVED, S.REJECTED)
 
 
 def visible_to(user):
@@ -238,9 +239,8 @@ def close_edit_requests(application, *, by):
 
 
 def _tell_reevaluation_approver(application, reason):
-    """Re-evaluations go to the award manager (or every leader if the award has no manager); staff are told too."""
+    """Re-evaluations go to the award manager (its staff decide if it has no manager); staff are told too."""
     from apps.core.approvals import reevaluation_approver
-    from apps.notifications.services import notify_role
 
     message = (f"{_what(application, K.REEVALUATION)}: the applicant asks. Reason: {reason} "
                f"Approve it and choose new judges, or refuse it.")
@@ -248,11 +248,12 @@ def _tell_reevaluation_approver(application, reason):
     approver = reevaluation_approver(application.award)
     if approver is not None:
         notify(approver, message, kind=Notification.Kind.REQUEST, link=link)
-    else:
-        notify_role(User.Role.LEADER, message, kind=Notification.Kind.REQUEST, link=link)
-    for person in application.award.staff.filter(is_active=True):
-        notify(person, f"{_what(application, K.REEVALUATION)}: the applicant asks; the award manager decides.",
-               kind=Notification.Kind.INFO, link=link)
+        for person in application.award.staff.filter(is_active=True):
+            notify(person, f"{_what(application, K.REEVALUATION)}: the applicant asks; the award manager decides.",
+                   kind=Notification.Kind.INFO, link=link)
+    else:                                       # no award manager: its programme staff decide
+        for person in application.award.staff.filter(is_active=True):
+            notify(person, message, kind=Notification.Kind.REQUEST, link=link)
 
 
 @transaction.atomic
@@ -272,12 +273,31 @@ def request_edit(application, *, by, reason):
 
 def has_result(application):
     """
-    A result is out: judges scored it and leadership approved or rejected it. An entry
-    declined at the staff check is also "rejected", but nobody judged it, so it has no result.
+    A result is out: judges scored it, the award manager decided it and leadership approved the
+    award's result (published). An entry declined at the staff check is also "rejected", but
+    nobody judged it, so it has no result.
     """
     from apps.evaluations.models import Evaluation
-    return application.status in (S.APPROVED, S.REJECTED) and Evaluation.objects.filter(
-        assignment__report=application, status=Evaluation.Status.SUBMITTED).exists()
+    return application.status in (S.APPROVED, S.REJECTED) and application.result_published and \
+        Evaluation.objects.filter(assignment__report=application, status=Evaluation.Status.SUBMITTED).exists()
+
+
+def provisional(application):
+    """Decided by the award manager, but leadership hasn't approved the award's result yet."""
+    from apps.evaluations.models import Evaluation
+    return application.status in (S.APPROVED, S.REJECTED) and not application.result_published and \
+        Evaluation.objects.filter(assignment__report=application, status=Evaluation.Status.SUBMITTED).exists()
+
+
+def as_applicant_sees(applications):
+    """
+    The applicant doesn't see a provisional result: until leadership approves the award's result
+    it shows as "Scored, waiting for the decision". Changes the objects in memory only (never saved).
+    """
+    for application in applications:
+        if provisional(application):
+            application.status = S.SCORED
+    return applications
 
 
 def can_request_reevaluation(application):
@@ -315,7 +335,7 @@ def decide_request(req, *, by, approve, note=""):
             raise BusinessRuleError(f"{application.reference}: judging has started, so it can't be edited any "
                                     f"more. Refuse this request; the applicant can ask for a re-evaluation "
                                     f"after the result.")
-        if req.kind == K.REEVALUATION and application.status not in (S.APPROVED, S.REJECTED):
+        if req.kind == K.REEVALUATION and not has_result(application):
             raise BusinessRuleError(f"{application.reference} has no final result to re-evaluate any more.")
     if req.kind == K.REEVALUATION:
         return _decide_reevaluation_request(req, by=by, approve=approve, note=note)
@@ -364,7 +384,8 @@ def _start_reevaluation(application, by):
     from apps.assignments.models import JudgeAssignment
 
     application.reevaluation_status = R.ALLOWED
-    application.save(update_fields=["reevaluation_status", "updated_at"])
+    application.result_published = False        # its new result is published with the award's updated result
+    application.save(update_fields=["reevaluation_status", "result_published", "updated_at"])
     for assignment in application.assignments.exclude(status__in=[JudgeAssignment.Status.DECLINED,
                                                                   JudgeAssignment.Status.SUPERSEDED]):
         before = assignment.status
@@ -398,7 +419,13 @@ def decide_reevaluation(application, *, by, allow, note=""):
 
 @transaction.atomic
 def change_status(application, *, by, new_status, note=""):
-    """Status changes staff/leaders make by hand (reject, approve)."""
+    """
+    Status changes made by hand: staff accept or decline a submitted entry; the award manager
+    decides a scored entry's result (apps/awards/results.py; published when leadership approves).
+    """
+    if new_status in (S.APPROVED, S.REJECTED) and application.status in OUTCOME_FROM:
+        from apps.awards import results
+        return results.decide_entry(application, by=by, successful=new_status == S.APPROVED, note=note)
     allowed_roles = MANUAL_TRANSITIONS.get((application.status, new_status))
     if allowed_roles is None:
         raise BusinessRuleError(f"Can't move an application from {application.status} to {new_status}.")
@@ -448,7 +475,8 @@ def applicant_home(user):
     from apps.awards.models import Award
     from apps.evaluations.services import applicant_progress
 
-    applications = list(visible_to(user).prefetch_related("assignments", "award__rounds").order_by("-updated_at"))
+    applications = as_applicant_sees(list(visible_to(user).prefetch_related("assignments", "award__rounds")
+                                          .order_by("-updated_at")))
     for application in applications:
         application.judging = applicant_progress(application)
     entered = {a.award_id for a in applications}

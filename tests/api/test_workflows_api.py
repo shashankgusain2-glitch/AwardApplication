@@ -86,8 +86,10 @@ def test_score_change_needs_staff_permission_reason_and_is_recorded(world, as_us
     too_soon = judge_client.post(f"/api/v1/evaluations/{ev['id']}/change-scores/",
                                  {"scores": {"results": 5}, "reason": "Too soon"}, format="json")
     assert too_soon.status_code == 400                                    # staff alone isn't enough
-    confirmed = as_user(LeaderFactory()).post(f"/api/v1/score-change-requests/{req['id']}/decide/",
-                                              {"approve": True, "note": "Agreed"}, format="json")
+    assert as_user(LeaderFactory()).post(f"/api/v1/score-change-requests/{req['id']}/decide/",
+                                         {"approve": True}, format="json").status_code == 403   # not leaders
+    confirmed = as_user(world["manager"]).post(f"/api/v1/score-change-requests/{req['id']}/decide/",
+                                               {"approve": True, "note": "Agreed"}, format="json")
     assert confirmed.json()["data"]["status"] == "approved"
     changed = judge_client.post(f"/api/v1/evaluations/{ev['id']}/change-scores/",
                                 {"scores": {"results": 5}, "reason": "Results cover one plant only"}, format="json")
@@ -119,15 +121,21 @@ def test_assignment_needs_a_verified_organisation(as_user):
 
 
 @pytest.mark.django_db
-def test_leader_approves_scored_report_staff_cannot(world, as_user):
+def test_the_award_manager_decides_a_scored_report_not_staff_or_leaders(world, as_user):
+    from apps.evaluations import services as evaluations
     report = world["report_1"]
-    report.status = Application.Status.SCORED
-    report.save()
-    assert as_user(world["staff"]).post(f"/api/v1/applications/{report.id}/change-status/",
-                                        {"status": "approved"}, format="json").status_code == 400
-    ok = as_user(LeaderFactory()).post(f"/api/v1/applications/{report.id}/change-status/",
-                                       {"status": "approved"}, format="json")
+    Award.objects.filter(pk=world["award"].pk).update(judges_per_report=1)   # one judge finishes it
+    report.award.refresh_from_db()
+    evaluations.save(world["a1"], judge=world["judge_a"], scores={"approach": 8, "results": 9}, submit=True)
+    report.refresh_from_db()
+    for other in (world["staff"], LeaderFactory()):
+        assert as_user(other).post(f"/api/v1/applications/{report.id}/change-status/",
+                                   {"status": "approved"}, format="json").status_code in (400, 403)
+    ok = as_user(world["manager"]).post(f"/api/v1/applications/{report.id}/change-status/",
+                                        {"status": "approved"}, format="json")
     assert ok.status_code == 200 and ok.json()["data"]["status"] == "approved"
+    report.refresh_from_db()
+    assert not report.result_published                                # out only when leadership approves the award
 
 
 # --- Database rules -----------------------------------------------------------

@@ -1,59 +1,71 @@
 {% extends "portal_base.html" %}
 
-{% block title %}Approve results{% endblock %}
-{% block heading %}Approve results{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Reports every judge has scored, best first. Approve or reject; scores can't be changed here.</p>{% endblock %}
+{% block title %}Approve award results{% endblock %}
+{% block heading %}Approve award results{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Each award's manager decides every entry and sends the award's result here. You approve the result of the whole award (it is then published and every applicant is told) or send it back with a note. You don't decide single applications.</p>{% endblock %}
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-<div class="stack">
-  {% for row in rows %}
-    {% with r=row.report %}
-    <div class="card">
+<h2 style="font-size:1.1rem">Waiting for your approval ({{ waiting|length }})</h2>
+<div class="stack" style="margin-bottom:1.5rem">
+  {% for item in waiting %}
+    {% with award=item.award %}
+    <div class="card" id="{{ award.slug }}" style="border-left:4px solid var(--warning)">
       <div class="row-between">
         <div>
-          <p class="muted small" style="margin:0">{{ r.award.name }} · {{ r.reference }}</p>
-          <h2 style="font-size:1.1rem;margin:.25rem 0">{{ r.applicant.applicant_profile.organisation_name|default:r.applicant.email }}</h2>
-          <p class="small" style="margin:0">{{ r.title }}</p>
-          {% if r.reevaluation_status == "allowed" %}<span class="badge badge-results" style="margin-top:.35rem">Re-evaluation: new judges' scores · was {% if r.reevaluation_previous_result == "approved" %}successful{% else %}not successful{% endif %}</span>{% endif %}
+          <h2 style="font-size:1.15rem;margin:0">{{ award.name }}</h2>
+          <p class="muted small" style="margin:.25rem 0 0">Sent by {{ award.results_submitted_by.display_name|default:"—" }} on {{ award.results_submitted_at|date:"j M Y, H:i" }}{% if award.results_note %} · “{{ award.results_note }}”{% endif %}</p>
         </div>
         <div style="text-align:right">
-          <p class="muted small" style="margin:0">Average</p>
-          <strong style="font-size:1.6rem">{{ r.average|floatformat:2 }}</strong><span class="muted small"> / 10</span>
+          <strong style="font-size:1.4rem">{{ item.successful }}</strong><span class="muted small"> successful of {{ item.rows|length }}</span>
+          {% if item.already_published %}<br><span class="muted small">+ {{ item.already_published }} already published (this updates the result)</span>{% endif %}
         </div>
       </div>
-      {% if row.spread is not None and row.spread >= 2 %}
-        <div class="callout callout-warning" style="margin:.75rem 0 0"><div><strong>Judges disagree</strong>Totals range from {{ r.lowest|floatformat:2 }} to {{ r.highest|floatformat:2 }}. Read the feedback before deciding.</div></div>
-      {% endif %}
       <div class="table-wrap" style="margin-top:.75rem">
         <table>
-          <thead><tr><th>Judge</th><th>Round</th><th>Total / 10</th><th>Feedback</th></tr></thead>
+          <thead><tr><th>Rank</th><th>Organisation</th><th>Average / 10</th><th>Judges</th><th>Result</th></tr></thead>
           <tbody>
-            {% for e in row.evaluations %}
-              <tr><td>{{ e.assignment.judge.display_name }}</td><td class="small">{{ e.assignment.round }}</td><td><strong>{{ e.total_score }}</strong></td><td class="muted small">{{ e.feedback|default:"—" }}</td></tr>
+            {% for r in item.rows %}
+              <tr>
+                <td><strong>{% if r.status == "approved" %}#{{ forloop.counter }}{% else %}—{% endif %}</strong></td>
+                <td>{{ r.applicant.applicant_profile.organisation_name|default:r.applicant.email }}<br><span class="muted small">{{ r.reference }}{% if r.reevaluation_status == "allowed" %} · re-evaluated, was {% if r.reevaluation_previous_result == "approved" %}successful{% else %}not successful{% endif %}{% endif %}</span></td>
+                <td><strong>{{ r.average|floatformat:2 }}</strong>{% if r.highest is not None and r.lowest is not None %}<br><span class="muted small">{{ r.lowest|floatformat:2 }}–{{ r.highest|floatformat:2 }}</span>{% endif %}</td>
+                <td class="small">{{ r.judged }}</td>
+                <td><span class="badge badge-{{ r.status }}">{% if r.status == "approved" %}Successful{% else %}Not successful{% endif %}</span></td>
+              </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-      <form method="post" action="{% url 'dashboard:decide' r.pk %}" class="row" style="margin-top:.75rem">
+      <form method="post" action="{% url 'dashboard:decide_award' award.slug %}" class="row" style="margin-top:.75rem">
         {% csrf_token %}
-        <input name="note" type="text" placeholder="Note (optional, recorded)" style="flex:1">
-        <button class="btn btn-success btn-sm" name="decision" value="approve">Approve</button>
-        <button class="btn btn-outline btn-sm" name="decision" value="reject">Reject</button>
+        <input name="note" type="text" placeholder="Note (required to send back; the award manager sees it)" style="flex:1;min-width:260px" aria-label="Note">
+        <button class="btn btn-success btn-sm" name="decision" value="approve">Approve award result</button>
+        <button class="btn btn-outline btn-sm" name="decision" value="send_back">Send back</button>
       </form>
     </div>
     {% endwith %}
   {% empty %}
-    <div class="card"><p class="muted small" style="margin:0">Nothing is waiting for a decision. Reports appear here once every judge has submitted.</p></div>
+    <div class="card"><p class="muted small" style="margin:0">No award result is waiting for you. An award comes here when its manager has decided every entry and sends the result.</p></div>
   {% endfor %}
 </div>
 
-{% if decided %}
-<div class="card" style="margin-top:1.5rem">
-  <h2 style="font-size:1.1rem">Recently decided</h2>
-  {% for r in decided %}
-    <div class="settings-row"><span><strong>{{ r.reference }}</strong> · {{ r.award.name }}</span><span class="badge badge-{{ r.status }}">{{ r.get_status_display }}</span></div>
-  {% endfor %}
+<div class="card">
+  <h2 style="font-size:1.05rem">Every award</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Award</th><th>Manager</th><th>Result</th><th>Still to do before it comes to you</th></tr></thead>
+      <tbody>
+        {% for p in progress %}
+          <tr>
+            <td><strong>{{ p.award.name }}</strong></td>
+            <td class="small">{{ p.award.manager.display_name|default:"none yet" }}</td>
+            <td><span class="badge badge-{% if p.award.results_status == 'approved' %}approved{% elif p.award.results_status == 'returned' %}rejected{% else %}pending{% endif %}">{{ p.award.get_results_status_display }}</span>{% if p.award.results_status == "approved" %}<br><span class="muted small">{{ p.award.results_decided_at|date:"j M Y" }} · <a href="{% url 'core:results' %}?award={{ p.award.slug }}">results board</a></span>{% elif p.award.results_status == "returned" %}<br><span class="muted small">“{{ p.award.results_note }}”</span>{% endif %}</td>
+            <td class="muted small">{% if p.state.can_send %}Ready: waiting for the manager to send it{% else %}{{ p.state.blockers|join:" " }}{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
-{% endif %}
 {% endblock %}

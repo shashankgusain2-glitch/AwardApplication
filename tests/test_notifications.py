@@ -79,19 +79,30 @@ def test_submit_edit_request_and_decision_reach_the_right_people():
 
 
 @pytest.mark.django_db
-def test_leader_decision_tells_the_applicant(saved, mailoutbox):
-    app = ApplicationFactory(status="scored")
+def test_the_applicant_hears_the_result_only_when_leadership_approves_the_award(saved, mailoutbox):
+    from apps.awards import results
+    award = AwardFactory(judges_per_report=1)
+    manager, staff, judge = ManagerFactory(awards=[award]), StaffFactory(), JudgeFactory(awards=[award])
+    app = ApplicationFactory(award=award)
+    assignment = assignment_services.assign(app, judge, by=staff)
+    evaluation_services.save(assignment, judge=judge, scores={"approach": 8, "results": 9}, submit=True)
+    app.refresh_from_db()
     with saved():
-        application_services.change_status(app, by=LeaderFactory(), new_status="approved", note="Well done")
-    note = Notification.objects.get(user=app.applicant)
-    assert "approved" in note.message and "Well done" in note.message
-    assert mailoutbox[-1].to == [app.applicant.email]
+        results.decide_entry(app, by=manager, successful=True)
+        results.send_to_leadership(award, by=manager)
+    assert not Notification.objects.filter(user=app.applicant, message__contains="results are out").exists()
+    with saved():
+        results.approve(award, by=LeaderFactory())
+    note = Notification.objects.filter(user=app.applicant).latest("created_at")
+    assert "results are out" in note.message and "successful" in note.message
+    assert [app.applicant.email] in [m.to for m in mailoutbox]
 
 
 @pytest.mark.django_db
 def test_score_change_request_and_decision():
     award = AwardFactory()
-    world = {"staff": StaffFactory(), "judge_a": JudgeFactory(awards=[award])}
+    world = {"staff": StaffFactory(), "judge_a": JudgeFactory(awards=[award]),
+             "manager": ManagerFactory(awards=[award])}
     a1 = assignment_services.assign(ApplicationFactory(award=award), world["judge_a"], by=world["staff"])
     assignment_services.start_review(a1, judge=world["judge_a"])
     evaluation = evaluation_services.save(a1, judge=world["judge_a"], scores={"approach": 7, "results": 8},
@@ -99,9 +110,10 @@ def test_score_change_request_and_decision():
     request = evaluation_services.request_change(evaluation, judge=world["judge_a"], reason="Misread")
     assert Notification.objects.filter(user=world["staff"], kind="request").exists()
     evaluation_services.decide_change(request, by=world["staff"], approve=True)
-    assert "passed it to leadership" in Notification.objects.filter(user=world["judge_a"]).first().message
-    evaluation_services.decide_change(request, by=LeaderFactory(), approve=True)
-    assert "approved by leadership" in Notification.objects.filter(user=world["judge_a"]).first().message
+    assert "passed it to the award manager" in Notification.objects.filter(user=world["judge_a"]).first().message
+    assert "waiting for you to confirm" in Notification.objects.filter(user=world["manager"]).first().message
+    evaluation_services.decide_change(request, by=world["manager"], approve=True)
+    assert "approved by the award manager" in Notification.objects.filter(user=world["judge_a"]).first().message
 
 
 @pytest.mark.django_db

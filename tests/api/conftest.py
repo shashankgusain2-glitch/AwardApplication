@@ -3,7 +3,7 @@ from rest_framework.test import APIClient
 
 from apps.assignments import services as assignments
 
-from ..factories import ApplicationFactory, AwardFactory, JudgeFactory, StaffFactory
+from ..factories import ApplicationFactory, AwardFactory, JudgeFactory, ManagerFactory, StaffFactory
 
 
 @pytest.fixture
@@ -30,9 +30,10 @@ def world(db):
     """
     award = AwardFactory()
     staff = StaffFactory()
+    manager = ManagerFactory(awards=[award])
     judge_a, judge_b = JudgeFactory(awards=[award]), JudgeFactory(awards=[award])
     report_1, report_2 = ApplicationFactory(award=award), ApplicationFactory(award=award)
     a1 = assignments.assign(report_1, judge_a, by=staff)
     a2 = assignments.assign(report_2, judge_b, by=staff)
-    return {"award": award, "staff": staff, "judge_a": judge_a, "judge_b": judge_b,
+    return {"award": award, "staff": staff, "manager": manager, "judge_a": judge_a, "judge_b": judge_b,
             "report_1": report_1, "report_2": report_2, "a1": a1, "a2": a2}

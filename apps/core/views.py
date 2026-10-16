@@ -50,7 +50,7 @@ def award_detail(request, slug):
     })
 
 
-@role_required("staff", "manager", "leader")
+@role_required("staff", "manager")
 @require_POST
 def decide_request(request, type, pk):
     """
@@ -84,8 +84,7 @@ def decide_request(request, type, pk):
         messages.success(request, f"{reference}: {req.get_kind_display() if type == 'applicant' else 'score change'} "
                                   f"request {outcome}. The person who asked has been told.")
     target = request.POST.get("next", "")
-    return redirect(target if target.startswith(("/staff/", "/leadership/")) else
-                    ("dashboard:requests" if request.user.role == "leader" else "awards:entries"))
+    return redirect(target if target.startswith("/staff/") else "awards:entries")
 
 
 @role_required("applicant", "judge", "staff", "manager", "leader")

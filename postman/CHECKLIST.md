@@ -100,30 +100,31 @@ Generated from `build_collection.py`, in run order. Tick **Pass/Fail** as you ru
 | 94 | 7. Evaluations | Ask to change a score (judge) | POST | `/api/v1/evaluations/{{evaluation_id}}/request-change/` | judge | 201 | ☐ |
 | 95 | 7. Evaluations | Change scores before anyone allows it → 400 | POST | `/api/v1/evaluations/{{evaluation_id}}/change-scores/` | judge | 400 | ☐ |
 | 96 | 7. Evaluations | Score-change requests (staff) | GET | `/api/v1/score-change-requests/?status=requested` | staff, leader | 200 | ☐ |
-| 97 | 7. Evaluations | Leader confirms before staff check it → 400 | POST | `/api/v1/score-change-requests/{{change_request_id}}/decide/` | staff first, then leader | 400 | ☐ |
-| 98 | 7. Evaluations | Check the change and pass it to leadership (staff) | POST | `/api/v1/score-change-requests/{{change_request_id}}/decide/` | staff first, then leader | 200 | ☐ |
+| 97 | 7. Evaluations | Leaders don't decide score changes → 403 | POST | `/api/v1/score-change-requests/{{change_request_id}}/decide/` | staff, then the award manager | 403 | ☐ |
+| 98 | 7. Evaluations | Check the change and pass it to the award manager (staff) | POST | `/api/v1/score-change-requests/{{change_request_id}}/decide/` | staff first, then leader | 200 | ☐ |
 | 99 | 7. Evaluations | Change scores with only staff's check → 400 | POST | `/api/v1/evaluations/{{evaluation_id}}/change-scores/` | judge | 400 | ☐ |
-| 100 | 7. Evaluations | Confirm the change (leader) | POST | `/api/v1/score-change-requests/{{change_request_id}}/decide/` | staff first, then leader | 200 | ☐ |
+| 100 | 7. Evaluations | Confirm the change (award manager) | POST | `/api/v1/score-change-requests/{{change_request_id}}/decide/` | staff first, then leader | 200 | ☐ |
 | 101 | 7. Evaluations | Change a score with a reason (judge) | POST | `/api/v1/evaluations/{{evaluation_id}}/change-scores/` | judge | 200 | ☐ |
-| 102 | 8. Decisions | Staff approve a result → 400 (leaders only) | POST | `/api/v1/applications/{{application_id}}/change-status/` | staff | 400 | ☐ |
-| 103 | 8. Decisions | Approve the result (leader) | POST | `/api/v1/applications/{{application_id}}/change-status/` | leader | 200 | ☐ |
-| 104 | 8. Decisions | Set an unknown status → 400 | POST | `/api/v1/applications/{{application_id}}/change-status/` | leader | 400 | ☐ |
-| 105 | 8. Decisions | Ask to edit after judging → 400 (only before judging starts) | POST | `/api/v1/applications/{{application_id}}/request-edit/` | applicant | 400 | ☐ |
-| 106 | 8. Decisions | Ask for a re-evaluation of the result (applicant) | POST | `/api/v1/applications/{{application_id}}/request-reevaluation/` | applicant | 200 | ☐ |
-| 107 | 8. Decisions | Staff decide a re-evaluation → 400 (the award manager decides) | POST | `/api/v1/applications/{{application_id}}/decide-reevaluation/` | award manager | 400 | ☐ |
-| 108 | 8. Decisions | Refuse the re-evaluation (award manager) | POST | `/api/v1/applications/{{application_id}}/decide-reevaluation/` | award manager | 200 | ☐ |
-| 109 | 9. Conflicts | Record a conflict (staff) | POST | `/api/v1/conflicts/` | staff, leader | 201 | ☐ |
-| 110 | 9. Conflicts | Conflicted judge is no longer offered | GET | `/api/v1/applications/{{application_id}}/eligible-judges/` | staff, leader | 200 | ☐ |
-| 111 | 9. Conflicts | List conflicts (staff) | GET | `/api/v1/conflicts/` | staff, leader | 200 | ☐ |
-| 112 | 9. Conflicts | Record a conflict as a judge → 403 | POST | `/api/v1/conflicts/` | judge | 403 | ☐ |
-| 113 | 10. Dashboards | Summary (applicant: own reports) | GET | `/api/v1/dashboard/summary/` | applicant | 200 | ☐ |
-| 114 | 10. Dashboards | Summary (judge: own assignments) | GET | `/api/v1/dashboard/summary/` | judge | 200 | ☐ |
-| 115 | 10. Dashboards | Summary (staff: whole event) | GET | `/api/v1/dashboard/summary/` | staff | 200 | ☐ |
-| 116 | 10. Dashboards | Summary (leader: whole event) | GET | `/api/v1/dashboard/summary/` | leader | 200 | ☐ |
-| 117 | 10. Dashboards | Summary with NO token → 401 | GET | `/api/v1/dashboard/summary/` | nobody | 401 | ☐ |
-| 118 | 10. Dashboards | Lookups (codes and labels) | GET | `/api/v1/lookups/` | any logged-in | 200 | ☐ |
-| 119 | 10. Dashboards | My notifications (judge) | GET | `/api/v1/notifications/` | any logged-in | 200 | ☐ |
-| 120 | 10. Dashboards | Mark a notification read (judge) | POST | `/api/v1/notifications/{{notification_id}}/read/` | any logged-in | 200 | ☐ |
-| 121 | 10. Dashboards | Mark ANOTHER user's notification → 404 | POST | `/api/v1/notifications/{{notification_id}}/read/` | judge | 404 | ☐ |
-| 122 | 11. Logout | Logout (new applicant) | POST | `/api/v1/auth/logout/` | any logged-in | 200 | ☐ |
-| 123 | 11. Logout | Refresh after logout → 401 | POST | `/api/v1/auth/refresh/` | anyone | 401 | ☐ |
+| 102 | 8. Decisions | Staff decide a result → 400 (the award manager decides) | POST | `/api/v1/applications/{{application_id}}/change-status/` | award manager | 400 | ☐ |
+| 103 | 8. Decisions | A leader decides a single entry → 400 (leaders approve whole awards) | POST | `/api/v1/applications/{{application_id}}/change-status/` | award manager | 400 | ☐ |
+| 104 | 8. Decisions | Decide the entry: successful (award manager) | POST | `/api/v1/applications/{{application_id}}/change-status/` | award manager | 200 | ☐ |
+| 105 | 8. Decisions | Set an unknown status → 400 | POST | `/api/v1/applications/{{application_id}}/change-status/` | award manager | 400 | ☐ |
+| 106 | 8. Decisions | The applicant still sees it waiting for the decision | GET | `/api/v1/applications/{{application_id}}/` | applicant | 200 | ☐ |
+| 107 | 8. Decisions | Ask to edit after judging → 400 (only before judging starts) | POST | `/api/v1/applications/{{application_id}}/request-edit/` | applicant | 400 | ☐ |
+| 108 | 8. Decisions | Ask for a re-evaluation before the award's result is approved → 400 | POST | `/api/v1/applications/{{application_id}}/request-reevaluation/` | applicant | 400 | ☐ |
+| 109 | 8. Decisions | Decide a re-evaluation nobody asked for → 400 | POST | `/api/v1/applications/{{application_id}}/decide-reevaluation/` | award manager | 400 | ☐ |
+| 110 | 9. Conflicts | Record a conflict (staff) | POST | `/api/v1/conflicts/` | staff, leader | 201 | ☐ |
+| 111 | 9. Conflicts | Conflicted judge is no longer offered | GET | `/api/v1/applications/{{application_id}}/eligible-judges/` | staff, leader | 200 | ☐ |
+| 112 | 9. Conflicts | List conflicts (staff) | GET | `/api/v1/conflicts/` | staff, leader | 200 | ☐ |
+| 113 | 9. Conflicts | Record a conflict as a judge → 403 | POST | `/api/v1/conflicts/` | judge | 403 | ☐ |
+| 114 | 10. Dashboards | Summary (applicant: own reports) | GET | `/api/v1/dashboard/summary/` | applicant | 200 | ☐ |
+| 115 | 10. Dashboards | Summary (judge: own assignments) | GET | `/api/v1/dashboard/summary/` | judge | 200 | ☐ |
+| 116 | 10. Dashboards | Summary (staff: whole event) | GET | `/api/v1/dashboard/summary/` | staff | 200 | ☐ |
+| 117 | 10. Dashboards | Summary (leader: whole event) | GET | `/api/v1/dashboard/summary/` | leader | 200 | ☐ |
+| 118 | 10. Dashboards | Summary with NO token → 401 | GET | `/api/v1/dashboard/summary/` | nobody | 401 | ☐ |
+| 119 | 10. Dashboards | Lookups (codes and labels) | GET | `/api/v1/lookups/` | any logged-in | 200 | ☐ |
+| 120 | 10. Dashboards | My notifications (judge) | GET | `/api/v1/notifications/` | any logged-in | 200 | ☐ |
+| 121 | 10. Dashboards | Mark a notification read (judge) | POST | `/api/v1/notifications/{{notification_id}}/read/` | any logged-in | 200 | ☐ |
+| 122 | 10. Dashboards | Mark ANOTHER user's notification → 404 | POST | `/api/v1/notifications/{{notification_id}}/read/` | judge | 404 | ☐ |
+| 123 | 11. Logout | Logout (new applicant) | POST | `/api/v1/auth/logout/` | any logged-in | 200 | ☐ |
+| 124 | 11. Logout | Refresh after logout → 401 | POST | `/api/v1/auth/refresh/` | anyone | 401 | ☐ |

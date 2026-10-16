@@ -43,6 +43,9 @@ class Application(TimeStampedModel, SoftDeleteModel):
     # Once the result is out the applicant may ask once; confirmed → fresh judges score it again.
     reevaluation_status = models.CharField(max_length=20, choices=Reevaluation.choices, blank=True, default="")
     reevaluation_previous_result = models.CharField(max_length=20, blank=True, default="")
+    # True once leadership approved the award's result with this entry's outcome in it: only
+    # then is the result "out" (results board, the applicant told, re-evaluation possible).
+    result_published = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-created_at"]

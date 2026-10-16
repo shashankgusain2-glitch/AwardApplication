@@ -124,3 +124,21 @@ class ApplicationFactory(factory.django.DjangoModelFactory):
     content = factory.LazyAttribute(lambda o: {"org": "Secret Org Ltd", "city": "Pune", "story": "We cut waste."})
     status = Application.Status.ACCEPTED
     submitted_at = factory.LazyFunction(timezone.now)
+
+
+def decide(report, successful=True):
+    """The award manager's decision on a scored report (provisional: not published)."""
+    from apps.awards import results
+    award = report.award
+    if award.manager is None or not award.manager.is_active:
+        ManagerFactory(awards=[award])
+    return results.decide_entry(report, by=award.manager, successful=successful)
+
+
+def publish(report, successful=True):
+    """A report whose result is out: decided by the manager, published with the award's approved result."""
+    decide(report, successful)
+    report.result_published = True
+    report.save(update_fields=["result_published", "updated_at"])
+    Award.objects.filter(pk=report.award_id).update(results_status=Award.Results.APPROVED)
+    return report

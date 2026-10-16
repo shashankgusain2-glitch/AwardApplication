@@ -83,7 +83,7 @@ def test_screens_show_the_seed_data_not_samples(seeded):
     entries = seeded_client("staff").get(reverse("awards:entries")).content.decode()
     assert "Shri Ganesh Polymers Ltd" in entries and "Northstar Auto Components" in entries
     results = seeded_client("leader").get(reverse("dashboard:results")).content.decode()
-    assert "Coastal Marine Foods" in results
+    assert "Kaizen Competition" in results and "Business Excellence Award" in results
     status = seeded_client("applicant").get(reverse("entries:status")).content.decode()
     assert "Business Excellence Award" in status and "Kaizen Competition" in status
 

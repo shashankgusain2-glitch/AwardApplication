@@ -114,7 +114,7 @@ def application_form(request, slug=None):
     if slug is None:
         entered = {a.award_id for a in mine}
         return render(request, "entries/application_pick.html", {
-            "role": ROLE, "applications": mine,
+            "role": ROLE, "applications": services.as_applicant_sees(list(mine)),
             "open_awards": Award.objects.filter(status=Award.Status.OPEN).exclude(id__in=entered),
             "upcoming_awards": Award.objects.filter(status=Award.Status.UPCOMING).exclude(id__in=entered),
         })
@@ -254,7 +254,8 @@ def _timeline(application):
 @role_required("applicant")
 def application_status(request):
     """Where each of the applicant's own applications is, with dates."""
-    applications = services.visible_to(request.user).select_related("award", "form_version").order_by("-updated_at")
+    applications = services.as_applicant_sees(list(services.visible_to(request.user)
+                                                    .select_related("award", "form_version").order_by("-updated_at")))
     return render(request, "entries/application_status.html", {
         "role": ROLE,
         "rows": [{"application": a, "timeline": _timeline(a), "can_reevaluate": services.can_request_reevaluation(a),

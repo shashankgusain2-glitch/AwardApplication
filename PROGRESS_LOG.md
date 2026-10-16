@@ -213,8 +213,8 @@ Only questions marked identifying (and file names) mention the organisation.
 
 | Kind | Where | Result |
 |---|---|---|
-| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **442 passed, 0 skipped** (16 Oct) |
-| Postman | `postman/` (collection, environment, `CHECKLIST.md`) | **123 requests, 279 checks, 0 failures** with Newman on fresh seed data; repeatable |
+| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **447 passed, 0 skipped** (16 Oct) |
+| Postman | `postman/` (collection, environment, `CHECKLIST.md`) | **124 requests, 280 checks, 0 failures** with Newman on fresh seed data; repeatable |
 | End-to-end | `tests/test_web_workflow.py` and a manual browser run | Sign up → organisation → submit → staff verify and assign → both judges grade → scored → leader approves → applicant sees "Approved" |
 | Rules | `tests/rules/` | Rule 1: 8 tests running. ⚠️ Rule 2 and Rule 3 files are **skipped placeholders**, although those behaviours are tested in `tests/api/`. Rule 4: 6 tests running |
 
@@ -256,6 +256,7 @@ Only questions marked identifying (and file names) mention the organisation.
 | 16 Oct | **Leaders only get notifications they act on**: edit requests are told to the award's staff only and never reach leaders (no manager: the staff check decides); an open edit request closes itself when a judge starts; a leader's score-change notification opens that request's page with Confirm / Refuse; data migrations remove leaders' old edit notifications and relink the rest | The request | `apps/core/approvals.py`, `apps/applications/services.py`, `apps/dashboard/`, `apps/notifications/migrations/` |
 | 16 Oct | Leaders' request page shows Confirm / Refuse at the top; a decided request says there's nothing to confirm and clears the reminder | Leaders opened decided requests and saw no buttons | `templates/dashboard/request_detail.html`, `apps/core/approvals.py` |
 | 16 Oct | **Audit log page removed for leaders** (menu, address, template); actions are still recorded and readable in `/admin/` | The request | `apps/dashboard/`, `apps/core/demo_data.py` |
+| 16 Oct | **Leaders approve each award's result as a whole**: the award manager decides every scored entry on *Prepare results* and sends the award's result once nothing is with staff or judges; a leader approves it (published: results board, applicants told) or sends it back with a note. Applicants see "waiting for the decision" until then. Score changes are confirmed by the award manager; leaders keep Overview, Awards and managers, People, Results board and Approve award results | The request | `apps/awards/results.py`, `apps/dashboard/`, `templates/awards/prepare_results.html` |
 
 ---
 

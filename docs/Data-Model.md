@@ -260,6 +260,8 @@ Replaces the session/`AwardSetting` settings with real columns (data migrated).
 | `applicant_type` | CharField(20, choices) | default `organisation` · `organisation` · `team` · `unit` |
 | `judges_per_report` | PositiveSmallIntegerField | default 2; `Check(1 ≤ n ≤ 7)` |
 | `blind_judging` | BooleanField | default False (only applies to desk rounds; enforced in service) |
+| `results_status` | CharField(20, choices) | **IX** · `""` not sent · `submitted` waiting for leadership · `approved` · `returned` sent back (`apps/awards/results.py`) |
+| `results_note` · `results_submitted_by/at` · `results_decided_by/at` | Text / FK → User (SET_NULL) / DateTime | the manager's note or why it was sent back; who sent and who approved, and when |
 | `entry_fee` | PositiveIntegerField | default 0 (rupees; 0 = no fee) |
 | `manager` | FK → User | N, **SET_NULL**, `related_name="managed_awards"`; role must be `manager` (service). One award manager per award; a manager can run several |
 | `staff` | M2M → User | B, `related_name="staff_awards"`; role must be `staff` (service). The programme staff allocated to this award |
@@ -308,6 +310,7 @@ Replaces the session/`AwardSetting` settings with real columns (data migrated).
 | `form_version` | FK → FormVersion | **PROTECT**: the questions the answers belong to (Rule 4) |
 | `title` | CharField(200) | |
 | `content` | JSONField | default `{}`; answers keyed by question key |
+| `result_published` | BooleanField | default False; True once leadership approves the award's result with this entry in it (only then is the result out) |
 | `status` | CharField(20, choices) | default `draft`, **IX** · `draft` · `submitted` · `accepted` (staff check passed; only these go to judges) · `assigned` · `in_review` · `scored` · `rejected` · `approved` |
 | `submitted_at` | DateTimeField | N |
 | `edit_requested` / `edit_allowed` | BooleanField | default False (changes after submit need staff OK, 12 Oct meeting) |
@@ -446,5 +449,6 @@ Indexes: `(entity, entity_id)`, `(user, -timestamp)`. `save()` refuses updates; 
 - Published form versions are read-only; editing questions publishes a **new version**.
 - Blind judging hides `identifying` answers from judges in **desk** rounds only.
 - Staff **accept** a submitted report before it can go to judges, only for a verified organisation and only when no undecided duplicate of it entered the same award; **declining** needs a reason the applicant sees.
+- The award manager decides each scored entry (approved / rejected); leadership approves the award's result as a whole, which publishes it. Applicants see a result only once it is published.
 - Two duplicate records can't be merged while both have an active entry in the same award; after a merge, conflicts and verification follow the main record.
 - Every assignment, score, score change and status change writes an **AuditLog** row.

@@ -16,7 +16,6 @@ from django.views.decorators.http import require_http_methods, require_POST
 from apps.accounts import services as account_services
 from apps.accounts.models import User
 from apps.accounts.permissions import role_required
-from apps.applications import services as application_services
 from apps.applications.models import Application
 from apps.awards.models import Award
 from apps.core import overview as summaries
@@ -56,34 +55,55 @@ def awards(request):
     })
 
 
+def _ranking(award, published=None):
+    """The award's decided entries, best first, with the judges' average (what the leader approves)."""
+    reports = Application.objects.filter(award=award, status__in=[Application.Status.APPROVED,
+                                                                 Application.Status.REJECTED])
+    if published is not None:
+        reports = reports.filter(result_published=published)
+    reports = _with_scores(reports.select_related("applicant__applicant_profile")).filter(judged__gt=0)
+    return sorted(reports, key=lambda r: (r.status != Application.Status.APPROVED, -(r.average or 0), r.reference))
+
+
 @role_required("leader")
 def results(request):
-    """Scored reports waiting for a decision, best first, with every judge's total."""
-    reports = _with_scores(application_services.visible_to(request.user)
-                           .filter(status=Application.Status.SCORED)
-                           .select_related("applicant__applicant_profile")).order_by("award__name", "-average")
-    rows = []
-    for report in reports:
-        evaluations = Evaluation.objects.filter(assignment__report=report, status=Evaluation.Status.SUBMITTED) \
-            .select_related("assignment__judge").order_by("assignment__round")
-        rows.append({"report": report, "evaluations": evaluations,
-                     "spread": (report.highest - report.lowest) if report.highest is not None else None})
-    decided = application_services.visible_to(request.user).filter(
-        status__in=[Application.Status.APPROVED, Application.Status.REJECTED]).order_by("-updated_at")[:20]
-    return render(request, "dashboard/results.html", {"role": ROLE, "rows": rows, "decided": decided})
+    """
+    Approve each award's result as a whole. The award manager decides every entry and sends the
+    award's result; a leader approves it (published: the results board, applicants told) or sends
+    it back with a note. Leaders don't decide single applications.
+    """
+    from apps.awards import results as award_results
+
+    waiting = []
+    for award in Award.objects.filter(results_status=Award.Results.SUBMITTED).select_related(
+            "manager", "results_submitted_by").order_by("results_submitted_at"):
+        rows = _ranking(award, published=False)
+        waiting.append({"award": award, "rows": rows,
+                        "successful": sum(r.status == Application.Status.APPROVED for r in rows),
+                        "already_published": Application.objects.filter(award=award, result_published=True).count()})
+    others = Award.objects.exclude(results_status=Award.Results.SUBMITTED).select_related("manager",
+                                                                              "results_decided_by")
+    progress = [{"award": a, "state": award_results.state(a)} for a in others.order_by("name")]
+    return render(request, "dashboard/results.html", {"role": ROLE, "waiting": waiting, "progress": progress,
+                                                      "focus": request.GET.get("award", "")})
 
 
 @role_required("leader")
 @require_POST
-def decide(request, pk):
-    """Approve or reject a scored result. Goes through the same rule as the API (leaders approve)."""
-    report = get_object_or_404(application_services.visible_to(request.user), pk=pk)
-    new_status = Application.Status.APPROVED if request.POST.get("decision") == "approve" \
-        else Application.Status.REJECTED
+def decide_award(request, slug):
+    """Approve an award's result, or send it back to the award manager with a note."""
+    from apps.awards import results as award_results
+
+    award = get_object_or_404(Award, slug=slug)
+    note = request.POST.get("note", "")
     try:
-        application_services.change_status(report, by=request.user, new_status=new_status,
-                                           note=request.POST.get("note", ""))
-        messages.success(request, f"{report.reference}: {report.get_status_display().lower()}.")
+        if request.POST.get("decision") == "approve":
+            award_results.approve(award, by=request.user, note=note)
+            messages.success(request, f"{award.name}: result approved. It is on the results board and every "
+                                      f"applicant has been told.")
+        else:
+            award_results.send_back(award, by=request.user, note=note)
+            messages.success(request, f"{award.name}: sent back to {award_results.preparer_label(award)}.")
     except BusinessRuleError as error:
         messages.error(request, str(error))
     return redirect("dashboard:results")
@@ -174,37 +194,3 @@ def person_action(request, pk):
     except BusinessRuleError as error:
         messages.error(request, str(error))
     return redirect("dashboard:people")
-
-
-@role_required("leader")
-def requests_to_confirm(request):
-    """Requests staff have checked, waiting for a leader's final confirmation (or refusal)."""
-    from apps.core import approvals
-    return render(request, "dashboard/requests.html", {
-        "role": ROLE,
-        "rows": approvals.for_leaders(approvals.waiting(approvals.T.WAITING_LEADER)),
-        "with_staff": approvals.for_leaders(approvals.waiting(approvals.T.WAITING_STAFF)),
-    })
-
-
-@role_required("leader")
-def request_detail(request, type, pk):
-    """
-    One request a leader confirms (a judge's score change), opened from its notification:
-    what was asked, the staff check, the current scores, and Confirm / Refuse.
-    """
-    from django.http import Http404
-
-    from apps.core import approvals
-    from apps.evaluations.models import ScoreChangeRequest
-
-    if type != "score":
-        raise Http404("Leaders only confirm judges' score changes.")
-    req = get_object_or_404(ScoreChangeRequest.objects.select_related(
-        "evaluation__assignment__report__award", "evaluation__assignment__judge", "staff_by", "decided_by"), pk=pk)
-    assignment = req.evaluation.assignment
-    return render(request, "dashboard/request_detail.html", {
-        "role": ROLE, "req": req, "assignment": assignment, "report": assignment.report,
-        "scores": req.evaluation.scores.select_related("criterion").order_by("criterion__order"),
-        "can_decide": req.status == approvals.T.WAITING_LEADER and approvals.can_confirm(request.user, req),
-    })

@@ -104,15 +104,22 @@ def test_full_workflow_through_the_web_screens(seeded):
     report.refresh_from_db()
     assert report.status == "scored"
 
-    # 4. Leadership: the result is waiting; approve it
-    leader = seeded_client("leader")
-    assert report.reference in leader.get(reverse("dashboard:results")).content.decode()
-    leader.post(reverse("dashboard:decide", args=[report.pk]), {"decision": "approve", "note": "Winner"})
+    # 4. The award manager decides it; staff and leaders can't
+    for key in ("staff", "leader"):
+        seeded_client(key).post(reverse("awards:decide_result", args=[report.pk]), {"decision": "successful"})
     report.refresh_from_db()
-    assert report.status == "approved"
+    assert report.status == "scored"
+    manager = seeded_client("manager")
+    manager.post(reverse("awards:decide_result", args=[report.pk]), {"decision": "successful"})
+    report.refresh_from_db()
+    assert report.status == "approved" and not report.result_published
 
-    # 5. The applicant sees the outcome on their status page
-    assert "Approved" in applicant.get(reverse("entries:status")).content.decode()
+    # 5. Until leadership approves Kaizen's result, the applicant still sees it waiting
+    page = applicant.get(reverse("entries:status")).content.decode()
+    assert "Scored, waiting for the decision" in page and "Approved" not in page
+    # ...and Kaizen can't go to leadership while other entries are still being judged
+    page = manager.get(reverse("awards:prepare_results") + "?award=kaizen").content.decode()
+    assert "still with staff or judges" in page
 
 
 @pytest.mark.django_db
@@ -123,7 +130,8 @@ def test_web_actions_are_guarded_by_role_and_ownership(seeded):
 
     # wrong role: 403 on staff and leadership actions
     assert applicant.post(reverse("awards:assign", args=[report.pk]), {"action": "auto"}).status_code == 403
-    assert judge.post(reverse("dashboard:decide", args=[report.pk]), {"decision": "approve"}).status_code == 403
+    assert judge.post(reverse("dashboard:decide_award", args=[report.award.slug]),
+                      {"decision": "approve"}).status_code == 403
     assert applicant.post(reverse("awards:verify_organisation", args=[1]), {"decision": "approve"}).status_code == 403
 
     # another judge's assignment: 404, and nothing is saved
@@ -145,12 +153,13 @@ def other_applicant_delete(application):
 
 
 @pytest.mark.django_db
-def test_leader_cannot_approve_before_scoring_and_staff_cannot_approve(seeded):
-    submitted = Application.objects.filter(status="submitted").first()
+def test_leaders_only_approve_an_award_result_the_manager_sent(seeded):
+    from apps.awards.models import Award
     leader = seeded_client("leader")
-    leader.post(reverse("dashboard:decide", args=[submitted.pk]), {"decision": "approve"})
-    submitted.refresh_from_db()
-    assert submitted.status == "submitted"            # only scored reports can be approved
+    response = leader.post(reverse("dashboard:decide_award", args=["kaizen"]), {"decision": "approve"}, follow=True)
+    assert "waiting for leadership" in response.content.decode()
+    assert Award.objects.get(slug="kaizen").results_status == ""
+    assert not Application.objects.filter(result_published=True).exists()
 
 
 @pytest.mark.django_db

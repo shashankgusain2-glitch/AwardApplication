@@ -268,3 +268,20 @@ Each decision: the options, the one we picked, why, and what would change our mi
 | The page | Hide the menu item vs. remove the page | **Removed** (menu item, address `/leadership/audit/`, template); leaders were its only users | A hidden page that still opens by address isn't really removed |
 | The audit trail itself | Stop recording vs. keep | **Kept**: every important action is still recorded (Rule 3 and the applicant's timeline depend on it) and stays read-only in `/admin/` for a superuser | Removing the page mustn't remove the record |
 
+---
+
+## D16. Leadership sees the whole event and approves each award's result as a whole
+
+**Date:** 16 Oct 2026 · Asked by the user: leaders only see the results and a dashboard of how far each award has got, create awards and pick their manager, and approve the result of a whole award, not single applications
+
+| Choice | Options | Picked | Why |
+|---|---|---|---|
+| The leader's pages | Many work queues vs. oversight only | **Overview, Awards and managers, People, Results board, Approve award results.** Requests to confirm, Re-evaluations, All applications, Duplicate review and the Audit log are gone (D13, D15) | The request |
+| Who decides a single entry | The leader vs. the award manager | **The award manager** marks each scored entry Successful / Not successful (*Prepare results*); staff of an award without a manager do it | Leaders approve the event, not applicants |
+| What a leader approves | Each entry vs. the award | **The award's result as a whole** (`Award.results_status`): sent by the manager once every entry is decided (nothing still with staff or judges); approve publishes it (`Application.result_published`), or send it back with a note | The request |
+| When the applicant learns the result | When the manager decides vs. when leadership approves | **When leadership approves**: until then the applicant sees "Scored, waiting for the decision" (web and API), the board doesn't list it, and re-evaluation isn't possible | A provisional result mustn't leak |
+| Judges' score changes | Leader confirms (D14) vs. the award manager | **Staff check, the award manager confirms** (staff alone if the award has no manager), like edits | Leaders are no longer in day-to-day decisions |
+| Re-evaluations on an award without a manager | A leader (D11) vs. its staff | **Its programme staff** | Same reason |
+| After a re-evaluation | Publish automatically vs. approve again | **The manager decides the entry again and sends the award's updated result; leadership approves it** | The result is always a leadership approval |
+| Results decided before this change | Hide vs. keep | **Kept published** (data migration), their awards marked approved | Nothing disappears from the live board |
+
