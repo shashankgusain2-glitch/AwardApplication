@@ -582,7 +582,6 @@ PORTAL_NAV = {
         ("My awards", "awards:staff_home"),
         ("Awards and teams", "awards:award_list"),
         ("Award settings", "awards:settings"),
-        ("Form builder", "awards:form_builder"),
         ("Entries", "awards:entries"),
         ("Assign judges", "awards:assign"),
         ("Prepare results", "awards:prepare_results"),

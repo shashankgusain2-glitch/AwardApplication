@@ -2,13 +2,13 @@
 
 | Document | What it covers |
 |---|---|
-| [Code-Guide.md](Code-Guide.md) | Every file in the codebase: what it does and why it's there |
+| [Code-Guide.md](Code-Guide.md) | How a page is built, every app and where each rule lives |
 | [Setup.md](Setup.md) | How to install, configure, seed and run (Docker or Python) |
 | [API.md](API.md) | REST API: endpoints, who can use them, response format, sample requests |
 | [Data-Model.md](Data-Model.md) | All models, fields, constraints and the ER diagram |
 | [Backend-Foundation-Plan.md](Backend-Foundation-Plan.md) | Phase 2 checklist (done vs. remaining) and day-by-day plan |
-| [Product-Roadmap.md](Product-Roadmap.md) | Product roadmap, phases 0–6 |
-| [Project-Roadmap.md](Project-Roadmap.md) | Project roadmap with stages and timelines |
+| [Product-Roadmap.md](Product-Roadmap.md) | Product roadmap, phases 0–6, with the status of every feature |
+| [Project-Roadmap.md](Project-Roadmap.md) | Project roadmap: phases, status and a dated timeline (11–16 Oct) |
 | [User-Workflows.md](User-Workflows.md) | Journey of each user through an award cycle |
 | [Award-Managers-Changes.md](Award-Managers-Changes.md) | 15 Oct: award managers, staff only see their own awards, leaders create awards (what changed) |
 | [UI-UX.md](UI-UX.md) | Screens, design principles, where each rule shows in the UI |

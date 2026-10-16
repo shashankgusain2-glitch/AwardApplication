@@ -75,17 +75,21 @@ Log in at http://localhost:8000/login/. There is one login form for everybody, a
 
 | Role | Email | Name | Home page after login | What you can try |
 |---|---|---|---|---|
-| Leadership | `leader@awards.example` | A. Verma | `/leadership/` | Counts for the whole event and each award's progress |
-| Staff | `staff@awards.example` | Meena Shah | `/staff/` | Organisations to verify, reports with no judges, award settings |
-| Staff | `staff2@awards.example` | Arjun Mehta | `/staff/` | Same as above (a second staff member) |
-| Judge | `kapoor@judges.example` | Dr. R. Kapoor | `/judge/` | Only his own assignments; Accept or Decline |
-| Judge | `rao@judges.example` | Prof. N. Rao | `/judge/` | A different set of assignments from Kapoor |
+| Leadership | `leader@awards.example` | A. Verma | `/leadership/` | Overview of every award; create an award and pick its manager; People; approve an award's result as a whole; results board |
+| Award manager | `manager@awards.example` | R. Kulkarni | `/staff/` | Manages both demo awards: set-up pages, team, confirm edit and score-change requests, re-evaluations, *Prepare results* (decide each entry, send the award's result) |
+| Staff | `staff@awards.example` | Meena Shah | `/staff/` | On both demo awards: verify organisations, accept or decline entries, duplicate review, form builder, assign judges, check requests |
+| Staff | `staff2@awards.example` | Arjun Mehta | `/staff/` | Same, but on Kaizen only (staff only see their own awards) |
+| Judge | `kapoor@judges.example` | Dr. R. Kapoor | `/judge/` | Only their own assignments; Accept or Decline; score; ask to change a score |
+| Judge | `rao@judges.example` | Prof. N. Rao | `/judge/` | A different set of assignments; has a recorded conflict with Shri Ganesh Polymers |
 | Judge | `iyer@judges.example` | Ms. A. Iyer | `/judge/` | A different set of assignments again |
-| Applicant | `priya@acme.example` | Priya Kulkarni | `/applicant/` | Her own applications (Acme Precision Components, verified) |
+| Applicant | `priya@acme.example` | Priya Kulkarni | `/applicant/` | Their own applications (Acme Precision Components, verified) |
 | Applicant | `ganesh@shriganesh.example` | Ravi Ganesh | `/applicant/` | Shri Ganesh Polymers (verified) |
 | Applicant | `anita@coastalfoods.example` | Anita D'Souza | `/applicant/` | Coastal Marine Foods (verified) |
 | Applicant | `vikram@vertexpharma.example` | Vikram Rao | `/applicant/` | Vertex Pharma Labs (verified) |
-| Applicant | `meera@northstar.example` | Meera Iyer | `/applicant/` | Northstar Auto Components, **not verified yet**, so she sees the "Staff are verifying" message |
+| Applicant | `meera@northstar.example` | Meera Iyer | `/applicant/` | Northstar Auto Components, **not verified yet**, so they see the "Staff are verifying" message |
+| Applicant | `sunil@shreeganesh.example` | Sunil Patel | `/applicant/` | A second registration of Shri Ganesh Polymers (same PAN): shows up on Duplicate review |
+| Applicant | `accounts@coastalmarine.example` | Joseph Fernandes | `/applicant/` | "COASTAL MARINE FOODS PVT. LTD.": a duplicate by name, with a Kaizen draft |
+| Applicant | `neha@vertexlabs.example` | Neha Rao | `/applicant/` | "Vertex Pharma Laboratories": a possible duplicate (similar name), no entries |
 
 Quick checks:
 

@@ -1,6 +1,6 @@
 # Abstraction: what's shared, what changes, and where the model breaks
 
-> **Status: Draft.** Written from the brief, the client meetings and what we built. It will change as we learn more.
+> **Status:** updated 16 Oct 2026 to match what is built. Written from the brief, the client meetings and the code; it will change as we learn more.
 
 The brief's first point: *"The parts every award shares, the parts that change per award, and the point where your model breaks."*
 
@@ -12,19 +12,21 @@ The brief's first point: *"The parts every award shares, the parts that change p
 
 | Shared part | What it does | Where |
 |---|---|---|
-| **People and roles** | Applicant, Judge, Programme staff (Member and Working staff), Leadership | `apps/accounts` |
-| **Organisation profile** | One profile per organisation, keyed by GSTIN, reused for every award | `apps/entries` |
-| **Duplicate check** | Finds the same company under different names | `apps/entries` |
-| **Application lifecycle** | Draft → Submitted → Under review → Shortlisted / Not → Result | `apps/entries` |
-| **Form engine** | Shows any form from its stored questions; auto-saves; remembers which version an entry used | `apps/awards`, `apps/entries` |
-| **Judge assignment** | Never assigns a conflicted judge; matches expertise; spreads the load | `apps/judging` |
-| **Scoring engine** | Each judge scores alone; weighted total per judge; final score = average of judges | `apps/judging` |
-| **Score change log** | Every change after submit records who, when, old value, new value and why | `apps/judging` |
-| **Blind judging engine** | Removes identifying answers and file names on the server, in desk review rounds | `apps/judging` |
-| **Leadership view** | All awards in one table, review queue, approval | `apps/dashboard` |
+| **People and roles** | Applicant, Judge, Programme staff, Award manager, Leader; staff and managers only reach their own awards | `apps/accounts`, `apps/awards/access.py` |
+| **Organisation profile** | One profile per organisation, keyed by GSTIN, reused for every award; verified by staff | `apps/accounts` |
+| **Duplicate check** | Finds the same company under different names or GSTINs (same PAN, cleaned name, similar name); staff merge or keep separate | `apps/accounts/duplicates.py` |
+| **Application lifecycle** | Draft → Submitted → Accepted for judging → Judges assigned → In review → Scored → result (published when leadership approves the award's result) | `apps/applications` |
+| **Form engine** | Shows any form from its stored questions; saves section by section; remembers which version an entry used | `apps/awards`, `apps/entries` |
+| **Judge assignment** | Never offers a conflicted judge; only the award's panel; spreads the load under each judge's limit, best priority first | `apps/assignments` |
+| **Scoring engine** | Each judge scores alone; weighted total per judge; final score = average of judges | `apps/evaluations` |
+| **Score change log** | Every change after submit records who, when, old value, new value and why | `apps/evaluations` |
+| **Blind judging engine** | Removes identifying answers, the title and file names on the server, in desk-review rounds | `apps/assignments` |
+| **Requests after submitting** | Edit and score-change requests: staff check, the award manager confirms; re-evaluation decided by the award manager | `apps/core/approvals.py`, `apps/applications` |
+| **Award results** | The award manager decides each entry; leadership approves the award's result as a whole, which publishes it on the results board | `apps/awards/results.py`, `apps/core/results.py` |
+| **Leadership view** | Every award's progress and result status in one table; award-level approval | `apps/dashboard` |
 | **The 4 rules** | Hold for every award, whatever its settings | Everywhere, tested in `tests/rules/` |
 
-Some of these are still sample screens (for example judge assignment and the duplicate check). What is real and tested is listed in [testing.md](testing.md).
+What is real and tested is listed in [testing.md](testing.md); only the public marketing pages still use sample content.
 
 ## 2. What changes per award (settings staff control, no code)
 
@@ -35,12 +37,13 @@ Some of these are still sample screens (for example judge assignment and the dup
 | Blind judging | On (desk review only) | Off | ✅ Editable, blocked if every round is in person |
 | Judges per entry | 3 | 2 | ✅ Editable |
 | Who applies | Organisation | Team | ✅ Editable |
+| Award manager and staff | Chosen by leadership / the manager | Chosen by leadership / the manager | ✅ Per award (Team page) |
 | Entry fee | None | None | ✅ Editable (amount only; no payment) |
 | Closing date | 30 Nov 2026 | 15 Dec 2026 | ✅ Editable |
-| Form questions | 12 indicators in 3 areas | Short before/after form | 🟡 Stored per award; editing on screen not built yet |
-| Which questions are hidden when blind | Name, location | Team, company, members | 🟡 Stored per question; editing not built yet |
-| Scoring criteria and weights | 30 / 30 / 40 | 25 each | 🟡 Stored per award; editing not built yet |
-| Round 2 criteria | Story, evidence, answers | Seen working, team explains, kept going | 🟡 Stored per award |
+| Form questions | 12 indicators in 3 areas | Short before/after form | ✅ Editable in the form builder (programme staff); each publish is a new version |
+| Which questions are hidden when blind | Name, location | Team, company, members | ✅ Editable per question in the form builder |
+| Scoring criteria and weights | 30 / 30 / 40 | 25 each | ✅ Editable on the award's criteria page (weights add up to 100 per round) |
+| Round 2 criteria | Story, evidence, answers | Seen working, team explains, kept going | ✅ Editable on the same page |
 | Eligibility text, FAQs | Organisation rules | Team rules | 🟡 Stored per award |
 
 ---
@@ -110,7 +113,7 @@ These are the places where real awards don't fit the model above. For each: what
 | **Entry fees** | The amount is a setting, but there's no payment, refund or invoice flow |
 | **Partner organisations** running awards with us | Who sees what, co-branding and data ownership aren't modelled |
 | **Regional awards** | Region = location (confirmed), so each region is its own award; there's no roll-up across regions, which the client said isn't needed |
-| **Appeals** | Handled in the leadership review queue, but there's no applicant-facing appeal form or deadline |
+| **Appeals** | A re-evaluation can be asked once per entry (the award manager decides); other appeals, and a deadline for asking, aren't modelled |
 
 ---
 

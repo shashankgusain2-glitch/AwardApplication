@@ -60,8 +60,13 @@ def test_leader_creates_a_third_award_and_its_team_runs_it_end_to_end(seeded):
     page = manager.get(reverse("awards:award_edit", args=[award.slug])).content.decode()
     assert "Publish the application form" in page and "Choose at least one judge" in page
 
-    # 2. Form  3. Criteria (both rounds = 100)  4. Panel
-    manager.post(reverse("awards:form_edit", args=[award.slug]), {
+    # The manager puts staff2 on the team; programme staff build the form (managers have no form builder)
+    manager.post(reverse("awards:award_team", args=[award.slug]), {"staff": [staff_user.pk]})
+    assert list(award.staff.all()) == [staff_user]
+    assert manager.get(reverse("awards:form_edit", args=[award.slug])).status_code == 403
+
+    # 2. Form (staff)  3. Criteria (both rounds = 100)  4. Panel (manager)
+    staff.post(reverse("awards:form_edit", args=[award.slug]), {
         "rows": "2",
         "q-0-key": "", "q-0-label": "Plant name", "q-0-type": "text", "q-0-section": "About",
         "q-0-required": "on", "q-0-identifying": "on",
@@ -72,12 +77,10 @@ def test_leader_creates_a_third_award_and_its_team_runs_it_end_to_end(seeded):
     kapoor, iyer = User.objects.get(email=ACCOUNTS["judge"]), User.objects.get(email="iyer@judges.example")
     manager.post(reverse("awards:award_panel", args=[award.slug]), {"judges": [kapoor.pk, iyer.pk]})
 
-    # Open it, and put staff2 on the team
+    # Open it
     manager.post(reverse("awards:award_status", args=[award.slug]), {"status": "open"})
     award.refresh_from_db()
     assert award.status == "open" and award.current_form.version == 1
-    manager.post(reverse("awards:award_team", args=[award.slug]), {"staff": [staff_user.pk]})
-    assert list(award.staff.all()) == [staff_user]
 
     # An applicant sees it, applies and submits
     applicant = seeded_client("applicant")
