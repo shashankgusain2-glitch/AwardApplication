@@ -1,8 +1,7 @@
 # Progress Log: Awards Platform
 
-> **Snapshot:** 14 Oct 2026 · `main` at `8477b62` ("steps 3.4 and 3.5").
-> Written from the code, settings, migrations, tests and git history. Where your summary and the code differ, the code wins and the difference is flagged with ⚠️.
-> **Since that snapshot** (branch `feature/form-editor-and-prod-setup`): the staff **form-version editor** with 6 real Rule 4 tests, and the **production setup** (Gunicorn, WhiteNoise, `Dockerfile.prod`, Nginx, Sentry, S3 option, SMTP settings, CI production-image check). Then **email notifications (R4)** and **document upload (R2)**. Then **award administration (R1)** , the **Phase 3 wrap-up (R0)** and **people and audit log (R5)**. Full suite: **340 passed, 1 skipped**.
+> **Snapshot:** 16 Oct 2026 · `main` at `04d5ee8`. A demo site has run on Render + Supabase since 15 Oct, deploying `main`.
+> Written from the code, settings, migrations, tests and git history. Where a summary and the code differ, the code wins and the difference is flagged with ⚠️. The dated change log is §4; the delivery plan is [docs/Project-Roadmap.md](docs/Project-Roadmap.md).
 
 ---
 
@@ -26,9 +25,10 @@ The four rules from the brief:
 | Role | What they do | How the account is created |
 |---|---|---|
 | Applicant | Organisation profile, apply, submit, follow status | Self sign-up (always created as an applicant) |
-| Staff | Verify organisations, assign judges, award settings, approve edit and score-change requests | By a leader (API `POST /users/`), `/admin/`, or `seed_data` |
+| Programme staff | On the awards they are allocated to: verify organisations, accept or decline entries, review duplicates, build forms, assign judges, record conflicts, check edit and score-change requests (first step) | By a leader (People page or API), an award manager (onto their own team), `import_csv`, `/admin/`, or `seed_data` |
+| Award manager | One per award, chosen by leadership: sets the award up, chooses its staff, confirms edit and score-change requests, decides re-evaluations, decides each entry's result and sends the award's result to leadership | By a leader, `import_csv`, or `seed_data` |
 | Judge | Accept or decline assignments; grade **only their own** reports | By a leader, `/admin/`, or `seed_data` |
-| Leader | Oversees everything, approves results, manages accounts; never changes scores | By a leader, `createsuperuser`, or `seed_data` |
+| Leader | Overview of every award, creates awards and picks their manager, manages people, **approves each award's result as a whole**, sees the results board; never changes scores or decides single entries | By a leader, `createsuperuser`, `import_csv`, or `seed_data` |
 
 **Tech stack** (from `requirements/base.txt`, `Dockerfile`, `docker-compose.yml`, `.github/workflows/ci.yml`)
 
@@ -58,13 +58,14 @@ The four rules from the brief:
 | 3.3 Authentication and roles | Done | 3 | Day 1 | `apps/accounts/`, `apps/accounts/permissions.py` (`role_required`), `tests/test_authentication.py`, `tests/test_role_homes.py` |
 | 3.4 Core API | Done | 6 | Day 2 | `config/api_urls.py`, `postman/` (116 requests, 259 checks, 0 failures), `tests/api/` |
 | 3.5 Frontend–backend integration | Done | 4 | Day 2–3 | `apps/{entries,judging,awards,dashboard}/views.py`, `tests/test_web_workflow.py` |
-| 🔍 Quick review | Not started | 1 | Day 3 | n/a |
-| 3.6 Feature slices | Partial (form-version editor done) | 8 | Day 3–4 | `apps/awards/views.py` `form_edit`, `tests/rules/test_rule4_form_versions.py` |
-| 3.7 Validation and edge cases | Partial (service-layer validation exists; no dedicated pass) | 3 | Day 4 | `apps/*/services.py` (`BusinessRuleError`) |
-| 3.8 Mid-point review and cleanup | Not started | 2 | Day 4 | n/a |
-| Phase 4 Testing | Partial (automated tests running in CI) | n/a | ongoing | `.github/workflows/ci.yml`, `docs/testing.md` |
-| Phase 5 Deployment | Not started | n/a | n/a | only `config/settings/prod.py` exists |
-| Phase 6 Maintenance | Not started | n/a | n/a | n/a |
+| 🔍 Quick review | Done | 1 | 14 Oct | Rule 3 bulk-delete gap closed; real Rule 2/3 tests |
+| 3.6 Feature slices | Done | 8 | 14 Oct | `tests/test_web_workflow.py`, `tests/test_award_admin.py` |
+| 3.7 Validation and edge cases | Done | 3 | 14 Oct | `tests/test_bad_input.py`; services raise `BusinessRuleError` with a clear message |
+| 3.8 Mid-point review and cleanup | Done | 2 | 14 Oct | Docs and folder READMEs updated; known gaps in §7 |
+| Phase 4 Testing | In progress (448 automated tests, Postman 124 requests; load, security scan and UAT to do) | n/a | ongoing | `.github/workflows/ci.yml`, `docs/testing.md` |
+| Phase 5 Deployment | Demo site live (15 Oct); real-user set-up to do | n/a | 15 Oct → | Render + Supabase; `render.yaml`, `docs/Deployment.md` |
+| Phase 3+ Client-review changes (award managers, duplicates, entry checks, results, award-level approval) | Done | n/a | 15–16 Oct | §4, decisions D9–D16 |
+| Phase 6 Maintenance | Not started | n/a | after launch | n/a |
 
 ---
 
@@ -190,8 +191,8 @@ Only questions marked identifying (and file names) mention the organisation.
 |---|---|
 | Applicant | Dashboard; organisation profile (GSTIN/PAN checks; GSTIN locked once verified); pick or start an application; form by section (save, next, back, submit, ask to edit); status timeline with dates; delete draft |
 | Judge | My assignments (accept / decline); grading page (save midway, submit, ask to change, change with reason, change history); blind view |
-| Staff | Home; entries (search, filter, verify organisations, decide edit and score-change requests, reject); assign judges (tick or fill with the best; conflicted judges hidden); award settings (saved to DB, audited); form builder (published versions read-only; edit questions → publish a new version) |
-| Leader | Overview counts; all applications with average and spread; approve / reject results |
+| Staff / award manager | Home (to-do counts); entries (search, filter, verify organisations, accept / decline, possible-duplicate badge, requests to check or confirm); duplicate review (staff); assign judges (eligible only, conflicted judges hidden); form builder (staff); award pages (details, criteria, panel, team, status); prepare results (the manager decides and sends); re-evaluations; results board |
+| Leader | Overview of every award; awards and managers (create, pick the manager, team); people; approve award results (whole award: approve or send back); results board |
 | Still sample content | Public marketing pages (home, about, award catalogue text) |
 
 ### 3.5 Security measures in place
@@ -205,7 +206,7 @@ Only questions marked identifying (and file names) mention the organisation.
 | Blind judging | Hiding is done on the server (identifying answers, title, applicant, file names) before the HTML or JSON is built |
 | Tokens | JWT rotation, blacklist on logout and on deactivation; short access lifetime |
 | Web | CSRF on every form; session cookies; `/admin/` for admins only |
-| Production settings | `DEBUG=False`, required `SECRET_KEY` and `ALLOWED_HOSTS`, HTTPS redirect, secure cookies, HSTS, nosniff, `X-Frame-Options: DENY` (in `config/settings/prod.py`, **not yet deployed**) |
+| Production settings | `DEBUG=False`, required `SECRET_KEY` and `ALLOWED_HOSTS`, HTTPS redirect, secure cookies, HSTS, nosniff, `X-Frame-Options: DENY` (in `config/settings/prod.py`; live on the demo site) |
 | Audit | Append-only `AuditLog` for logins, status changes, assignments, scores, score changes, verification and settings |
 | Data | Soft delete for Award and Application; PROTECT on judging history |
 
@@ -213,10 +214,10 @@ Only questions marked identifying (and file names) mention the organisation.
 
 | Kind | Where | Result |
 |---|---|---|
-| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **447 passed, 0 skipped** (16 Oct) |
+| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **448 passed, 0 skipped** (16 Oct) |
 | Postman | `postman/` (collection, environment, `CHECKLIST.md`) | **124 requests, 280 checks, 0 failures** with Newman on fresh seed data; repeatable |
-| End-to-end | `tests/test_web_workflow.py` and a manual browser run | Sign up → organisation → submit → staff verify and assign → both judges grade → scored → leader approves → applicant sees "Approved" |
-| Rules | `tests/rules/` | Rule 1: 8 tests running. ⚠️ Rule 2 and Rule 3 files are **skipped placeholders**, although those behaviours are tested in `tests/api/`. Rule 4: 6 tests running |
+| End-to-end | `tests/test_web_workflow.py`, `tests/test_award_admin.py`, `tests/test_reevaluation.py` and browser runs | Sign up → organisation → submit → staff verify and accept → judges grade → the award manager decides → leadership approves the award → results board → re-evaluation with fresh judges → approved again |
+| Rules | `tests/rules/` | Rules 1–4 all running, no skipped tests (Rule 2 includes conflicts across merged duplicate organisations) |
 
 ---
 
@@ -225,7 +226,7 @@ Only questions marked identifying (and file names) mention the organisation.
 | Date | Change | Why | Main files |
 |---|---|---|---|
 | 11 Oct 2026 | Roadmap, git workflow guide; docs moved to `docs/` | Plan the 10 days | `docs/` |
-| 11 Oct | Django skeleton, architecture, test plan; clickable UI for the website and all four portals (sample data) | See the workflows before building | `apps/`, `templates/`, `static/` |
+| 11 Oct | Django skeleton, architecture, test plan; clickable UI for the website and every portal (sample data) | See the workflows before building | `apps/`, `templates/`, `static/` |
 | 11 Oct | Code guide, undo guide | Beginner-friendly repo | `docs/Code-Guide.md`, `docs/Git-Workflow.md` |
 | 12 Oct | Pre-coding roadmap; two awards made correct; round types (desk / site / live), blind only in desk review; abstraction doc | Brief: two awards differ by settings | `apps/core/demo_data.py`, `apps/awards/` |
 | 13 Oct | Applicant workflow and all-workflows builds, then **reverted** (user decision); renamed "Awards Platform"; folder READMEs | Back to a known-good state | many |
@@ -245,11 +246,14 @@ Only questions marked identifying (and file names) mention the organisation.
 | 14 Oct | Fix: the staff home listed only *submitted* reports as needing judges, so a report short of judges after a decline or a conflict never showed | Bug reported by the user | `apps/core/overview.py`, `templates/awards/staff_home.html` |
 | 14 Oct | Supabase-ready: transaction-pooler setting (`DB_TRANSACTION_POOLER`), S3 path-style option, fixed connection reuse in production (`CONN_MAX_AGE` was set where Django ignores it), Supabase steps in the runbook | Staging on Supabase | `config/settings/{base,prod}.py`, `docs/Deployment.md` |
 | 14 Oct | Production setup: Gunicorn, WhiteNoise, `Dockerfile.prod` (non-root), `docker-compose.prod.yml`, `deploy/nginx.conf`, Sentry, S3 option, SMTP settings, CI production-image job, runbook | Ready to deploy once hosting is chosen | `requirements/prod.txt`, `config/settings/{base,prod}.py`, `docs/Deployment.md`, `.github/workflows/ci.yml` |
+| 15 Oct | **Award managers and award-only access** (D9): a fifth role; one manager per award, chosen by leadership; staff and managers only reach the awards they are on; leaders create awards and pick the manager; a Team page per award | The client's review | `apps/awards/access.py`, `templates/awards/award_team.html` |
+| 15 Oct | **`import_csv`**: real staff, managers, judges, leaders and awards from CSV files; dry run by default, one transaction, templates in `deploy/import-templates/` | Load real data on the live site | `apps/core/management/commands/import_csv.py` |
+| 15 Oct | **Demo site live** on Render (free plan) with PostgreSQL on Supabase, deploying `main`; the local demo data was copied across | Show the platform | `render.yaml`, `docs/Deployment.md` |
 | 15 Oct | **Duplicate organisations, end to end**: `DuplicateCandidate` found on every profile save (same PAN, same cleaned name, similar name); Duplicate review with one tab per award (only pairs that both entered it), merge / keep separate / undo, *Decline as duplicate* on the card; conflicts and verification follow the main record after a merge; demo seed adds 3 second registrations | The screen was sample data | `apps/accounts/duplicates.py`, `apps/awards/views.py`, `templates/awards/duplicates.html` |
 | 15 Oct | **Staff accept or decline each entry**: new status *Accepted for judging*; only accepted entries go to judges; declining needs a reason the applicant sees | Entries went straight to judges | `apps/applications/services.py`, `templates/awards/entries.html` |
 | 15 Oct | **Applicant sees judging progress** ("1 of 3 judges finished · 1 reviewing now"), counts only | It looked stuck on *Assigned to judges* | `apps/evaluations/services.py`, `templates/entries/` |
 | 15 Oct | **Results board** for every role (`/results/`): decided results per award, ranked; applicants see the successful entries and their own, staff/managers the full ranking of their awards | Nobody could see results once they were out | `apps/core/results.py`, `templates/core/results.html` |
-| 15 Oct | **Re-evaluation goes to the award manager**: one step (a leader if there's no manager), then straight to choosing new judges; the result is decided again and the board shows "Re-evaluated · was …" | The request; it was staff check then leader confirm | `apps/applications/services.py`, `apps/core/approvals.py`, `templates/awards/reevaluations.html` |
+| 15 Oct | **Re-evaluation goes to the award manager**: one step (a leader if there's no manager; since 16 Oct the award's staff instead), then straight to choosing new judges; the result is decided again and the board shows "Re-evaluated · was …" | The request; it was staff check then leader confirm | `apps/applications/services.py`, `apps/core/approvals.py`, `templates/awards/reevaluations.html` |
 | 15 Oct | Fixes found while testing: the API couldn't accept entries (`change-status` now takes `accepted`); entries declined at the staff check counted as results; only high duplicate matches block accepting; Postman verifies the organisation after it applies (staff only see organisations on their awards) and decides re-evaluations as the award manager | Postman run and browser check | `apps/applications/api/serializers.py`, `postman/build_collection.py` |
 | 15 Oct | **Edit requests: staff check, then the award manager confirms** (not a leader; a leader only for an award with no manager). Staff on the award take the first step (the manager only if the award has no staff); the manager sees *Waiting for you to confirm* on Entries and on their home page; the applicant's status page, form and notifications name the award manager. Judges' score changes still go to leadership | The request | `apps/core/approvals.py`, `templates/awards/entries.html`, `templates/entries/` |
 | 15 Oct | **Duplicate review is staff-only; leaders' *All applications* page removed**: menu items gone for leaders and award managers, Duplicate review refuses them (403), the overview button opens *Approve results* | The request | `apps/core/demo_data.py`, `apps/awards/views.py`, `apps/dashboard/` |
@@ -257,10 +261,11 @@ Only questions marked identifying (and file names) mention the organisation.
 | 16 Oct | Leaders' request page shows Confirm / Refuse at the top; a decided request says there's nothing to confirm and clears the reminder | Leaders opened decided requests and saw no buttons | `templates/dashboard/request_detail.html`, `apps/core/approvals.py` |
 | 16 Oct | **Audit log page removed for leaders** (menu, address, template); actions are still recorded and readable in `/admin/` | The request | `apps/dashboard/`, `apps/core/demo_data.py` |
 | 16 Oct | **Leaders approve each award's result as a whole**: the award manager decides every scored entry on *Prepare results* and sends the award's result once nothing is with staff or judges; a leader approves it (published: results board, applicants told) or sends it back with a note. Applicants see "waiting for the decision" until then. Score changes are confirmed by the award manager; leaders keep Overview, Awards and managers, People, Results board and Approve award results | The request | `apps/awards/results.py`, `apps/dashboard/`, `templates/awards/prepare_results.html` |
+| 16 Oct | Form builder is programme-staff only: removed from the award manager's menu, the pages refuse managers, the set-up checklist shows "2. Application form (staff)" | The request | `apps/core/demo_data.py`, `apps/awards/views.py` |
 
 ---
 
-## 5. Key decisions and assumptions (see `docs/decisions/decision-log.md`, D1–D8)
+## 5. Key decisions and assumptions (see `docs/decisions/decision-log.md`, D1–D16)
 
 - **One login form**; the role is stored on the account and never chosen at login. The API's optional `role` must match the account.
 - **Self sign-up creates applicants only.** Staff, judges and leaders are created by a leader (API), an admin, or the seed command.
@@ -272,7 +277,12 @@ Only questions marked identifying (and file names) mention the organisation.
 - **Declined reports go back to the pool**; organisations must be verified before judges are assigned (13 Oct meeting).
 - **Bulk assign is all or nothing**; **only leaders deactivate accounts**.
 - **Django templates rather than a separate SPA** for the 3.5 time box; JWT is for API clients.
-- **Assumption:** the seed data and demo awards stand in for real programmes; nothing real has been imported.
+- **Award managers** (D9): one per award; staff and managers only reach their own awards.
+- **Duplicates** (D10, D13): found automatically, decided by programme staff per award; a merge links the records so conflicts and verification cover both.
+- **Staff accept each entry** before judges get it (D10).
+- **Requests after submitting** (D12, D14, D16): an applicant's edit and a judge's score change are checked by staff and confirmed by the award manager; re-evaluations are decided by the award manager. Leaders don't take part.
+- **Results** (D16): the award manager decides each entry; leadership approves each award's result as a whole, which publishes it.
+- **Assumption:** the seed data and demo awards stand in for real programmes; real people and awards load with `import_csv` when the client provides them.
 
 ---
 
@@ -307,13 +317,13 @@ Only questions marked identifying (and file names) mention the organisation.
 | 2 | ~~No document upload~~ Done (R2): PDF/JPG/PNG uploads with permission-checked downloads. Files are stored locally until an S3 bucket is configured | n/a |
 | 3 | ~~Notifications in-app only~~ Done (R4): email for every notification and a Notifications page. Real delivery needs an SMTP account (development prints emails to the console) | n/a |
 | 4 | ~~Duplicate review~~ Real since 15 Oct. The **public marketing pages** still use sample content (`apps/core/demo_data.py`) | Not real data |
-| 5 | ~~No screen to create awards~~ Done (R1). Remaining: the older *Award settings* screen still edits only the 2 demo awards and overlaps with the new award page (both save to the same tables); merge in R8. New awards don't appear on the public marketing pages yet (they do for applicants) | Two places to edit the demo awards |
-| 6 | ~~No account screen or audit viewer~~ Done (R5). Invites need a real email service in production to arrive | n/a |
-| 7 | No search/export to CSV or PDF; no results publication to applicants beyond status | Reporting gap |
+| 5 | ~~No screen to create awards~~ Done (R1). Remaining: the older *Award settings* screen still edits only the 2 demo awards and overlaps with the award page (both save to the same tables) | Two places to change the same settings |
+| 6 | ~~No account screen~~ Done (R5). The audit-log viewer was removed on 16 Oct (D15); the trail is read-only in `/admin/`. Invites need a real email service to arrive | n/a |
+| 7 | No CSV or PDF export of results; ~~no results publication~~ done (results board, award-level approval) | Reporting gap |
 | 8 | ~~Rule 2/3 placeholder tests~~ Done (real tests), including conflicts across merged duplicate organisations (15 Oct) | n/a |
 | 9 | Some N+1 queries (`report_for_judge` per row, per-award counts) | Slow at scale |
-| 10 | Not deployed yet: production image, settings and runbook exist (`docs/Deployment.md`), but no hosting, domain, bucket or email account is chosen | Can't go live until those are picked |
-| 11 | Dev database on port 8000 holds older seed answers and one probe-modified draft evaluation | Demo looks leakier than the code is |
+| 10 | ~~Not deployed~~ Demo site live on Render + Supabase (15 Oct). Not yet ready for real users: no own domain, email provider, storage bucket, backups or monitoring; demo accounts with a shared password are on the live site on purpose | Must be fixed before real users join |
+| 11 | The local dev database holds extra test records from Postman runs and browser checks | Cosmetic; re-seed a fresh database for demos |
 | 12 | `Application.title` is shown to staff and leaders and is free text | Fine; noted because judges' view hides it |
 | 13 | ~~Stray `package-lock.json` in the repo root (no Node app)~~ Removed | n/a |
 

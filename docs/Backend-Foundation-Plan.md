@@ -1,7 +1,7 @@
 # Phase 2: Data Modeling & Backend Foundation: Plan and Checklist
 
 > **Assumption** (placeholders in the brief): Phase 2 of the roadmap, **10 working days**.
-> Status as of **14 Oct 2026**. ✅ done · ⏳ remaining.
+> Status as of **14 Oct 2026**, with the remaining items updated on **16 Oct**. ✅ done · 🟡 partly · ⏳ remaining.
 
 ## Checklist
 
@@ -37,12 +37,12 @@
 | **Quality** | pytest + pytest-django + factory_boy; 227 tests | ✅ |
 | | Required security tests (judge/applicant isolation, wrong-role login, only staff/leader assign, judges score only own) | ✅ |
 | | ruff (lint + isort + format) configured; lint in CI | ✅ |
-| **Remaining** | Attachment upload endpoint (model exists; upload API not built) | ⏳ |
+| **Remaining** (status on 16 Oct) | Attachment upload endpoint | ✅ Done 14 Oct (R2) |
 | | Round 2 meeting details (date/link) on assignments | ⏳ |
-| | Switch the server-rendered portal screens from sample data to these models | ⏳ (Phase 3) |
-| | Email sending for notifications (in-app only now) | ⏳ |
+| | Switch the server-rendered portal screens from sample data to these models | ✅ Done 14 Oct (step 3.5) |
+| | Email sending for notifications | ✅ Done 14 Oct (R4); real delivery needs an email provider |
 | | Real GSTIN/PAN verification service | ⏳ (later phase) |
-| | Leaderboard / reporting endpoints for dashboards | ⏳ (Phase 3–4) |
+| | Leaderboard / reporting for dashboards | 🟡 Leader overview and results board done (15–16 Oct); CSV/PDF export ⏳ (R6) |
 
 ## Day-by-day (10 working days)
 

@@ -7,7 +7,7 @@
 | File / folder | What it holds |
 |---|---|
 | `base.html` | **Layout for the public website**: banner, top menu, footer. Public pages slot into it |
-| `portal_base.html` | **Layout for the four portals**: sidebar menu for the current role, "view as" switch, page heading |
+| `portal_base.html` | **Layout for every portal** (applicant, judge, staff, award manager, leadership): sidebar menu for the current role, notifications count, messages, page heading |
 | [core/](core/) | Public website pages |
 | [entries/](entries/) | Applicant pages |
 | [judging/](judging/) | Judge pages |

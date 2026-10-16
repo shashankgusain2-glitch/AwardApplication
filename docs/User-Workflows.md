@@ -1,34 +1,37 @@
 # User Workflows
 
-This page shows what each person does in **one award cycle**, step by step.
+This page shows what each person does in **one award cycle**, step by step, as the platform works today (16 Oct 2026). Steps that are planned but not built yet are marked ⏳.
 
 We built for two awards that work differently:
 
 | | Award A: Business Excellence | Award B: Kaizen |
 |---|---|---|
 | Form | Long | Short, with before/after photos |
-| Rounds | 2: desk review, then live presentation | 2: desk review, then site visit (assumed, to confirm) |
+| Rounds | 2: desk review, then live presentation | 2: desk review, then site visit |
 | Blind judging | Yes (desk review only) | No: judges meet the team on site |
 
-Staff choose these settings on a screen. No code changes are needed.
+These are settings on the award's page. No code changes are needed.
 
 The four rules from the brief are tagged like this:
 **[R1]** Blind judging · **[R2]** No conflict of interest · **[R3]** Score changes are recorded · **[R4]** Old forms still open
+
+There are five roles: **Applicant, Judge, Programme staff, Award manager, Leader**. Everyone logs in on the same form with their email and password; the account's role decides where they land.
 
 ---
 
 ## 1. Applicant
 
-1. **Log in** with an email. Usually the organisation's email, but a personal email also works.
-2. **Pick an award** and start the application.
-3. **Enter the organisation's GST number.** This stops:
-   - people pretending to be another company
-   - the same company sending two entries
-4. **If the company has already entered this award**, the system stops the new entry. The first entry is kept and the second is not allowed. If this is a mistake, the applicant contacts staff.
-5. **Fill the form.** It saves automatically, so the applicant can stop and come back.
-6. **Submit.** After this, the entry is locked.
-7. **Track the status:** Submitted → Under review → Shortlisted / Not shortlisted → Result.
-8. **Award A only:** if shortlisted, present live in Round 2.
+1. **Sign up** with an email and password (only applicants can sign up themselves).
+2. **Fill the organisation profile** with the GST number. Programme staff verify it. The GSTIN stops:
+   - people pretending to be another company (one profile per GSTIN)
+   - the same company sending two entries (one entry per organisation per award)
+3. **Pick an award** and start the application.
+4. **Fill the form section by section.** Each section is saved, so the applicant can stop and come back. Evidence files (PDF, JPG, PNG, up to 10 MB) can be attached.
+5. **Submit.** After this the entry is locked. Before any judge starts, the applicant can **ask to change it** with a reason: programme staff check, then the award manager confirms. When a judge starts, an open request closes by itself.
+6. **Track the status:** Submitted → Accepted for judging → Judges assigned → Being judged ("1 of 3 judges finished") → Scored, waiting for the decision → result. The result appears only when **leadership approves the award's result**.
+7. **See the results board:** the successful entries and their own result.
+8. **Ask for a re-evaluation** once, with a reason, after the result is out. The award manager decides; if approved, new judges score the entry and the award's result is approved again.
+9. ⏳ **Award A:** moving shortlisted entries to the live Round 2 by rule.
 
 The application always remembers which version of the form it used. **[R4]**
 
@@ -36,60 +39,61 @@ The application always remembers which version of the form it used. **[R4]**
 
 ## 2. Judge
 
-1. **Get selected first.** A Member or staff picks the judge for the award. Nobody can sign up as a judge alone.
-2. **Log in with a magic link** sent to their email. No password is needed. One click opens their page.
-3. **See their assigned entries.** For each one, the judge clicks:
-   - **Accept** to score it
-   - **Decline** to give it back
-   - **Conflict** if they know the applicant. The entry is removed from them. **[R2]**
-4. **Blind award:** the judge sees `Entry A-0042`, not the company name. **[R1]**
-5. **Score each question.** The page shows a progress bar (for example, 60% done), and scores **save automatically**.
-6. **Final submit.** After this the scorecard does not reopen. If a score must change, the judge has to give a reason, and the change is recorded. **[R3]**
-7. **If a judge drops out**, their entries go back to the pool and get assigned to another judge.
+1. **Get added first.** A leader adds the judge on the People page (or by CSV import); the judge gets an email to set their password. Nobody can sign up as a judge.
+2. **See their assigned entries.** For each one, the judge clicks **Accept** to score it or **Decline** to give it back to the pool. Judges don't declare conflicts: staff record them, and a conflicted judge is never offered the entry. **[R2]**
+3. **Blind award, desk round:** identifying answers, the title, the applicant's name and file names are hidden. **[R1]**
+4. **Score each criterion (1–10).** The page shows progress and saves midway.
+5. **Final submit.** After this the scorecard doesn't reopen. To change a score, the judge asks with a reason; programme staff check it and the award manager confirms; every change is recorded permanently (who, when, old and new value, why). **[R3]**
+6. **See the results board** (the successful entries).
 
 ---
 
-## 3. Award manager (the Member) and programme staff (Working staff)
+## 3. Programme staff and the award manager
 
 Each award has **one award manager**, chosen by leadership, and the **programme staff** allocated to it. Both only ever see the awards they are on.
 
-**Before the cycle (the award manager)**
-1. Leadership creates the award and picks its manager. The manager chooses its settings: rounds, blind on or off, number of judges, scoring questions.
-2. Build the form. Publishing it saves it as a version, and old versions are never changed. **[R4]**
-3. Select the judges.
-4. Choose the award's staff (or invite a new staff member onto the team).
+**Setting up an award (the award manager, after leadership creates it)**
+1. Details and rounds: dates, who can apply, fee, rounds, blind judging, judges per entry.
+2. Scoring criteria for each round (weights add up to 100).
+3. The judge panel.
+4. The team: choose the award's staff, or invite a new staff member.
+5. Open the award when the set-up checklist is complete.
 
-**During the cycle (programme staff and the manager, on their own awards)**
-1. Check new entries.
-2. Help applicants who contact them, for example someone blocked by a duplicate GST.
-3. **Assign judges.** The system suggests judges using the rules below, and staff confirm.
-4. Send reminders to slow judges.
-5. **Award A:** make the shortlist for Round 2.
+**Programme staff also**
+- **Build the application form** (Form builder). Publishing it saves a new version; old versions never change. **[R4]**
+
+**During the cycle (on their own awards)**
+1. **Verify organisations** (GSTIN).
+2. **Accept or decline each submitted entry.** Declining needs a reason the applicant sees. Only accepted entries go to judges.
+3. **Duplicate review** (programme staff): possible duplicate organisations are found automatically and listed under each award both entered. Staff merge them (conflicts and verification then cover both) or keep them separate; an entry can't be accepted while an undecided duplicate also entered the award.
+4. **Assign judges.** Only eligible judges are offered (see the rules below); staff tick them or fill with the best.
+5. **Record conflicts of interest.** A conflict recorded after assignment withdraws it.
+6. **Requests after submitting:** staff check an applicant's edit request or a judge's score-change request first; **the award manager confirms** it. (If the award has no manager, the staff check decides.)
+7. **Re-evaluations:** the award manager approves or refuses and then chooses fresh judges.
+8. **Prepare results:** the award manager marks each scored entry **Successful** or **Not successful**, then **sends the award's result to leadership** once nothing is still with staff or judges. Staff can follow along.
+9. ⏳ Send reminders to slow judges; ⏳ make the Round 2 shortlist by rule.
 
 ### Judge assignment rules
 
 | Priority | Rule |
 |---|---|
-| **1 (never broken)** | Never give a judge an entry they have a conflict with. **[R2]** |
-| 2 | Match the judge's expertise to the award category. |
-| 3 | Balance the load, so no judge gets far more entries than others. |
-| 4 | Don't put the same group of judges together every time. |
-| 5 | Cap the maximum entries per judge. |
+| **1 (never broken)** | Never offer a judge an entry they have a conflict with, including a merged duplicate of that organisation. **[R2]** |
+| 2 | Only judges on the award's panel, and not already on that entry. |
+| 3 | Under the judge's workload limit. |
+| 4 | Best first: the judge's priority, then the lightest workload. |
+| ⏳ | Matching the judge's expertise to the award, and not always pairing the same judges. |
 
 ---
 
 ## 4. Leadership
 
-1. **Dashboard:** one view of all awards, showing scores, flagged items and pending decisions.
+1. **Overview:** every award in one view: entries, how many are being judged, scored and decided, judging progress, and each award's result status.
 2. **Awards and managers:** create new awards, give each one an award manager, and change any award's team.
-3. **Review queue:** problem cases sent up for a decision, such as ties, re-evaluation requests, conflict cases and applicant appeals.
-4. **Policy settings:** set the rules that apply to all awards.
-5. **Decisions:**
-   - approve the winners
-   - decide conflict cases
-   - decide appeals (resolutions)
+3. **People:** add staff, award managers, judges and leaders (each gets an invite email); deactivate and reactivate accounts.
+4. **Approve award results:** each award's manager sends the award's result; leadership **approves the result of the whole award** (it is published on the results board and every applicant is told) or **sends it back** with a note.
+5. **Results board:** every award's published results.
 
-Leadership can approve or send back results, but cannot change scores.
+Leadership doesn't decide single applications, confirm requests or change scores.
 
 ---
 
@@ -97,13 +101,15 @@ Leadership can approve or send back results, but cannot change scores.
 
 | Problem | What happens |
 |---|---|
-| **Applicant leaves a draft unfinished** | The system sends a reminder email before the deadline. |
-| **Applicant wants to edit a submitted entry** | Not allowed, unless staff ask for more information. Then only that part opens. |
-| **Applicant disagrees with the result** | They raise an appeal with a reason. Leadership reviews it and decides. |
-| **Someone loses access to their account** | They get a new login link by email. If the email itself has changed, staff verify and update it. |
-| **A conflict is found late** (after scoring started) | The entry is taken from that judge, their scores are removed (and recorded), and a new judge is assigned. **[R2] [R3]** |
-| **Tie** | The tie goes to the Leadership review queue to decide. |
-| **Big gap between judges' scores** (for example, 4+ points) | The entry is flagged. It can be re-scored or given one extra judge. |
+| **Applicant wants to edit a submitted entry** | They ask with a reason before judging starts; staff check, the award manager confirms; then the form reopens until they submit again. Judges can't start meanwhile. |
+| **Applicant disagrees with the result** | They ask for a re-evaluation once, with a reason. The award manager decides; if approved, fresh judges score it and the award's result is approved again. |
+| **Someone forgets their password** | "Forgot password" emails a reset link. |
+| **A judge declines** | The entry goes back to the pool and the person who assigned it is told. |
+| **A conflict is found late** | Staff record it; any unfinished assignment for that judge is withdrawn and the entry needs another judge. **[R2]** |
+| **The same company registered twice** | Duplicate review: merge, decline the extra entry, or keep them separate if they are different companies. |
+| **Leadership disagrees with an award's result** | They send it back with a note; the award manager changes it and sends it again. |
+| ⏳ **Applicant leaves a draft unfinished** | A reminder email before the deadline. |
+| ⏳ **Tie or a big gap between judges' scores** | Shown on the manager's results page (each judge's total); a dedicated review queue isn't built. |
 
 ---
 
@@ -111,13 +117,14 @@ Leadership can approve or send back results, but cannot change scores.
 
 ```mermaid
 flowchart LR
-    A[Member sets up award] --> B[Applicants apply]
-    B --> C[Staff assign judges]
-    C --> D[Judges score]
-    D --> E{2 rounds?}
-    E -- Yes --> F[Shortlist + live round]
-    E -- No --> G[Final scores]
-    F --> G
-    G --> H[Leadership approves]
-    H --> I[Results published]
+    A[Leader creates award<br/>and picks manager] --> B[Manager and staff<br/>set it up]
+    B --> C[Applicants apply]
+    C --> D[Staff verify and<br/>accept entries]
+    D --> E[Staff assign judges]
+    E --> F[Judges score]
+    F --> G[Manager decides<br/>each entry]
+    G --> H[Manager sends<br/>award result]
+    H --> I{Leadership}
+    I -- approve --> J[Results published]
+    I -- send back --> G
 ```
