@@ -56,7 +56,8 @@ def form_builder(request, slug=None):
     draft the next version; the award manager approves (publishes) it or sends it back.
     """
     awards = awards_for(request.user).order_by("name")
-    award = get_object_or_404(awards, slug=slug) if slug else awards.filter(form_versions__isnull=False).first()
+    award = (get_object_or_404(awards, slug=slug) if slug
+             else awards.filter(form_versions__isnull=False).first() or awards.first())   # a new award has none
     if award is None:   # nothing set up yet
         return render(request, "awards/form_builder.html", {"role": request.user.role, "awards": awards, "award": None})
     versions = list(award.form_versions.annotate(applications_count=Count("applications")).order_by("-version"))

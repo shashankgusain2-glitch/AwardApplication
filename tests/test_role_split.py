@@ -267,3 +267,15 @@ def test_each_role_has_its_own_home_and_menu(team):
     assert "Your team" in manager_home and "Organisations waiting for verification" not in manager_home
     assert "Ask the manager" in staff_home and "Escalations" in manager_home
     assert reverse("awards:duplicates") not in manager_home
+
+
+@pytest.mark.django_db
+def test_staff_can_start_the_form_of_a_new_award(db):
+    from apps.awards.models import Award
+    award = Award.objects.create(slug="energy", name="Energy Award")      # just created: no form version
+    staff = StaffFactory(awards=[award])
+    ManagerFactory(awards=[award])
+    page = web(staff).get(reverse("awards:form_builder")).content.decode()   # opens on it, though it has no form
+    assert "Energy Award has no application form yet" in page
+    assert reverse("awards:form_edit", args=[award.slug]) in page and "Create the form" in page
+    assert web(staff).get(reverse("awards:form_edit", args=[award.slug])).status_code == 200

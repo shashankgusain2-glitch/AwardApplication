@@ -81,6 +81,13 @@
   </div>
 </div>
 {% else %}
-  <div class="card"><p class="muted small" style="margin:0">{% if award %}{{ award.name }} has no published form yet.{% if role == "staff" %} <a href="{% url 'awards:form_edit' award.slug %}">Write the questions</a>.{% endif %}{% else %}No awards are set up yet.{% endif %}</p></div>
+  {% if award %}
+    <div class="callout callout-info">
+      <div><strong>{{ award.name }} has no application form yet</strong>{% if role == "staff" %}Write its questions and send them to {% if manager %}{{ manager.display_name }} (the award manager) to approve{% else %}publish{% endif %}.{% else %}Programme staff on this award write the questions; you approve them here.{% if not award.staff.exists %} It has no staff yet: <a href="{% url 'awards:award_team' award.slug %}">choose its team</a> first.{% endif %}{% endif %}</div>
+      {% if role == "staff" %}<a class="btn btn-dark btn-sm" style="margin-left:auto;align-self:center" href="{% url 'awards:form_edit' award.slug %}">Create the form</a>{% endif %}
+    </div>
+  {% else %}
+    <div class="card"><p class="muted small" style="margin:0">{% if role == "staff" %}You aren't on any award's team yet. Its award manager adds you.{% else %}No awards are set up yet.{% endif %}</p></div>
+  {% endif %}
 {% endif %}
 {% endblock %}
