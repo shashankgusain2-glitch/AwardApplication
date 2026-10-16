@@ -67,8 +67,10 @@ def eligible_judges(report, round=1):
 
 
 def _check_can_assign(by, report):
+    if by.role == User.Role.MANAGER:
+        raise BusinessRuleError("Programme staff assign judges; award managers don't.")
     if by.role not in STAFF_WORK_ROLES:
-        raise BusinessRuleError("Only staff, award managers or leaders can assign judges.")
+        raise BusinessRuleError("Only programme staff (or leaders, through the API) can assign judges.")
     check_can_work_on(by, report.award)
 
 
@@ -208,8 +210,10 @@ def record_conflict(*, judge, profile, by, reason=""):
     Staff record a conflict (judges don't declare them). Any unfinished
     assignment between that judge and organisation is withdrawn at once.
     """
+    if by.role == User.Role.MANAGER:
+        raise BusinessRuleError("Programme staff record conflicts; the award manager doesn't.")
     if by.role not in STAFF_WORK_ROLES:
-        raise BusinessRuleError("Only staff, award managers or leaders can record conflicts.")
+        raise BusinessRuleError("Only programme staff or leaders can record conflicts.")
     conflict, _ = ConflictOfInterest.objects.get_or_create(
         judge=judge, applicant_profile=profile, defaults={"reason": reason, "recorded_by": by})
     withdrawn = JudgeAssignment.objects.filter(judge=judge, report__applicant=profile.user, status__in=OPEN_STATUSES)

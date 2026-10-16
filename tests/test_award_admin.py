@@ -2,9 +2,11 @@
 R1 award administration: run any award without code.
 
 The first test does it end to end through the web pages on the seed data: a
-leader creates the award and picks its manager → the manager sets it up (form,
-criteria, panel, team) and opens it → an applicant applies → staff on its team
-assign judges → judges score → a leader approves.
+leader creates the award and picks its manager → the manager sets it up (criteria,
+panel, team) → staff draft the form and the manager publishes it → the manager opens it →
+an applicant applies → staff on its team accept it and assign judges → judges score →
+the manager decides → a leader approves. Staff never set an award up; the manager never
+does staff work.
 """
 import pytest
 from django.test import Client
@@ -17,7 +19,7 @@ from apps.awards import services as award_services
 from apps.awards.models import Award
 
 from .conftest import ACCOUNTS, seeded_client
-from .factories import AwardFactory, JudgeFactory, LeaderFactory, StaffFactory
+from .factories import AwardFactory, JudgeFactory, LeaderFactory, ManagerFactory, StaffFactory
 
 AWARD = {"name": "Energy Efficiency Award", "sector": "Energy", "summary": "Plants that cut energy use.",
          "opens_on": "2026-11-01", "closes_on": "2026-12-31", "applicant_type": "unit",
@@ -44,9 +46,10 @@ def test_leader_creates_a_third_award_and_its_team_runs_it_end_to_end(seeded):
     assert response["Location"] == reverse("awards:award_team", args=[award.slug])
     assert award.manager == manager_user and not award.staff.exists()
 
-    # Staff not on its team can't open it
+    # Staff not on its team can't open it; and set-up is never staff work
     staff = seeded_client("staff2")
-    assert staff.get(reverse("awards:award_edit", args=[award.slug])).status_code == 404
+    assert staff.get(reverse("awards:form_builder", args=[award.slug])).status_code == 404
+    assert staff.get(reverse("awards:award_edit", args=[award.slug])).status_code == 403
 
     # Its manager sets it up
     manager = seeded_client("manager")
@@ -65,13 +68,16 @@ def test_leader_creates_a_third_award_and_its_team_runs_it_end_to_end(seeded):
     assert list(award.staff.all()) == [staff_user]
     assert manager.get(reverse("awards:form_edit", args=[award.slug])).status_code == 403
 
-    # 2. Form (staff)  3. Criteria (both rounds = 100)  4. Panel (manager)
+    # 2. Form (staff draft it, the manager publishes it)  3. Criteria (both rounds = 100)  4. Panel (manager)
     staff.post(reverse("awards:form_edit", args=[award.slug]), {
         "rows": "2",
         "q-0-key": "", "q-0-label": "Plant name", "q-0-type": "text", "q-0-section": "About",
         "q-0-required": "on", "q-0-identifying": "on",
         "q-1-key": "", "q-1-label": "How much energy did you save?", "q-1-type": "textarea",
         "q-1-section": "Results", "q-1-required": "on"})
+    assert award.current_form is None                                # sent, not published yet
+    manager.post(reverse("awards:form_review", args=[award.slug]), {"decision": "approve"})
+    assert award.current_form.version == 1
     manager.post(reverse("awards:award_criteria", args=[award.slug]),
                  _criteria_post([(1, "Savings achieved", 60), (1, "Method", 40), (2, "On-site evidence", 100)]))
     kapoor, iyer = User.objects.get(email=ACCOUNTS["judge"]), User.objects.get(email="iyer@judges.example")
@@ -187,13 +193,14 @@ def test_names_get_unique_web_addresses():
 def test_criteria_must_add_up_to_100_per_round():
     award = AwardFactory()
     with pytest.raises(Exception, match="add up to 90"):
-        award_services.save_criteria(award, by=StaffFactory(), rows=[{"round_number": 1, "label": "A", "weight": 90}])
+        award_services.save_criteria(award, by=ManagerFactory(awards=[award]),
+                                     rows=[{"round_number": 1, "label": "A", "weight": 90}])
 
 
 @pytest.mark.django_db
 def test_criteria_lock_once_judges_have_scored(world_scored):
     with pytest.raises(Exception, match="already scored"):
-        award_services.save_criteria(world_scored, by=StaffFactory(),
+        award_services.save_criteria(world_scored, by=ManagerFactory(awards=[world_scored]),
                                      rows=[{"round_number": 1, "label": "New", "weight": 100}])
 
 
@@ -223,7 +230,7 @@ def test_a_round_with_judges_cannot_be_removed(world_scored):
     judge = JudgeFactory(awards=[award])
     assignments.assign(report, judge, by=StaffFactory(), round=2)
     with pytest.raises(Exception, match="Round 2 already has judges"):
-        award_services.update_award(award, by=StaffFactory(), rounds=["desk"], name=award.name,
+        award_services.update_award(award, by=ManagerFactory(awards=[award]), rounds=["desk"], name=award.name,
                                     judges_per_report=2, blind_judging=False, entry_fee=0)
 
 
@@ -232,7 +239,7 @@ def test_panel_controls_who_can_be_assigned():
     from .factories import ApplicationFactory
     award = AwardFactory()
     on, off = JudgeFactory(awards=[award]), JudgeFactory(awards=[award])
-    award_services.set_panel(award, by=StaffFactory(), judges=[on])
+    award_services.set_panel(award, by=ManagerFactory(awards=[award]), judges=[on])
     from apps.assignments.services import eligible_judges
     assert eligible_judges(ApplicationFactory(award=award)) == [on]
     assert off.judge_profile.awards.count() == 0
@@ -251,9 +258,11 @@ def test_award_admin_is_staff_only_and_only_leaders_create_awards(client_for, na
 
 @pytest.mark.django_db
 def test_award_pages_open_for_the_seeded_awards(seeded):
-    staff = seeded_client("staff")
+    manager, staff = seeded_client("manager"), seeded_client("staff")
     for award in Award.objects.all():
         for name in ("awards:award_edit", "awards:award_criteria", "awards:award_panel"):
-            assert staff.get(reverse(name, args=[award.slug])).status_code == 200, (award.slug, name)
-    page = staff.get(reverse("awards:award_list")).content.decode()
-    assert "Business Excellence Award" in page and "Kaizen Competition" in page
+            assert manager.get(reverse(name, args=[award.slug])).status_code == 200, (award.slug, name)
+            assert staff.get(reverse(name, args=[award.slug])).status_code == 403, (award.slug, name)
+    for client in (manager, staff):
+        page = client.get(reverse("awards:award_list")).content.decode()
+        assert "Business Excellence Award" in page and "Kaizen Competition" in page

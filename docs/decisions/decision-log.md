@@ -297,3 +297,30 @@ Each decision: the options, the one we picked, why, and what would change our mi
 | Award settings screen | Keep vs. remove | **Removed** for staff and managers | It only covered the two demo awards and duplicated the award's own *Details and rounds* page, which works for every award (R1) |
 | Its tests | Delete vs. move | **Moved** to the award's own page (`tests/conftest.py` → `save_award`) | The behaviour (public page follows the settings, blind needs a desk round, one award doesn't change another) still matters |
 
+---
+
+## D18. Programme staff assign judges, not award managers
+
+**Date:** 16 Oct 2026 · Asked by the user: remove Assign judges from the award manager
+
+| Choice | Options | Picked | Why |
+|---|---|---|---|
+| Who assigns judges | Staff and managers vs. staff only | **Programme staff only**: the menu item, home-page buttons and Entries button are gone for managers, and the page and the service (`assign`, bulk and auto assign, reassign) refuse them | The request; a hidden page that still works isn't really removed |
+| Fresh judges after a re-evaluation (D11) | The manager goes to the assign page vs. staff are asked | **The award's staff are notified** with a link to choose the new judges; the manager returns to Re-evaluations | Keeps assignment with staff. (On an award with no manager, its staff decide and go straight to the assign page.) |
+| Leaders | — | Unchanged: the API still lets a leader assign | Leaders have no assign page; the API stays as it was |
+
+
+---
+
+## D19. Strict split: programme staff do the work, the award manager decides
+
+**Date:** 16 Oct 2026 · Asked by the user: give staff and managers clearly different responsibilities; picked the strict split over "the manager can also do staff work"
+
+| Choice | Options | Picked | Why |
+|---|---|---|---|
+| Can the manager do staff work? | Superset (manager does everything staff can) vs. strict split | **Strict split** (`apps/awards/access.py`). The manager no longer verifies organisations, accepts or declines entries, records conflicts, assigns judges or does the first check of a request, even on an award with no staff | Cleaner audit: every action has a doer and a separate decider. Trade-off accepted: an award stalls if its staff aren't available (a leader or the manager adds staff) |
+| Who sets an award up | Staff and managers vs. the manager | **The award manager** (or a leader): details and rounds, criteria, judge panel, status. Pages and services refuse staff | Set-up is a decision, not day-to-day work |
+| Application form | Staff publish vs. staff draft, manager publishes | **Staff draft, the manager publishes or sends it back with a note** (`apps/awards/team_work.py`). The draft is an unpublished `FormVersion`, so applicants never see it. No active manager: staff's save publishes it | Maker–checker on what every applicant will answer |
+| Hard cases | Staff decide alone vs. pass up | **Escalations**: staff "Ask the manager" (optionally about one entry); the manager answers; staff act. Nothing changes on its own | Staff get a way to not decide what isn't theirs to decide |
+| Work allocation | None vs. per entry | **The manager gives entries to named staff** (`Application.handled_by`), sees each person's open workload on their home page; staff filter "Given to me". Unallocated entries are for anyone on the award's staff | What makes the manager a manager, not only a final approver |
+| Leaders and the no-manager fallbacks (D11, results) | — | Unchanged | Out of scope |

@@ -24,7 +24,7 @@
 | 2 | Skeleton | ✅ Done (11–13 Oct) | Clickable screens for every role, reviewed |
 | 3 | Core Development | ✅ Done (14 Oct) | All main features working on real data |
 | 3+ | Changes after the client reviews | ✅ Done (15–16 Oct) | Award managers, duplicates, entry checks, results board, award-level approval |
-| 4 | Testing | 🔄 In progress | 441 automated tests and the Postman collection pass; load, security and UAT still to do |
+| 4 | Testing | 🔄 In progress | 442 automated tests and the Postman collection pass; load, security and UAT still to do |
 | 5 | Deployment | 🔄 Demo site live (15 Oct) | Live for real users: domain, email, backups, real accounts |
 | 6 | Maintenance and Updates | ⏳ Not started | Steady support and regular updates |
 
@@ -175,12 +175,12 @@ Make the app handle bad situations without crashing:
 | Duplicate organisations found automatically, reviewed per award by programme staff (merge / keep separate / undo) | D10, D13 |
 | Staff accept or decline each submitted entry; only accepted entries go to judges | D10 |
 | Applicants see judging progress (counts only) | D10 |
-| Results board for every role; re-evaluation asked from the board and decided by the award manager, who chooses fresh judges | D11 |
+| Results board for every role; re-evaluation asked from the board and decided by the award manager; programme staff choose fresh judges | D11, D18 |
 | Edit requests: staff check, the award manager confirms; never leadership | D12, D14 |
 | Leaders only get notifications they act on; Audit log page, Requests to confirm, Re-evaluations, All applications and Duplicate review removed from leaders | D13, D14, D15 |
 | The award manager decides each entry; **leadership approves each award's result as a whole**, which publishes it | D16 |
 | `import_csv` command to load real staff, judges and awards | progress log, 15 Oct |
-| Form builder for programme staff only | progress log, 16 Oct |
+| Form builder and judge assignment for programme staff only; the Award settings screen removed | D17, D18 |
 
 ---
 
@@ -192,7 +192,7 @@ Make the app handle bad situations without crashing:
 
 Testing happens in two ways:
 
-1. **Continuous testing:** after each change, the automated tests run (441 passing, 0 skipped) and CI runs lint, the migration check and the tests on every push.
+1. **Continuous testing:** after each change, the automated tests run (442 passing, 0 skipped) and CI runs lint, the migration check and the tests on every push.
 2. **Full testing phase**, before real users:
    - [x] Each user flow from start to finish (`tests/test_web_workflow.py`, `tests/test_award_admin.py`, `tests/test_reevaluation.py`)
    - [x] Every role and its permissions (parametrised role tests; the Postman collection's wrong-role and no-token checks)

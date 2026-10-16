@@ -2,7 +2,7 @@
 
 {% block title %}Re-evaluations{% endblock %}
 {% block heading %}Re-evaluations{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Applicants can ask once, with a reason, after their result is out. The award manager decides. Approving replaces the first judges' scores (kept as history) and you choose new judges; the result is then decided again and the results board updates.</p>{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Applicants can ask once, with a reason, after their result is out. The award manager decides. Approving replaces the first judges' scores (kept as history) and programme staff choose new judges; the result is then decided again and the results board updates.</p>{% endblock %}
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
@@ -22,11 +22,11 @@
         <form method="post" action="{% url 'awards:reevaluation_decide' req.pk %}" class="row" style="margin-top:.5rem">
           {% csrf_token %}
           <input name="note" type="text" placeholder="Note to the applicant (optional)" style="flex:1;min-width:220px" aria-label="Note">
-          <button class="btn btn-success btn-sm" name="decision" value="approve">Approve and choose new judges</button>
+          <button class="btn btn-success btn-sm" name="decision" value="approve">Approve (staff choose new judges)</button>
           <button class="btn btn-outline btn-sm" name="decision" value="refuse">Refuse</button>
         </form>
       {% else %}
-        <p class="muted small" style="margin:.4rem 0 0">Waiting for {% if req.approver %}the award manager, {{ req.approver.display_name }}{% else %}a leader (this award has no manager){% endif %}.</p>
+        <p class="muted small" style="margin:.4rem 0 0">Waiting for {% if req.approver %}the award manager, {{ req.approver.display_name }}{% else %}the award's programme staff (this award has no manager){% endif %}.</p>
       {% endif %}
     </div>
     {% endwith %}

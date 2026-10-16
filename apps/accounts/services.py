@@ -85,8 +85,10 @@ def invite(user, *, by):
 @transaction.atomic
 def verify_organisation(profile, *, by, approve, note=""):
     """Staff check a new organisation before its reports go to judges (13 Oct meeting)."""
-    if by.role not in (User.Role.STAFF, User.Role.MANAGER, User.Role.LEADER):
-        raise BusinessRuleError("Only staff, award managers or leaders can verify organisations.")
+    if by.role == User.Role.MANAGER:
+        raise BusinessRuleError("Programme staff verify organisations; the award manager doesn't.")
+    if by.role not in (User.Role.STAFF, User.Role.LEADER):
+        raise BusinessRuleError("Only programme staff or leaders can verify organisations.")
     if approve and not profile.gstin:
         raise BusinessRuleError("The organisation needs a GSTIN before it can be verified.")
     before = profile.verification_status

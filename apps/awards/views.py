@@ -1,12 +1,16 @@
 """
-Programme staff screens, also used by award managers. Everyone here only ever
+The staff portal, shared by programme staff and award managers. Everyone here only ever
 sees the awards they are on (apps/awards/access.py): staff the awards a leader or
 manager allocated to them, managers the awards they manage. Creating an award is
-a leader's job (dashboard). The home page, entries, judge assignment, the form
-builder, award settings and duplicate review read and write the real database
-through the services.
+a leader's job (dashboard).
+
+The two roles have separate jobs (the strict split in apps/awards/access.py): staff do
+the work (screening, duplicates, judges, the first check of requests, drafting the form);
+the manager decides (set-up, approving the form, confirming requests, re-evaluations,
+results, escalations, and which staff member handles which entry).
 """
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -21,6 +25,7 @@ from apps.applications.models import Application
 from apps.assignments import services as assignment_services
 from apps.assignments.models import ConflictOfInterest
 from apps.awards import services as award_services
+from apps.awards import team_work
 from apps.awards.access import awards_for
 from apps.awards.models import Award
 from apps.core import approvals, overview
@@ -32,12 +37,24 @@ OPEN = DuplicateCandidate.Status.OPEN
 @role_required("staff", "manager")
 def staff_home(request):
     """Home page: what needs staff today, from the database."""
-    return render(request, "awards/staff_home.html", {"role": request.user.role, **overview.staff_home(request.user)})
+    user = request.user
+    extra = {}
+    if user.role == "manager":
+        from apps.awards.models import Escalation
+        extra = {"forms_waiting": team_work.forms_waiting(user), "team_workload": team_work.team_workload(user),
+                 "open_escalations": team_work.escalations_for(user).filter(status=Escalation.Status.OPEN).count()}
+    else:
+        extra = {"mine": application_services.visible_to(user).filter(
+                     handled_by=user, status__in=team_work.OPEN_WORK).count()}
+    return render(request, "awards/staff_home.html", {"role": user.role, **overview.staff_home(user), **extra})
 
 
-@role_required("staff")
+@role_required("staff", "manager")
 def form_builder(request, slug=None):
-    """Each award's published form versions and their questions (read-only: published versions never change)."""
+    """
+    Each award's form versions and their questions (published versions never change). Staff
+    draft the next version; the award manager approves (publishes) it or sends it back.
+    """
     awards = awards_for(request.user).order_by("name")
     award = get_object_or_404(awards, slug=slug) if slug else awards.filter(form_versions__isnull=False).first()
     if award is None:   # nothing set up yet
@@ -47,7 +64,10 @@ def form_builder(request, slug=None):
         wanted = int(request.GET.get("version", 0))
     except ValueError:
         wanted = 0
-    chosen = next((v for v in versions if v.version == wanted), versions[0] if versions else None)
+    draft = team_work.draft_of(award)
+    chosen = next((v for v in versions if v.version == wanted),
+                  draft if draft and draft.waiting_for_manager and request.user.role == "manager"
+                  else next((v for v in versions if v.is_published), versions[0] if versions else None))
     sections = []
     for q in chosen.questions if chosen else []:
         name = q.get("section") or "Questions"
@@ -56,19 +76,44 @@ def form_builder(request, slug=None):
         sections[-1]["questions"].append(q)
     return render(request, "awards/form_builder.html", {
         "role": request.user.role, "awards": awards, "award": award, "versions": versions, "chosen": chosen,
-        "sections": sections,
+        "sections": sections, "draft": draft, "manager": team_work.active_manager(award),
+        "can_review": bool(draft and draft.waiting_for_manager and request.user.pk == award.manager_id),
     })
+
+
+@role_required("manager")
+@require_POST
+def form_review(request, slug):
+    """The award manager publishes the waiting draft, or sends it back to staff with a note."""
+    award = get_object_or_404(awards_for(request.user), slug=slug)
+    draft = team_work.draft_of(award)
+    if draft is None:
+        messages.error(request, "There's no form version waiting for approval.")
+        return redirect("awards:form_builder", slug=award.slug)
+    approve = request.POST.get("decision") == "approve"
+    try:
+        team_work.review_form_draft(draft, by=request.user, approve=approve, note=request.POST.get("note", ""))
+    except BusinessRuleError as error:
+        messages.error(request, str(error))
+    else:
+        who = draft.submitted_by.display_name if draft.submitted_by else "staff"
+        messages.success(request, f"Version {draft.version} published. New applications use it; applications "
+                                  f"already started keep their own version." if approve else
+                         f"Version {draft.version} sent back to {who}.")
+    return redirect("awards:form_builder", slug=award.slug)
 
 
 @role_required("staff")
 @require_http_methods(["GET", "POST"])
 def form_edit(request, slug):
     """
-    Edit the questions and publish them as a NEW version (Rule 4): the current
-    version never changes, and applications already started keep their version.
+    Edit the questions as the NEW version (Rule 4): the current version never changes, and
+    applications already started keep their version. Saving sends the draft to the award
+    manager to publish (an award with no manager: saving publishes it).
     """
     award = get_object_or_404(awards_for(request.user), slug=slug)
     current = award.current_form
+    draft = team_work.draft_of(award)
     blank = {"key": "", "label": "", "type": "textarea", "section": "", "subsection": "",
              "required": True, "identifying": False}
     if request.method == "POST":
@@ -80,19 +125,23 @@ def form_edit(request, slug):
                  "identifying": request.POST.get(f"q-{n}-identifying") == "on",
                  "remove": request.POST.get(f"q-{n}-remove") == "on"} for n in range(count)]
         try:
-            version = award_services.publish_form_version(
-                award, award_services.questions_from_editor(rows), request.user)
+            version = team_work.save_form_draft(award, award_services.questions_from_editor(rows), by=request.user)
         except BusinessRuleError as error:
             messages.error(request, str(error))
-            return _form_edit_page(request, award, current, rows)
-        messages.success(request, f"Version {version.version} published. New applications use it; "
-                                  f"applications already started keep their own version.")
+            return _form_edit_page(request, award, current, rows, draft)
+        if version.is_published:
+            messages.success(request, f"Version {version.version} published (the award has no manager to approve "
+                                      f"it). New applications use it; applications already started keep their own.")
+        else:
+            messages.success(request, f"Version {version.version} sent to the award manager to approve. Nothing "
+                                      f"changes for applicants until they publish it.")
         return redirect("awards:form_builder", slug=award.slug)
-    rows = [{**blank, **q} for q in (current.questions if current else [])] or [dict(blank, section="Questions")]
-    return _form_edit_page(request, award, current, rows)
+    start = draft or current          # carry on with the draft, or start from the published version
+    rows = [{**blank, **q} for q in (start.questions if start else [])] or [dict(blank, section="Questions")]
+    return _form_edit_page(request, award, current, rows, draft)
 
 
-def _form_edit_page(request, award, current, rows):
+def _form_edit_page(request, award, current, rows, draft=None):
     """One card per section in the editor; each row keeps its position n (the q-<n>-* field names)."""
     sections = []
     for n, row in enumerate(rows):
@@ -101,7 +150,8 @@ def _form_edit_page(request, award, current, rows):
             sections.append({"name": name, "rows": []})
         sections[-1]["rows"].append({**row, "n": n})
     return render(request, "awards/form_edit.html", {
-        "role": request.user.role, "award": award, "current": current, "sections": sections, "row_count": len(rows),
+        "role": request.user.role, "award": award, "current": current, "draft": draft,
+        "manager": team_work.active_manager(award), "sections": sections, "row_count": len(rows),
         "subcategories": sorted({row["subsection"].strip() for row in rows if (row.get("subsection") or "").strip()}),
         "blank": {"key": "", "type": "textarea", "required": True}, "types": award_services.QUESTION_TYPES})
 
@@ -276,7 +326,7 @@ def _invite_staff(request, award):
     return redirect("awards:award_team", slug=award.slug)
 
 
-@role_required("staff", "manager")
+@role_required("manager", "leader")   # set-up is the award manager's job, not staff work
 @require_http_methods(["GET", "POST"])
 def award_edit(request, slug):
     award = get_object_or_404(awards_for(request.user), slug=slug)
@@ -298,7 +348,7 @@ def award_edit(request, slug):
     return _award_form_page(request, award, values, [r.kind for r in award.rounds.all()])
 
 
-@role_required("staff", "manager")
+@role_required("manager", "leader")   # set-up is the award manager's job, not staff work
 @require_POST
 def award_status(request, slug):
     award = get_object_or_404(awards_for(request.user), slug=slug)
@@ -310,7 +360,7 @@ def award_status(request, slug):
     return redirect("awards:award_edit", slug=award.slug)
 
 
-@role_required("staff", "manager")
+@role_required("manager", "leader")   # set-up is the award manager's job, not staff work
 @require_http_methods(["GET", "POST"])
 def award_criteria(request, slug):
     award = get_object_or_404(awards_for(request.user), slug=slug)
@@ -342,7 +392,7 @@ def award_criteria(request, slug):
     })
 
 
-@role_required("staff", "manager")
+@role_required("manager", "leader")   # set-up is the award manager's job, not staff work
 @require_http_methods(["GET", "POST"])
 def award_panel(request, slug):
     award = get_object_or_404(awards_for(request.user), slug=slug)
@@ -362,12 +412,17 @@ def award_panel(request, slug):
 @role_required("staff", "manager")
 def entries(request):
     """
-    Every application on the awards this person is on, with what needs a decision:
-    organisations to verify, edit requests and judges' score-change requests.
+    Every application on the awards this person is on, with what needs a decision.
+    Staff: organisations to verify, entries to accept or decline, requests to check, and
+    "Ask the manager". The award manager: read-only, plus requests to confirm and who
+    handles each entry (allocation).
     """
-    reports = application_services.visible_to(request.user).select_related("applicant__applicant_profile")
+    reports = (application_services.visible_to(request.user)
+               .select_related("applicant__applicant_profile", "handled_by"))
     filters = {"status": request.GET.get("status", ""), "award": request.GET.get("award", ""),
-               "q": request.GET.get("q", "").strip()}
+               "q": request.GET.get("q", "").strip(), "mine": request.GET.get("mine", "")}
+    if filters["mine"] and request.user.role == "staff":
+        reports = reports.filter(handled_by=request.user)
     if filters["status"]:
         reports = reports.filter(status=filters["status"])
     if filters["award"]:
@@ -375,13 +430,17 @@ def entries(request):
     if filters["q"]:
         reports = reports.filter(Q(reference__icontains=filters["q"]) | Q(title__icontains=filters["q"])
                                  | Q(applicant__applicant_profile__organisation_name__icontains=filters["q"]))
+    manager = request.user.role == "manager"
     return render(request, "awards/entries.html", {
-        "role": request.user.role,
+        "role": request.user.role, "can_screen": request.user.role == "staff",
         "reports": reports.order_by("-updated_at"),
+        # the manager allocates entries: each award's active staff, for the "Handled by" choice
+        "award_staff": {a.pk: list(a.staff.filter(is_active=True).order_by("name"))
+                        for a in awards_for(request.user)} if manager else {},
         "statuses": Application.Status.choices,
         "awards": awards_for(request.user).order_by("name"),
         "filters": filters,
-        "to_verify": overview.organisations_to_verify(request.user),
+        "to_verify": overview.organisations_to_verify(request.user) if not manager else [],
         # verification follows the main record after a merge, so ask the duplicates service
         "verified_ids": {p.pk for p in ApplicantProfile.objects.filter(user__in=reports.values("applicant"))
                          if duplicate_services.is_verified(p)},
@@ -389,6 +448,66 @@ def entries(request):
                           for pk in (c.profile_a_id, c.profile_b_id)},
         **_requests_for(request.user),
     })
+
+
+@role_required("manager")
+@require_POST
+def allocate_entry(request, pk):
+    """The award manager gives an entry to one of the award's staff (or back to anyone)."""
+    report = get_object_or_404(application_services.visible_to(request.user), pk=pk)
+    chosen = request.POST.get("staff", "")
+    person = User.objects.filter(pk=chosen, role=User.Role.STAFF).first() if chosen.isdigit() else None
+    if chosen and person is None:
+        messages.error(request, "Choose someone from the award's staff.")
+        return _back(request)
+    outcome = f"given to {person.display_name}" if person else "open to any staff member"
+    return _decide(request, lambda: team_work.allocate(report, by=request.user, staff_member=person),
+                   f"{report.reference}: {outcome}.")
+
+
+@role_required("staff", "manager")
+@require_http_methods(["GET", "POST"])
+def escalations(request):
+    """
+    Cases staff pass up to the award manager. Staff ask (optionally about one entry); the
+    manager answers with a decision; staff act on it.
+    """
+    from apps.awards.models import Escalation
+
+    user = request.user
+    if request.method == "POST":
+        if user.role != "staff":
+            raise PermissionDenied("Programme staff pass cases up; the award manager answers them.")
+        award = get_object_or_404(awards_for(user), pk=(_ids([request.POST.get("award", "")]) or [0])[0])
+        entry = None
+        if request.POST.get("application", "").isdigit():
+            entry = get_object_or_404(application_services.visible_to(user), pk=request.POST["application"])
+        try:
+            team_work.escalate(award, by=user, question=request.POST.get("question", ""), application=entry)
+        except BusinessRuleError as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, f"Sent to the {award.name} award manager. You'll be told when they answer.")
+        return _back(request, "awards:escalations")
+    cases = team_work.escalations_for(user)
+    return render(request, "awards/escalations.html", {
+        "role": user.role, "awards": awards_for(user).order_by("name"),
+        "open": [c for c in cases if c.status == Escalation.Status.OPEN],
+        "answered": [c for c in cases if c.status == Escalation.Status.ANSWERED][:30],
+    })
+
+
+@role_required("manager")
+@require_POST
+def escalation_answer(request, pk):
+    case = get_object_or_404(team_work.escalations_for(request.user), pk=pk)
+    try:
+        team_work.answer_escalation(case, by=request.user, answer=request.POST.get("answer", ""))
+    except BusinessRuleError as error:
+        messages.error(request, str(error))
+    else:
+        messages.success(request, f"Answer sent to {case.raised_by.display_name}.")
+    return redirect("awards:escalations")
 
 
 def _requests_for(user):
@@ -422,7 +541,7 @@ def _decide(request, action, success):
     return _back(request)
 
 
-@role_required("staff", "manager")
+@role_required("staff")
 @require_POST
 def verify_organisation(request, pk):
     profile = get_object_or_404(overview.organisations_for(request.user), pk=pk)   # only on their awards
@@ -432,7 +551,7 @@ def verify_organisation(request, pk):
         f"{profile.organisation_name}: {'verified' if approve else 'not verified'}.")
 
 
-@role_required("staff", "manager")
+@role_required("staff")
 @require_POST
 def accept_report(request, pk):
     """Staff check passed: the entry can now be assigned to judges."""
@@ -441,7 +560,7 @@ def accept_report(request, pk):
                    f"{report.reference} accepted for judging. You can assign judges now.")
 
 
-@role_required("staff", "manager")
+@role_required("staff")
 @require_POST
 def reject_report(request, pk):
     """Staff check failed: the entry is declined with a reason the applicant sees."""
@@ -450,7 +569,7 @@ def reject_report(request, pk):
         report, by=request.user, note=request.POST.get("note", "")), f"{report.reference} declined.")
 
 
-@role_required("staff", "manager")
+@role_required("staff")
 def assign(request, pk=None):
     """
     /staff/assign/        reports that still need judges (round 1)
@@ -597,7 +716,7 @@ def reevaluations(request):
     done = [r for r in requests if not r.waiting][:20]
     return render(request, "awards/reevaluations.html", {
         "role": request.user.role, "waiting": waiting, "in_progress": in_progress, "done": done,
-        "can_assign": request.user.role in ("staff", "manager"),
+        "can_assign": request.user.role == "staff",
     })
 
 
@@ -619,10 +738,12 @@ def reevaluation_decide(request, pk):
     if not approve:
         messages.success(request, f"{reference}: re-evaluation refused. The applicant has been told.")
         return redirect("awards:reevaluations")
-    messages.success(request, f"{reference}: re-evaluation approved. Choose the new judges now; the first judges "
-                              f"aren't offered again.")
-    if request.user.role in ("staff", "manager"):
+    if request.user.role == "staff":            # an award without a manager: staff decide and assign
+        messages.success(request, f"{reference}: re-evaluation approved. Choose the new judges now; the first "
+                                  f"judges aren't offered again.")
         return redirect("awards:assign", pk=req.application.pk)
+    messages.success(request, f"{reference}: re-evaluation approved. The award's programme staff have been asked "
+                              f"to choose the new judges.")
     return redirect("awards:reevaluations")
 
 

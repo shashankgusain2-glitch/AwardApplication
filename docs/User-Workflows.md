@@ -50,28 +50,42 @@ The application always remembers which version of the form it used. **[R4]**
 
 ## 3. Programme staff and the award manager
 
-Each award has **one award manager**, chosen by leadership, and the **programme staff** allocated to it. Both only ever see the awards they are on.
+Each award has **one award manager**, chosen by leadership, and the **programme staff** allocated to it. Both only ever see the awards they are on. **Their jobs don't overlap: staff do the work, the manager decides** (decision D19). The manager never screens entries, verifies organisations, assigns judges or does the first check of a request, and staff never set an award up or give a final decision.
+
+| | Programme staff (do the work) | Award manager (decides) |
+|---|---|---|
+| Set-up | Can't change it | Details and rounds, criteria, judge panel, team, opening and closing |
+| Application form | Draft the next version and send it | Publish it, or send it back with a note |
+| Entries | Verify organisations, accept or decline, duplicates | Read-only; decide what staff pass up |
+| Judges | Assign judges, record conflicts | — |
+| Edit / score-change requests | First check | Final confirmation |
+| Hard cases | **Ask the manager** (Escalations) | Answer with a decision |
+| Work allocation | See entries **given to me** | Give each entry to a staff member, see each person's workload |
+| Re-evaluations, results | Choose fresh judges; follow results | Approve or refuse; decide each entry; send the result to leadership |
 
 **Setting up an award (the award manager, after leadership creates it)**
 1. Details and rounds: dates, who can apply, fee, rounds, blind judging, judges per entry.
 2. Scoring criteria for each round (weights add up to 100).
 3. The judge panel.
 4. The team: choose the award's staff, or invite a new staff member.
-5. Open the award when the set-up checklist is complete.
+5. Approve the application form that staff drafted (below).
+6. Open the award when the set-up checklist is complete.
 
-**Programme staff also**
-- **Build the application form** (Form builder). Publishing it saves a new version; old versions never change. **[R4]**
+**The application form (staff draft, the manager publishes)**
+- Staff edit the questions in the Form builder and send them; this is a draft, and applicants don't see it. The award manager **approves and publishes** it, or **sends it back** with a note; staff change it and send it again. Publishing saves a new version; old versions never change. **[R4]** (If the award has no manager, staff publish it themselves.)
 
 **During the cycle (on their own awards)**
-1. **Verify organisations** (GSTIN).
-2. **Accept or decline each submitted entry.** Declining needs a reason the applicant sees. Only accepted entries go to judges.
+1. **Verify organisations** (staff, GSTIN).
+2. **Accept or decline each submitted entry** (staff). Declining needs a reason the applicant sees. Only accepted entries go to judges.
 3. **Duplicate review** (programme staff): possible duplicate organisations are found automatically and listed under each award both entered. Staff merge them (conflicts and verification then cover both) or keep them separate; an entry can't be accepted while an undecided duplicate also entered the award.
-4. **Assign judges.** Only eligible judges are offered (see the rules below); staff tick them or fill with the best.
-5. **Record conflicts of interest.** A conflict recorded after assignment withdraws it.
+4. **Assign judges** (programme staff). Only eligible judges are offered (see the rules below); staff tick them or fill with the best.
+5. **Record conflicts of interest** (staff). A conflict recorded after assignment withdraws it.
 6. **Requests after submitting:** staff check an applicant's edit request or a judge's score-change request first; **the award manager confirms** it. (If the award has no manager, the staff check decides.)
-7. **Re-evaluations:** the award manager approves or refuses and then chooses fresh judges.
-8. **Prepare results:** the award manager marks each scored entry **Successful** or **Not successful**, then **sends the award's result to leadership** once nothing is still with staff or judges. Staff can follow along.
-9. ⏳ Send reminders to slow judges; ⏳ make the Round 2 shortlist by rule.
+7. **Ask the manager** (escalations): when staff shouldn't decide alone (a doubtful GSTIN, an applicant disputing a decline), they pass the case up, optionally about one entry. The manager answers on *Escalations*; staff are told and act on it.
+8. **Who handles what:** on *Entries* the manager gives each entry to a staff member on the award; their home page shows each person's open workload. Staff filter *Given to me*. Entries nobody was given are for anyone on the award's staff.
+9. **Re-evaluations:** the award manager approves or refuses; programme staff then choose fresh judges.
+10. **Prepare results:** the award manager marks each scored entry **Successful** or **Not successful**, then **sends the award's result to leadership** once nothing is still with staff or judges. Staff can follow along.
+11. ⏳ Send reminders to slow judges; ⏳ make the Round 2 shortlist by rule.
 
 ### Judge assignment rules
 

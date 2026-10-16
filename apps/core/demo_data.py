@@ -570,16 +570,19 @@ PORTAL_NAV = {
         ("Entries", "awards:entries"),
         ("Duplicate review", "awards:duplicates"),
         ("Assign judges", "awards:assign"),
+        ("Ask the manager", "awards:escalations"),
         ("Prepare results", "awards:prepare_results"),
         ("Re-evaluations", "awards:reevaluations"),
         ("Results", "core:results"),
     ],
-    # Award managers: the staff portal for the awards they manage, plus choosing each award's team.
+    # Award managers decide (they don't do staff work): set-up and team, approving the form,
+    # confirming requests, escalations, re-evaluations and results, for the awards they manage.
     "manager": [
         ("My awards", "awards:staff_home"),
         ("Awards and teams", "awards:award_list"),
+        ("Application forms", "awards:form_builder"),
         ("Entries", "awards:entries"),
-        ("Assign judges", "awards:assign"),
+        ("Escalations", "awards:escalations"),
         ("Prepare results", "awards:prepare_results"),
         ("Re-evaluations", "awards:reevaluations"),
         ("Results", "core:results"),

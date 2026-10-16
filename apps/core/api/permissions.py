@@ -19,7 +19,7 @@ class IsApplicant(HasRole):
 
 
 class IsStaff(HasRole):
-    roles = ("staff", "manager")   # award managers do staff work on their awards
+    roles = ("staff", "manager")   # the staff portal roles; the services check who may do what
 
 
 class IsJudge(HasRole):
@@ -36,7 +36,8 @@ class IsStaffOrManager(HasRole):
 
 
 class IsStaffOrLeader(HasRole):
-    """Staff, award managers and leaders. What each sees is narrowed by apps/awards/access.py."""
+    """Staff, award managers and leaders. What each sees is narrowed by apps/awards/access.py, and what
+    each may change by the services (award managers decide; they don't do staff work)."""
     roles = ("staff", "manager", "leader")
 
 

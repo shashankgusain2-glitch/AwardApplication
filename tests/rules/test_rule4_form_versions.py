@@ -1,7 +1,7 @@
 """
 Rule 4: last year's applications still open correctly after questions change.
 
-Staff edit questions in the form builder; publishing makes a NEW version.
+Staff edit questions in the form builder and the award manager publishes them as a NEW version.
 The old version never changes, and applications keep the version they
 were started on.
 """
@@ -31,8 +31,12 @@ def _editor_post(award, change):
 
 
 def _publish(award, change):
+    """Staff send the new questions; the award manager approves (publishes) them."""
     staff = seeded_client("staff")
-    return staff.post(reverse("awards:form_edit", args=[award.slug]), _editor_post(award, change))
+    response = staff.post(reverse("awards:form_edit", args=[award.slug]), _editor_post(award, change))
+    if response.status_code == 302:
+        seeded_client("manager").post(reverse("awards:form_review", args=[award.slug]), {"decision": "approve"})
+    return response
 
 
 @pytest.mark.django_db

@@ -35,6 +35,9 @@ def make_user(email, role, password=PASSWORD, **extra):
     if role == "staff":   # like StaffFactory: test staff are on every award unless a test says otherwise
         from apps.awards.models import Award
         user.staff_awards.set(Award.objects.all())
+    if role == "manager":  # the test manager runs every award that has no manager yet
+        from apps.awards.models import Award
+        Award.objects.filter(manager=None).update(manager=user)
     return user
 
 
@@ -69,6 +72,12 @@ def judge_client(db):
 @pytest.fixture
 def judge2_client(db):
     return logged_in("judge2")
+
+
+@pytest.fixture
+def manager_client(db):
+    """An award manager: sets awards up and decides (the strict split: staff do the work)."""
+    return logged_in("manager")
 
 
 @pytest.fixture

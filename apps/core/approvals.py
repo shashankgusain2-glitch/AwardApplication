@@ -9,9 +9,9 @@ Who gives the final confirmation (confirmer()): the award's manager, for an appl
 request and a judge's score change alike. If the award has no active manager, the staff check
 is the final step. Leaders are never involved (they approve each award's result as a whole).
 
-Staff on that award check first (the award manager may, only if the award has no staff, and
-not for an edit they would then confirm themselves); nobody can skip that step, and staff
-can't give the final confirmation. Every step is audited and the person who asked is told. The caller (the
+Staff on that award check first; the award manager never does the staff check (the strict
+split in apps/awards/access.py: staff do, the manager decides). Nobody can skip that step,
+and staff can't give the final confirmation. Every step is audited and the person who asked is told. The caller (the
 service for each kind of request) checks its own "is it still allowed?" rule before each
 step and applies the effect when this returns APPROVED.
 
@@ -60,13 +60,9 @@ def can_confirm(user, request):
 
 
 def can_check(user, request):
-    """The first step: staff on the award; its manager only when the award has no active staff."""
+    """The first step: programme staff on the award (never its manager, who decides)."""
     award = award_of(request)
-    if user.role == User.Role.STAFF:
-        return award.staff.filter(pk=user.pk).exists()
-    if user.role == User.Role.MANAGER and award.manager_id == user.pk:
-        return not award.staff.filter(is_active=True).exists()
-    return False
+    return user.role == User.Role.STAFF and award.staff.filter(pk=user.pk).exists()
 
 
 def step(request, *, by, approve, note=""):

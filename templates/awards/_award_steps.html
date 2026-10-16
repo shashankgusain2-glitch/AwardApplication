@@ -4,7 +4,7 @@
   <div class="row-between">
     <nav class="chips" aria-label="Set up this award" style="margin:0">
       <a class="chip {% if request.resolver_match.url_name == 'award_edit' %}active{% endif %}" href="{% url 'awards:award_edit' award.slug %}">1. Details and rounds</a>
-      {% if role == "staff" %}<a class="chip" href="{% url 'awards:form_edit' award.slug %}">2. Application form</a>{% else %}<span class="chip" title="Programme staff build the application form">2. Application form (staff)</span>{% endif %}
+      <a class="chip" href="{% url 'awards:form_builder' award.slug %}" title="Programme staff draft the form; you approve and publish it">2. Application form (approve)</a>
       <a class="chip {% if request.resolver_match.url_name == 'award_criteria' %}active{% endif %}" href="{% url 'awards:award_criteria' award.slug %}">3. Scoring criteria</a>
       <a class="chip {% if request.resolver_match.url_name == 'award_panel' %}active{% endif %}" href="{% url 'awards:award_panel' award.slug %}">4. Judge panel</a>
       {% if role == "manager" %}<a class="chip {% if request.resolver_match.url_name == 'award_team' %}active{% endif %}" href="{% url 'awards:award_team' award.slug %}">5. Team</a>{% endif %}
