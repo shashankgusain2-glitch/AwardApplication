@@ -91,13 +91,20 @@ def results(request):
 @role_required("leader")
 @require_POST
 def decide_award(request, slug):
-    """Approve an award's result, or send it back to the award manager with a note."""
+    """
+    Approve an award's result, or send it back to the award manager with a note. Or publish the
+    entries already decided now, without waiting for the ones still with staff or judges.
+    """
     from apps.awards import results as award_results
 
     award = get_object_or_404(Award, slug=slug)
     note = request.POST.get("note", "")
     try:
-        if request.POST.get("decision") == "approve":
+        if request.POST.get("decision") == "publish_now":
+            newly = award_results.publish_now(award, by=request.user, note=note)
+            messages.success(request, f"{award.name}: {len(newly)} decided entr{'y' if len(newly) == 1 else 'ies'} "
+                                      f"published and the applicants told. The rest are published when decided.")
+        elif request.POST.get("decision") == "approve":
             award_results.approve(award, by=request.user, note=note)
             messages.success(request, f"{award.name}: result approved. It is on the results board and every "
                                       f"applicant has been told.")

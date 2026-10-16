@@ -11,6 +11,9 @@ Approving publishes every decided entry in the award at once: it appears on the 
 each applicant is told their result, and re-evaluation becomes possible. After a re-evaluation
 the manager decides that entry again and sends the award's updated result the same way.
 If an award has no active manager, its programme staff prepare the result.
+
+A leader can also publish the entries already decided straight away (publish_now), even while
+other entries are still with staff or judges; those are published later.
 """
 from django.db import transaction
 from django.urls import reverse
@@ -116,10 +119,8 @@ def _check_leader(by, award):
         raise BusinessRuleError(f"{award.name}'s result isn't waiting for leadership.")
 
 
-@transaction.atomic
-def approve(award, *, by, note=""):
-    """Approve the award's result as a whole: every decided entry is published and its applicant told."""
-    _check_leader(by, award)
+def _publish(award, *, by, note="", **extra):
+    """Publish every decided, unpublished entry of the award and tell each applicant."""
     newly = state(award)["decided"]
     for report in newly:
         report.result_published = True
@@ -131,10 +132,40 @@ def approve(award, *, by, note=""):
     award.results_decided_by, award.results_decided_at = by, timezone.now()
     award.save()
     record(by, "status_change", award, changes={"results": RESULTS.APPROVED, "published": len(newly),
-                                                "note": (note or "").strip()})
+                                                "note": (note or "").strip(), **extra})
+    return newly
+
+
+@transaction.atomic
+def approve(award, *, by, note=""):
+    """Approve the award's result as a whole: every decided entry is published and its applicant told."""
+    _check_leader(by, award)
+    _publish(award, by=by, note=note)
     notify_team(award, f"{award.name}: leadership approved the award's result. It is now on the results board.",
                 kind=Notification.Kind.INFO, link=reverse("core:results") + f"?award={award.slug}")
     return award
+
+
+@transaction.atomic
+def publish_now(award, *, by, note=""):
+    """
+    A leader publishes the entries already decided, without waiting for the rest of the award
+    (entries still with staff or judges, or scored but not decided yet). Those stay unpublished
+    and can be published later the same way, or sent by the manager as usual.
+    """
+    if not (by.role == User.Role.LEADER or by.is_superuser):
+        raise BusinessRuleError("Only leadership publishes an award's result.")
+    current = state(award)
+    if not current["decided"]:
+        raise BusinessRuleError(f"{award.name} has no decided entry to publish yet: the award manager "
+                                f"marks scored entries Successful or Not successful first.")
+    pending = len(current["in_pipeline"]) + len(current["to_decide"])
+    newly = _publish(award, by=by, note=note, early=True, still_pending=pending)
+    left = f" {pending} other entr{'y is' if pending == 1 else 'ies are'} still in progress." if pending else ""
+    notify_team(award, f"{award.name}: leadership published {len(newly)} decided entr"
+                       f"{'y' if len(newly) == 1 else 'ies'} on the results board.{left}",
+                kind=Notification.Kind.INFO, link=reverse("core:results") + f"?award={award.slug}")
+    return newly
 
 
 @transaction.atomic

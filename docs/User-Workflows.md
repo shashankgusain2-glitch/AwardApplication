@@ -104,7 +104,7 @@ Each award has **one award manager**, chosen by leadership, and the **programme 
 1. **Overview:** every award in one view: entries, how many are being judged, scored and decided, judging progress, and each award's result status.
 2. **Awards and managers:** create new awards, give each one an award manager, and change any award's team.
 3. **People:** add staff, award managers, judges and leaders (each gets an invite email); deactivate and reactivate accounts.
-4. **Approve award results:** each award's manager sends the award's result; leadership **approves the result of the whole award** (it is published on the results board and every applicant is told) or **sends it back** with a note.
+4. **Approve award results:** each award's manager sends the award's result; leadership **approves the result of the whole award** (it is published on the results board and every applicant is told) or **sends it back** with a note. Leadership can also **publish now** the entries already decided, without waiting for entries still with staff or judges; those are published later the same way.
 5. **Results board:** every award's published results.
 
 Leadership doesn't decide single applications, confirm requests or change scores.
