@@ -2,7 +2,7 @@
 
 {% block title %}Approve award results{% endblock %}
 {% block heading %}Approve award results{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Each award's manager decides every entry and sends the award's result here. You approve the result of the whole award (it is then published and every applicant is told) or send it back with a note. You don't decide single applications.</p>{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Each award's manager decides every entry and sends the award's result here. You approve the result of the whole award (it is then published and every applicant is told) or send it back with a note. You don't decide single applications. If an award shouldn't wait for entries still in progress, use <em>Publish now</em> to publish the entries already decided.</p>{% endblock %}
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
@@ -54,7 +54,7 @@
   <h2 style="font-size:1.05rem">Every award</h2>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Award</th><th>Manager</th><th>Result</th><th>Still to do before it comes to you</th></tr></thead>
+      <thead><tr><th>Award</th><th>Manager</th><th>Result</th><th>Still to do before it comes to you</th><th>Publish now</th></tr></thead>
       <tbody>
         {% for p in progress %}
           <tr>
@@ -62,6 +62,12 @@
             <td class="small">{{ p.award.manager.display_name|default:"none yet" }}</td>
             <td><span class="badge badge-{% if p.award.results_status == 'approved' %}approved{% elif p.award.results_status == 'returned' %}rejected{% else %}pending{% endif %}">{{ p.award.get_results_status_display }}</span>{% if p.award.results_status == "approved" %}<br><span class="muted small">{{ p.award.results_decided_at|date:"j M Y" }} · <a href="{% url 'core:results' %}?award={{ p.award.slug }}">results board</a></span>{% elif p.award.results_status == "returned" %}<br><span class="muted small">“{{ p.award.results_note }}”</span>{% endif %}</td>
             <td class="muted small">{% if p.state.can_send %}Ready: waiting for the manager to send it{% else %}{{ p.state.blockers|join:" " }}{% endif %}</td>
+            <td>{% if p.state.decided %}
+              <form method="post" action="{% url 'dashboard:decide_award' p.award.slug %}" onsubmit="return confirm('Publish the {{ p.state.decided|length }} decided entr{{ p.state.decided|length|pluralize:"y,ies" }} of {{ p.award.name|escapejs }} now? Applicants are told at once; entries still in progress are published later.')">
+                {% csrf_token %}
+                <button class="btn btn-outline btn-sm" name="decision" value="publish_now">Publish {{ p.state.decided|length }} decided</button>
+              </form>
+            {% else %}<span class="muted small">Nothing decided yet</span>{% endif %}</td>
           </tr>
         {% endfor %}
       </tbody>
