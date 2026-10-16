@@ -15,6 +15,7 @@ urlpatterns = [
     path("form-builder/", views.form_builder, name="form_builder"),
     path("form-builder/<slug:slug>/", views.form_builder, name="form_builder"),
     path("form-builder/<slug:slug>/new-version/", views.form_edit, name="form_edit"),
+    path("form-builder/<slug:slug>/review/", views.form_review, name="form_review"),
     path("entries/", views.entries, name="entries"),
     path("duplicates/", views.duplicates, name="duplicates"),
     path("duplicates/<int:pk>/", views.duplicate_decide, name="duplicate_decide"),
@@ -28,4 +29,7 @@ urlpatterns = [
     path("organisations/<int:pk>/verify/", views.verify_organisation, name="verify_organisation"),
     path("entries/<int:pk>/accept/", views.accept_report, name="accept_report"),
     path("entries/<int:pk>/reject/", views.reject_report, name="reject_report"),
+    path("entries/<int:pk>/handler/", views.allocate_entry, name="allocate_entry"),
+    path("escalations/", views.escalations, name="escalations"),
+    path("escalations/<int:pk>/answer/", views.escalation_answer, name="escalation_answer"),
 ]

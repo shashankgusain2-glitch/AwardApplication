@@ -133,7 +133,7 @@ flowchart LR
 - ⏳ 2-round awards: moving entries from round 1 to round 2 by rule (shortlist).
 - ✅ **Leadership dashboard:** every award's progress in one view.
 - ✅ **Results:** the award manager decides each entry; **leadership approves each award's result as a whole**, which publishes it on the **results board** and tells every applicant.
-- ✅ **Re-evaluation:** an applicant can ask once, with a reason; the award manager decides and chooses fresh judges.
+- ✅ **Re-evaluation:** an applicant can ask once, with a reason; the award manager decides and programme staff choose fresh judges.
 - ⏳ A review queue for ties and big score gaps.
 
 **Outcome:** one full award cycle runs from entry to published result.
@@ -144,7 +144,7 @@ flowchart LR
 
 *Make sure it works and is safe before real people use it.*
 
-- ✅ Tests for the 4 rules (`tests/rules/`) and every role's permissions; 441 automated tests and a 124-request Postman collection pass.
+- ✅ Tests for the 4 rules (`tests/rules/`) and every role's permissions; 442 automated tests and a 124-request Postman collection pass.
 - ⏳ Test the busy deadline day, when many applicants submit at once.
 - 🟡 Security: login throttling, password policy, HTTPS settings and a dependency scan are in place; an OWASP ZAP scan is still to do.
 - 🟡 Email notifications are built; real email sending needs a provider. SMS reminders: not started.

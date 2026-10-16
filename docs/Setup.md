@@ -76,7 +76,7 @@ Log in at http://localhost:8000/login/. There is one login form for everybody, a
 | Role | Email | Name | Home page after login | What you can try |
 |---|---|---|---|---|
 | Leadership | `leader@awards.example` | A. Verma | `/leadership/` | Overview of every award; create an award and pick its manager; People; approve an award's result as a whole; results board |
-| Award manager | `manager@awards.example` | R. Kulkarni | `/staff/` | Manages both demo awards: set-up pages, team, confirm edit and score-change requests, re-evaluations, *Prepare results* (decide each entry, send the award's result) |
+| Award manager | `manager@awards.example` | R. Kulkarni | `/staff/` | Manages both demo awards: set-up pages, team, confirm edit and score-change requests, re-evaluations, *Prepare results* (decide each entry, send the award's result); doesn't assign judges |
 | Staff | `staff@awards.example` | Meena Shah | `/staff/` | On both demo awards: verify organisations, accept or decline entries, duplicate review, form builder, assign judges, check requests |
 | Staff | `staff2@awards.example` | Arjun Mehta | `/staff/` | Same, but on Kaizen only (staff only see their own awards) |
 | Judge | `kapoor@judges.example` | Dr. R. Kapoor | `/judge/` | Only their own assignments; Accept or Decline; score; ask to change a score |

@@ -2,8 +2,8 @@
 The brief: one system, two awards that work differently, and the award's team sets the
 differences without changing code, on the award's own page (Details and rounds).
 
-Settings are saved by a logged-in staff member into the Award tables, so the public site
-and judges (other users) see them too.
+Settings are saved by the logged-in award manager (set-up is the manager's job) into the
+Award tables, so the public site and judges (other users) see them too.
 """
 import pytest
 from django.urls import reverse
@@ -45,8 +45,8 @@ def test_criteria_weights_add_up_to_100(slug):
 
 
 @pytest.mark.django_db
-def test_the_award_page_changes_the_public_page_for_everyone(staff_client, client):
-    save_award(staff_client, "kaizen", round2="live", judges_per_report="5", entry_fee="2000")
+def test_the_award_page_changes_the_public_page_for_everyone(manager_client, client):
+    save_award(manager_client, "kaizen", round2="live", judges_per_report="5", entry_fee="2000")
     page = client.get(reverse("core:award_detail", args=["kaizen"])).content.decode()   # a visitor, not staff
     assert "Round 2: live presentation" in page
     assert "Round 2: site visit" not in page
@@ -55,8 +55,8 @@ def test_the_award_page_changes_the_public_page_for_everyone(staff_client, clien
 
 
 @pytest.mark.django_db
-def test_settings_for_one_award_do_not_change_the_other(staff_client, client):
-    save_award(staff_client, "kaizen", blind_judging=True, judges_per_report="4")
+def test_settings_for_one_award_do_not_change_the_other(manager_client, client):
+    save_award(manager_client, "kaizen", blind_judging=True, judges_per_report="4")
     be_page = client.get(reverse("core:award_detail", args=["business-excellence"])).content.decode()
     assert "3 jury members read and score" in be_page
 
@@ -71,22 +71,22 @@ def test_settings_for_one_award_do_not_change_the_other(staff_client, client):
     ("entry_fee", "-5"),
     ("closes_on", "yesterday"),
 ])
-def test_invalid_settings_are_rejected(staff_client, demo_awards, field, value):
-    response = save_award(staff_client, "kaizen", **{field: value})
+def test_invalid_settings_are_rejected(manager_client, demo_awards, field, value):
+    response = save_award(manager_client, "kaizen", **{field: value})
     assert b"Saved Kaizen" not in response.content
     assert demo_data.award_overrides() == demo_awards
 
 
 @pytest.mark.django_db
-def test_settings_are_saved_in_the_award_table_and_audited(staff_client):
+def test_settings_are_saved_in_the_award_table_and_audited(manager_client):
     from apps.audit.models import AuditLog
     from apps.awards.models import Award
-    save_award(staff_client, "kaizen", judges_per_report="3", round2="live")
+    save_award(manager_client, "kaizen", judges_per_report="3", round2="live")
     award = Award.objects.get(slug="kaizen")
     assert award.judges_per_report == 3
     assert [r.kind for r in award.rounds.all()] == ["desk", "live"]
     entry = AuditLog.objects.filter(entity="award", entity_id=str(award.pk), action="update").latest("timestamp")
-    assert entry.user.email == "staff@awards.example"
+    assert entry.user.email == "manager@awards.example"
 
 
 def test_there_is_no_separate_award_settings_page():
@@ -99,15 +99,15 @@ def test_there_is_no_separate_award_settings_page():
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("round1,round2", [("site", ""), ("live", ""), ("site", "live"), ("site", "site")])
-def test_blind_rejected_when_every_round_is_in_person(staff_client, demo_awards, round1, round2):
-    response = save_award(staff_client, "kaizen", round1=round1, round2=round2, blind_judging=True)
+def test_blind_rejected_when_every_round_is_in_person(manager_client, demo_awards, round1, round2):
+    response = save_award(manager_client, "kaizen", round1=round1, round2=round2, blind_judging=True)
     assert b"Blind judging needs a desk review round" in response.content
     assert demo_data.award_overrides() == demo_awards
 
 
 @pytest.mark.django_db
-def test_in_person_award_without_blind_is_accepted(staff_client):
-    response = save_award(staff_client, "kaizen", round1="site", round2="", blind_judging=False)
+def test_in_person_award_without_blind_is_accepted(manager_client):
+    response = save_award(manager_client, "kaizen", round1="site", round2="", blind_judging=False)
     assert b"Saved Kaizen Competition" in response.content
     kaizen = demo_data.get_award("kaizen")
     assert kaizen["round_types"] == ["site"]
@@ -134,6 +134,6 @@ def test_a_round_with_judges_assigned_cannot_be_removed(seeded):
     round_two = assignment_services.assign(report, judge, by=User.objects.get(email=ACCOUNTS["staff"]), round=2)
     kapoor = seeded_client("judge")
     assert kapoor.get(reverse("judging:score", args=[round_two.pk])).status_code == 200
-    response = save_award(seeded_client("staff"), "kaizen", round2="")
+    response = save_award(seeded_client("manager"), "kaizen", round2="")
     assert b"Round 2 already has judges assigned" in response.content
     assert kapoor.get(reverse("judging:score", args=[round_two.pk])).status_code == 200   # nothing removed

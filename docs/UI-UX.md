@@ -29,7 +29,7 @@ The four rules are visible in the UI, not only enforced in the background:
 | **Applicant** | `/applicant/` | Dashboard, Organisation profile, Application form, Application status, Results, Notifications |
 | **Judge** | `/judge/` | My assignments, Score an entry, Results, Notifications |
 | **Programme staff** | `/staff/` | My awards, Awards, Form builder, Entries, Duplicate review, Assign judges, Prepare results (view), Re-evaluations (view), Results, Notifications |
-| **Award manager** | `/staff/` (their awards only) | My awards, Awards and teams, Entries, Assign judges, Prepare results, Re-evaluations, Results, Notifications |
+| **Award manager** | `/staff/` (their awards only) | My awards, Awards and teams, Entries, Prepare results, Re-evaluations, Results, Notifications |
 | **Leadership** | `/leadership/` | Overview, Awards and managers, Approve award results, Results board, People, Notifications |
 
 Each role only sees its own menu; any other role's page answers **403 Access denied**, and another user's record answers **404**. Staff and award managers only see the awards they are on.

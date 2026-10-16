@@ -46,6 +46,10 @@ class Application(TimeStampedModel, SoftDeleteModel):
     # True once leadership approved the award's result with this entry's outcome in it: only
     # then is the result "out" (results board, the applicant told, re-evaluation possible).
     result_published = models.BooleanField(default=False)
+    # The programme staff member the award manager gave this entry to (apps/awards/team_work.py).
+    # Empty: anyone on the award's staff picks it up.
+    handled_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="handled_entries", limit_choices_to={"role": "staff"})
 
     class Meta:
         ordering = ["-created_at"]

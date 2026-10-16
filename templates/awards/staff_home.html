@@ -6,20 +6,46 @@
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
+{% if role == "manager" %}
 <div class="grid grid-3" style="margin-bottom:1.5rem">
+  <a class="kpi" href="{% url 'awards:entries' %}" style="text-decoration:none;color:inherit"><span>Requests for you to confirm</span><strong>{{ to_confirm }}</strong></a>
+  <a class="kpi" href="{% url 'awards:escalations' %}" style="text-decoration:none;color:inherit"><span>Cases staff passed to you</span><strong>{{ open_escalations }}</strong></a>
+  <div class="kpi"><span>Form versions to approve</span><strong>{{ forms_waiting|length }}</strong></div>
+  <div class="kpi"><span>With staff (not yet with judges)</span><strong>{{ to_accept }}</strong></div>
+</div>
+{% for f in forms_waiting %}
+  <div class="callout callout-warning" style="margin-bottom:1rem"><div><strong>{{ f.award.name }}: form version {{ f.version }} is waiting for you</strong>Sent by {{ f.submitted_by.display_name|default:"staff" }} on {{ f.submitted_at|date:"j M Y" }}. <a href="{% url 'awards:form_builder' f.award.slug %}">Review and publish it</a>.</div></div>
+{% endfor %}
+
+<div class="card" style="margin-bottom:1.5rem">
+  <div class="card-head"><h2>Your team's workload</h2><a class="btn btn-outline btn-sm" href="{% url 'awards:entries' %}">Give entries to staff</a></div>
+  <p class="muted small" style="margin:0 0 .75rem">Open entries (submitted, accepted or with judges) each staff member holds. Unallocated ones are for anyone on the award's staff.</p>
+  {% for t in team_workload %}
+    <div class="settings-row" style="display:block">
+      <strong>{{ t.award.name }}</strong>
+      <div class="row" style="gap:.5rem;margin-top:.35rem;flex-wrap:wrap">
+        {% for row in t.rows %}<span class="badge badge-draft">{{ row.user.display_name }}: {{ row.open }}</span>{% empty %}<span class="muted small">No staff on this award yet. <a href="{% url 'awards:award_team' t.award.slug %}">Choose its team</a>.</span>{% endfor %}
+        <span class="badge badge-pending">Unallocated: {{ t.unallocated }}</span>
+      </div>
+    </div>
+  {% empty %}<p class="muted small" style="margin:0">You don't manage any award yet.</p>{% endfor %}
+</div>
+{% else %}
+<div class="grid grid-3" style="margin-bottom:1.5rem">
+  <a class="kpi" href="{% url 'awards:entries' %}?mine=1" style="text-decoration:none;color:inherit"><span>Entries given to you</span><strong>{{ mine }}</strong></a>
   <div class="kpi"><span>Organisations to verify</span><strong>{{ to_verify|length }}</strong></div>
   <a class="kpi" href="{% url 'awards:entries' %}?status=submitted" style="text-decoration:none;color:inherit"><span>Entries to accept</span><strong>{{ to_accept }}</strong></a>
-  {% if role == "staff" %}<a class="kpi" href="{% url 'awards:duplicates' %}" style="text-decoration:none;color:inherit"><span>Possible duplicates</span><strong>{{ duplicates }}</strong></a>{% endif %}
+  <a class="kpi" href="{% url 'awards:duplicates' %}" style="text-decoration:none;color:inherit"><span>Possible duplicates</span><strong>{{ duplicates }}</strong></a>
   <div class="kpi"><span>Reports needing judges</span><strong>{{ needing_judges|length }}</strong></div>
   <div class="kpi"><span>Requests for you to check</span><strong>{{ staff_requests }}</strong></div>
-  {% if role == "manager" %}<a class="kpi" href="{% url 'awards:entries' %}" style="text-decoration:none;color:inherit"><span>Waiting for you to confirm</span><strong>{{ to_confirm }}</strong></a>{% else %}<div class="kpi"><span>Checked, waiting for confirmation</span><strong>{{ leader_requests }}</strong></div>{% endif %}
 </div>
 {% if staff_requests %}
-  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>{{ staff_requests }} request{{ staff_requests|pluralize }} waiting for staff</strong>Applicant edits (the award manager then confirms) or judges' score changes (leadership then confirms). Check them on <a href="{% url 'awards:entries' %}">Entries</a>.</div></div>
+  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>{{ staff_requests }} request{{ staff_requests|pluralize }} waiting for staff</strong>Applicant edits and judges' score changes: you check them, then the award manager confirms. Check them on <a href="{% url 'awards:entries' %}">Entries</a>.</div></div>
+{% endif %}
 {% endif %}
 
 <div class="card" style="margin-bottom:1.5rem">
-  <div class="card-head"><h2>Awards</h2><a class="btn btn-outline btn-sm" href="{% url 'awards:award_list' %}">Manage awards</a></div>
+  <div class="card-head"><h2>Awards</h2><a class="btn btn-outline btn-sm" href="{% url 'awards:award_list' %}">{% if role == "manager" %}Set up awards{% else %}All awards{% endif %}</a></div>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Award</th><th>Rounds</th><th>Drafts</th><th>Submitted</th><th>Being judged</th><th>Scored</th><th>Judging progress</th></tr></thead>
@@ -42,6 +68,7 @@
   </div>
 </div>
 
+{% if role == "staff" %}
 <div class="grid grid-2" style="align-items:start">
   <div class="card">
     <h2 style="font-size:1.1rem">Organisations waiting for verification</h2>
@@ -60,4 +87,5 @@
     {% empty %}<p class="muted small" style="margin:0">Every submitted report has its judges.</p>{% endfor %}
   </div>
 </div>
+{% endif %}
 {% endblock %}

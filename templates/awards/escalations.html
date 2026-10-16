@@ -1,0 +1,55 @@
+{% extends "portal_base.html" %}
+
+{% block title %}{% if role == "manager" %}Escalations{% else %}Ask the manager{% endif %}{% endblock %}
+{% block heading %}{% if role == "manager" %}Cases staff passed to you{% else %}Ask the award manager{% endif %}{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">{% if role == "manager" %}Programme staff send you the cases they shouldn't decide alone. Write your decision; staff act on it.{% else %}Not sure how to decide something (a doubtful GSTIN, an applicant disputing a decline, an unclear duplicate)? Pass it to the award manager. They decide; you act on their answer.{% endif %}</p>{% endblock %}
+{% block user %}{% include "partials/user_chip.html" %}{% endblock %}
+
+{% block content %}
+{% if role == "staff" %}
+<div class="card" style="margin-bottom:1.5rem">
+  <h2 style="font-size:1.05rem">New question</h2>
+  <form method="post" class="row">
+    {% csrf_token %}
+    <select name="award" required aria-label="Award" style="width:220px">{% for a in awards %}<option value="{{ a.pk }}">{{ a.name }}{% if not a.manager %} (no manager){% endif %}</option>{% endfor %}</select>
+    <input name="question" type="text" required placeholder="What should the award manager decide?" style="flex:1;min-width:260px">
+    <button class="btn btn-dark btn-sm" type="submit">Send to the manager</button>
+  </form>
+  <p class="muted small" style="margin:.5rem 0 0">About one entry? Use <strong>Ask the manager</strong> on its row in <a href="{% url 'awards:entries' %}">Entries</a>.</p>
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:1.5rem{% if open and role == 'manager' %};border-left:4px solid var(--warning){% endif %}">
+  <h2 style="font-size:1.05rem">Waiting for the award manager ({{ open|length }})</h2>
+  {% for c in open %}
+    <div class="settings-row" style="display:block">
+      <div class="row" style="gap:.5rem;margin-bottom:.25rem">
+        <strong>{{ c.award.name }}</strong>{% if c.application %}<span class="muted small">· {{ c.application.reference }}</span>{% endif %}
+        <span class="muted small">· {{ c.raised_by.display_name }}, {{ c.created_at|date:"j M Y" }}</span>
+      </div>
+      <p class="small" style="margin:0">“{{ c.question }}”</p>
+      {% if role == "manager" %}
+        <form method="post" action="{% url 'awards:escalation_answer' c.pk %}" class="row" style="margin-top:.5rem">
+          {% csrf_token %}
+          <input name="answer" type="text" required placeholder="Your decision (staff act on it)" style="flex:1;min-width:260px" aria-label="Answer">
+          <button class="btn btn-success btn-sm" type="submit">Answer</button>
+        </form>
+      {% endif %}
+    </div>
+  {% empty %}<p class="muted small" style="margin:0">Nothing waiting.</p>{% endfor %}
+</div>
+
+<div class="card">
+  <h2 style="font-size:1.05rem">Answered</h2>
+  {% for c in answered %}
+    <div class="settings-row" style="display:block">
+      <div class="row" style="gap:.5rem;margin-bottom:.25rem">
+        <strong>{{ c.award.name }}</strong>{% if c.application %}<span class="muted small">· {{ c.application.reference }}</span>{% endif %}
+        <span class="muted small">· asked by {{ c.raised_by.display_name }}</span>
+      </div>
+      <p class="small" style="margin:0">“{{ c.question }}”</p>
+      <p class="small" style="margin:.25rem 0 0">✓ <strong>{{ c.answered_by.display_name }}</strong> ({{ c.answered_at|date:"j M Y" }}): {{ c.answer }}</p>
+    </div>
+  {% empty %}<p class="muted small" style="margin:0">None yet.</p>{% endfor %}
+</div>
+{% endblock %}

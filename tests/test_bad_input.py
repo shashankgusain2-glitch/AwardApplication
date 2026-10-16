@@ -81,10 +81,12 @@ def test_bad_values_explain_themselves(seeded):
     """Not just no crash: the person is told what is wrong."""
     from apps.accounts.models import User
     from apps.awards.services import create_award
-    staff = seeded_client("staff")
+    staff, manager = seeded_client("staff"), seeded_client("manager")
     award = create_award(by=User.objects.get(email=ACCOUNTS["leader"]), name="Fresh Award", rounds=["desk"])
     award.staff.add(User.objects.get(email=ACCOUNTS["staff"]))
-    page = staff.post(reverse("awards:award_criteria", args=[award.slug]),
+    award.manager = User.objects.get(email=ACCOUNTS["manager"])
+    award.save()
+    page = manager.post(reverse("awards:award_criteria", args=[award.slug]),
                       {"rows": "1", "c-0-round": "1", "c-0-label": "A", "c-0-weight": "heavy"}, follow=True)
     assert "must be a whole number" in page.content.decode()
     page = seeded_client("leader").post(reverse("dashboard:award_new"), {

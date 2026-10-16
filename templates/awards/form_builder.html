@@ -2,7 +2,7 @@
 
 {% block title %}Form builder{% endblock %}
 {% block heading %}Application form{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">The questions applicants answer, by published version.</p>{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">The questions applicants answer, by version. Programme staff draft the next version; the award manager approves it before applicants see it.</p>{% endblock %}
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
@@ -12,15 +12,39 @@
   {% endfor %}
 </nav>
 
+{% if draft %}
+  {% if draft.waiting_for_manager %}
+    <div class="callout callout-info" style="margin-bottom:1.5rem;{% if can_review %}border-left:4px solid var(--warning){% endif %}">
+      <div><strong>Version {{ draft.version }} is waiting for the award manager</strong>Sent {{ draft.submitted_at|date:"j M Y, H:i" }} by {{ draft.submitted_by.display_name|default:"staff" }}. Applicants don't see it until {% if can_review %}you publish{% else %}{{ manager.display_name|default:"the award manager" }} publishes{% endif %} it.{% if chosen.pk != draft.pk %} <a href="?version={{ draft.version }}">See its questions</a>.{% endif %}</div>
+      {% if role == "staff" %}<a class="btn btn-outline btn-sm" style="margin-left:auto;align-self:center" href="{% url 'awards:form_edit' award.slug %}">Change the draft</a>{% endif %}
+    </div>
+    {% if can_review %}
+      <form method="post" action="{% url 'awards:form_review' award.slug %}" class="card row" style="margin-bottom:1.5rem">
+        {% csrf_token %}
+        <input name="note" type="text" placeholder="What needs changing (required to send it back; staff see it)" style="flex:1;min-width:260px" aria-label="Note">
+        <button class="btn btn-success btn-sm" name="decision" value="approve">Approve and publish version {{ draft.version }}</button>
+        <button class="btn btn-outline btn-sm" name="decision" value="return">Send back to staff</button>
+      </form>
+    {% endif %}
+  {% else %}
+    <div class="callout callout-warning" style="margin-bottom:1.5rem">
+      <div><strong>Version {{ draft.version }} {% if draft.review_note %}was sent back by the award manager{% else %}is a draft{% endif %}</strong>{% if draft.review_note %}“{{ draft.review_note }}” ({{ draft.reviewed_by.display_name }}). {% endif %}{% if role == "staff" %}Change it and send it again.{% else %}Staff are changing it.{% endif %}</div>
+      {% if role == "staff" %}<a class="btn btn-dark btn-sm" style="margin-left:auto;align-self:center" href="{% url 'awards:form_edit' award.slug %}">Change the draft</a>{% endif %}
+    </div>
+  {% endif %}
+{% endif %}
+
 {% if chosen %}
+{% if chosen.is_published %}
 <div class="callout callout-warning" style="margin-bottom:1.5rem">
   <div><strong>Version {{ chosen.version }} is published and locked</strong>Published versions never change. Applications always open with the version they were started on, even after a new version is published.</div>
-  <a class="btn btn-dark btn-sm" style="margin-left:auto;align-self:center" href="{% url 'awards:form_edit' award.slug %}">Edit questions (new version)</a>
+  {% if role == "staff" and not draft %}<a class="btn btn-dark btn-sm" style="margin-left:auto;align-self:center" href="{% url 'awards:form_edit' award.slug %}">Edit questions (new version)</a>{% endif %}
 </div>
+{% endif %}
 
 <div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(260px,1fr);align-items:start">
   <div class="card">
-    <div class="card-head"><h2>Questions in version {{ chosen.version }}</h2></div>
+    <div class="card-head"><h2>Questions in version {{ chosen.version }}{% if not chosen.is_published %} (not published){% endif %}</h2></div>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Question</th><th>Type</th><th>Required</th><th>Hidden in blind judging</th></tr></thead>
@@ -50,13 +74,20 @@
     <h3>Version history</h3>
     {% for v in versions %}
       <a class="settings-row" style="display:block;text-decoration:none;color:inherit" href="?version={{ v.version }}">
-        <div class="row-between"><strong>Version {{ v.version }}</strong>{% if forloop.first %}<span class="badge badge-approved">Current</span>{% endif %}</div>
-        <p class="muted small" style="margin:.25rem 0 0">Published {{ v.published_at|date:"j M Y" }} · {{ v.applications_count }} application{{ v.applications_count|pluralize }} · {{ v.questions|length }} questions</p>
+        <div class="row-between"><strong>Version {{ v.version }}</strong>{% if not v.is_published %}<span class="badge badge-pending">{% if v.waiting_for_manager %}Waiting for approval{% else %}Draft{% endif %}</span>{% elif v.pk == award.current_form.pk %}<span class="badge badge-approved">Current</span>{% endif %}</div>
+        <p class="muted small" style="margin:.25rem 0 0">{% if v.is_published %}Published {{ v.published_at|date:"j M Y" }} · {{ v.applications_count }} application{{ v.applications_count|pluralize }}{% else %}Not published{% endif %} · {{ v.questions|length }} questions</p>
       </a>
     {% endfor %}
   </div>
 </div>
 {% else %}
-  <div class="card"><p class="muted small" style="margin:0">{% if award %}{{ award.name }} has no published form yet.{% else %}No awards are set up yet.{% endif %}</p></div>
+  {% if award %}
+    <div class="callout callout-info">
+      <div><strong>{{ award.name }} has no application form yet</strong>{% if role == "staff" %}Write its questions and send them to {% if manager %}{{ manager.display_name }} (the award manager) to approve{% else %}publish{% endif %}.{% else %}Programme staff on this award write the questions; you approve them here.{% if not award.staff.exists %} It has no staff yet: <a href="{% url 'awards:award_team' award.slug %}">choose its team</a> first.{% endif %}{% endif %}</div>
+      {% if role == "staff" %}<a class="btn btn-dark btn-sm" style="margin-left:auto;align-self:center" href="{% url 'awards:form_edit' award.slug %}">Create the form</a>{% endif %}
+    </div>
+  {% else %}
+    <div class="card"><p class="muted small" style="margin:0">{% if role == "staff" %}You aren't on any award's team yet. Its award manager adds you.{% else %}No awards are set up yet.{% endif %}</p></div>
+  {% endif %}
 {% endif %}
 {% endblock %}

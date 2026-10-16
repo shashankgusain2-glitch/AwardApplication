@@ -84,7 +84,7 @@ AwardApplication/
 
 - **Templates:** `base.html` (public website) and `portal_base.html` (every portal: sidebar menu for the role, notifications, messages). One folder per area: `accounts/`, `core/`, `entries/`, `judging/`, `awards/` (staff and award managers), `dashboard/` (leadership), `notifications/`, and `partials/` for shared pieces. See [templates/README.md](../templates/README.md).
 - **Static:** `css/main.css` (all styles, colours as CSS variables), `js/main.js` (mobile menu, a few small helpers), `js/form_editor.js` (adding and moving questions in the form builder). See [static/js/README.md](../static/js/README.md).
-- **Tests:** `tests/rules/` has one file per rule; `tests/api/` covers the REST API; the other files cover each role's screens and flows. 441 tests, run with `docker compose exec web pytest`. See [testing.md](testing.md).
+- **Tests:** `tests/rules/` has one file per rule; `tests/api/` covers the REST API; the other files cover each role's screens and flows. 442 tests, run with `docker compose exec web pytest`. See [testing.md](testing.md).
 - **Docs:** setup, API, data model, architecture, deployment runbook, workflows, roadmaps and the decision log. See [docs/README.md](README.md).
 
 ---

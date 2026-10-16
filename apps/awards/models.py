@@ -112,6 +112,15 @@ class FormVersion(TimeStampedModel):
     version = models.PositiveIntegerField()
     questions = models.JSONField(default=list)
     published_at = models.DateTimeField(null=True, blank=True)
+    # Staff draft a version and send it; the award manager publishes it or sends it back
+    # (apps/awards/team_work.py). Unpublished = a draft: staff can still change it.
+    submitted_by = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL,
+                                     related_name="+")
+    submitted_at = models.DateTimeField(null=True, blank=True, help_text="Sent to the award manager (empty: "
+                                                                         "being edited, or sent back)")
+    reviewed_by = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL,
+                                    related_name="+")
+    review_note = models.TextField(blank=True, default="", help_text="Why the manager sent it back")
 
     class Meta:
         ordering = ["award", "version"]
@@ -123,6 +132,10 @@ class FormVersion(TimeStampedModel):
     @property
     def is_published(self):
         return self.published_at is not None
+
+    @property
+    def waiting_for_manager(self):
+        return self.published_at is None and self.submitted_at is not None
 
     def save(self, *args, **kwargs):
         if self.pk:
@@ -151,3 +164,35 @@ class Criterion(models.Model):
 
     def __str__(self):
         return f"{self.award} R{self.round_number}: {self.label} ({self.weight}%)"
+
+
+class Escalation(TimeStampedModel):
+    """
+    A case programme staff pass up to the award manager instead of deciding it themselves
+    (a doubtful GSTIN, an applicant disputing a decline, an unclear duplicate...). The manager
+    answers with a decision; staff then act on it. Nothing changes on its own.
+    """
+
+    class Status(models.TextChoices):
+        OPEN = "open", "Waiting for the award manager"
+        ANSWERED = "answered", "Answered"
+
+    award = models.ForeignKey(Award, on_delete=models.CASCADE, related_name="escalations")
+    application = models.ForeignKey("applications.Application", null=True, blank=True, on_delete=models.CASCADE,
+                                    related_name="escalations")
+    raised_by = models.ForeignKey("accounts.User", on_delete=models.PROTECT, related_name="+")
+    question = models.TextField()
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.OPEN, db_index=True)
+    answer = models.TextField(blank=True, default="")
+    answered_by = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL,
+                                    related_name="+")
+    answered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["status", "-created_at"]
+        constraints = [
+            models.CheckConstraint(condition=Q(status="open") | ~Q(answer=""), name="escalation_answered_has_answer"),
+        ]
+
+    def __str__(self):
+        return f"{self.award}: {self.question[:40]}"

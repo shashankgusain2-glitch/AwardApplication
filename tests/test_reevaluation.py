@@ -150,7 +150,9 @@ def test_approved_reevaluation_uses_fresh_judges_and_keeps_the_old_scores_as_his
     with pytest.raises(BusinessRuleError, match="re-evaluated by other judges"):
         evaluations.request_change(Evaluation.objects.get(assignment=first[0]), judge=judges[0], reason="Fix it")
 
-    _score(report, judges[2], decided["manager"], 8)
+    with pytest.raises(BusinessRuleError, match="award managers don't"):   # programme staff assign
+        _score(report, judges[2], decided["manager"], 8)
+    _score(report, judges[2], staff, 8)
     _score(report, judges[3], staff, 9)
     report.refresh_from_db()
     assert report.status == "scored" and evaluations.report_progress(report) == 100
@@ -195,18 +197,22 @@ def test_the_whole_flow_on_the_web_pages(decided, client):
     assert "sent to the award manager" in response.content.decode()
     assert "waiting for the award manager" in response.content.decode()
 
-    # Staff see it but can't decide; the manager approves and goes straight to choosing judges
+    # Staff see it but can't decide; the manager approves; staff are asked to choose the new judges
     _as(client, decided["staff"])
     page = client.get(reverse("awards:reevaluations")).content.decode()
     assert "Our data was missed." in page and f"the award manager, {manager.display_name}" in page
-    assert "Approve and choose new judges" not in page
+    assert "Approve (staff choose new judges)" not in page
     _as(client, manager)
     page = client.get(reverse("awards:reevaluations")).content.decode()
-    assert "Waiting for a decision (1)" in page and "Approve and choose new judges" in page
+    assert "Waiting for a decision (1)" in page and "Approve (staff choose new judges)" in page
     req = report.requests.get()
     response = client.post(reverse("awards:reevaluation_decide", args=[req.pk]), {"decision": "approve"})
-    assert response["Location"] == reverse("awards:assign", args=[report.pk])
-    page = client.get(response["Location"]).content.decode()
+    assert response["Location"] == reverse("awards:reevaluations")
+    assert client.get(reverse("awards:assign", args=[report.pk])).status_code == 403   # managers don't assign
+    note = Notification.objects.filter(user=decided["staff"], link=reverse("awards:assign", args=[report.pk])).get()
+    assert "Choose the new judges" in note.message
+    _as(client, decided["staff"])
+    page = client.get(note.link).content.decode()
     offered = [f'name="judges" value="{j.pk}"' in page for j in judges]
     assert offered == [False, False, True, True]                      # fresh judges only
     client.post(reverse("awards:assign", args=[report.pk]), {"judges": [judges[2].pk, judges[3].pk]})

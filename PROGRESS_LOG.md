@@ -26,7 +26,7 @@ The four rules from the brief:
 |---|---|---|
 | Applicant | Organisation profile, apply, submit, follow status | Self sign-up (always created as an applicant) |
 | Programme staff | On the awards they are allocated to: verify organisations, accept or decline entries, review duplicates, build forms, assign judges, record conflicts, check edit and score-change requests (first step) | By a leader (People page or API), an award manager (onto their own team), `import_csv`, `/admin/`, or `seed_data` |
-| Award manager | One per award, chosen by leadership: sets the award up, chooses its staff, confirms edit and score-change requests, decides re-evaluations, decides each entry's result and sends the award's result to leadership | By a leader, `import_csv`, or `seed_data` |
+| Award manager | One per award, chosen by leadership: sets the award up, chooses its staff, confirms edit and score-change requests, decides re-evaluations (staff then assign the new judges), decides each entry's result and sends the award's result to leadership | By a leader, `import_csv`, or `seed_data` |
 | Judge | Accept or decline assignments; grade **only their own** reports | By a leader, `/admin/`, or `seed_data` |
 | Leader | Overview of every award, creates awards and picks their manager, manages people, **approves each award's result as a whole**, sees the results board; never changes scores or decides single entries | By a leader, `createsuperuser`, `import_csv`, or `seed_data` |
 
@@ -62,7 +62,7 @@ The four rules from the brief:
 | 3.6 Feature slices | Done | 8 | 14 Oct | `tests/test_web_workflow.py`, `tests/test_award_admin.py` |
 | 3.7 Validation and edge cases | Done | 3 | 14 Oct | `tests/test_bad_input.py`; services raise `BusinessRuleError` with a clear message |
 | 3.8 Mid-point review and cleanup | Done | 2 | 14 Oct | Docs and folder READMEs updated; known gaps in §7 |
-| Phase 4 Testing | In progress (441 automated tests, Postman 124 requests; load, security scan and UAT to do) | n/a | ongoing | `.github/workflows/ci.yml`, `docs/testing.md` |
+| Phase 4 Testing | In progress (442 automated tests, Postman 124 requests; load, security scan and UAT to do) | n/a | ongoing | `.github/workflows/ci.yml`, `docs/testing.md` |
 | Phase 5 Deployment | Demo site live (15 Oct); real-user set-up to do | n/a | 15 Oct → | Render + Supabase; `render.yaml`, `docs/Deployment.md` |
 | Phase 3+ Client-review changes (award managers, duplicates, entry checks, results, award-level approval) | Done | n/a | 15–16 Oct | §4, decisions D9–D16 |
 | Phase 6 Maintenance | Not started | n/a | after launch | n/a |
@@ -214,7 +214,7 @@ Only questions marked identifying (and file names) mention the organisation.
 
 | Kind | Where | Result |
 |---|---|---|
-| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **441 passed, 0 skipped** (16 Oct) |
+| Automated tests | `tests/` (pytest; runs in GitHub Actions with Postgres 16 and ruff) | **442 passed, 0 skipped** (16 Oct) |
 | Postman | `postman/` (collection, environment, `CHECKLIST.md`) | **124 requests, 280 checks, 0 failures** with Newman on fresh seed data; repeatable |
 | End-to-end | `tests/test_web_workflow.py`, `tests/test_award_admin.py`, `tests/test_reevaluation.py` and browser runs | Sign up → organisation → submit → staff verify and accept → judges grade → the award manager decides → leadership approves the award → results board → re-evaluation with fresh judges → approved again |
 | Rules | `tests/rules/` | Rules 1–4 all running, no skipped tests (Rule 2 includes conflicts across merged duplicate organisations) |
@@ -263,6 +263,7 @@ Only questions marked identifying (and file names) mention the organisation.
 | 16 Oct | **Leaders approve each award's result as a whole**: the award manager decides every scored entry on *Prepare results* and sends the award's result once nothing is with staff or judges; a leader approves it (published: results board, applicants told) or sends it back with a note. Applicants see "waiting for the decision" until then. Score changes are confirmed by the award manager; leaders keep Overview, Awards and managers, People, Results board and Approve award results | The request | `apps/awards/results.py`, `apps/dashboard/`, `templates/awards/prepare_results.html` |
 | 16 Oct | Form builder is programme-staff only: removed from the award manager's menu, the pages refuse managers, the set-up checklist shows "2. Application form (staff)" | The request | `apps/core/demo_data.py`, `apps/awards/views.py` |
 | 16 Oct | **Award settings screen removed** (staff and award managers): it only covered the two demo awards and duplicated the award's own *Details and rounds* page; its tests moved to that page | The request | `apps/awards/views.py`, `tests/test_award_settings.py` |
+| 16 Oct | **Judge assignment is programme-staff only**: Assign judges removed from the award manager's menu, home page and Entries; the page and the service refuse managers; after a re-evaluation is approved, the award's staff are notified to choose the new judges | The request | `apps/assignments/services.py`, `apps/awards/views.py` |
 
 ---
 

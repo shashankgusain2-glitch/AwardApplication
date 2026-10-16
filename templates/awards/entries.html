@@ -3,12 +3,12 @@
 
 {% block title %}Entries{% endblock %}
 {% block heading %}Entries{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Every application, and the decisions waiting for staff. Check each submitted entry: <strong>Accept</strong> sends it on to judges, <strong>Decline</strong> tells the applicant why.</p>{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">{% if can_screen %}Every application on your awards, and the work waiting for staff. Check each submitted entry: <strong>Accept</strong> sends it on to judges, <strong>Decline</strong> tells the applicant why. Not sure? <strong>Ask the manager</strong>.{% else %}Every application on the awards you manage. Programme staff screen them; you confirm the requests they've checked and choose who handles each entry.{% endif %}</p>{% endblock %}
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
 {% if staff_requests or confirm_requests or leader_requests or to_verify %}
-<div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(260px,1fr);align-items:start;margin-bottom:1.5rem">
+<div class="grid" style="{% if can_screen %}grid-template-columns:minmax(0,2fr) minmax(260px,1fr);{% endif %}align-items:start;margin-bottom:1.5rem">
   <div class="card" {% if staff_requests %}style="border-left:4px solid var(--warning)"{% endif %}>
     <h2 style="font-size:1.05rem">Requests waiting for staff ({{ staff_requests|length }})</h2>
     <p class="muted small" style="margin:0 0 .5rem">Applicants asking to edit a submitted report, and judges asking to change a submitted score. Staff on the award check each one: <strong>Pass on</strong> sends it for the final confirmation (an edit to the <strong>award manager</strong>, a score change to leadership; nothing changes until they confirm), or <strong>Refuse</strong> it with a note. Re-evaluations are on the <a href="{% url 'awards:reevaluations' %}">Re-evaluations</a> page.</p>
@@ -24,6 +24,7 @@
       </details>
     {% endif %}
   </div>
+  {% if can_screen %}
   <div class="card">
     <h2 style="font-size:1.05rem">Organisations to verify ({{ to_verify|length }})</h2>
     {% for p in to_verify %}
@@ -38,6 +39,7 @@
       </div>
     {% empty %}<p class="muted small" style="margin:0">None waiting.</p>{% endfor %}
   </div>
+  {% endif %}
 </div>
 {% endif %}
 
@@ -47,13 +49,14 @@
       <input name="q" type="text" placeholder="Reference, title or organisation…" value="{{ filters.q }}" style="width:260px">
       <select name="status" style="width:170px"><option value="">All statuses</option>{% for v, l in statuses %}<option value="{{ v }}" {% if filters.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
       <select name="award" style="width:220px"><option value="">All awards</option>{% for a in awards %}<option value="{{ a.slug }}" {% if filters.award == a.slug %}selected{% endif %}>{{ a.name }}</option>{% endfor %}</select>
+      {% if can_screen %}<label class="small row" style="gap:.3rem"><input type="checkbox" name="mine" value="1" {% if filters.mine %}checked{% endif %}> Given to me</label>{% endif %}
       <button class="btn btn-outline btn-sm" type="submit">Filter</button>
     </div>
     <span class="muted small">{{ reports|length }} application{{ reports|length|pluralize }}</span>
   </form>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Reference</th><th>Organisation</th><th>Award</th><th>Submitted</th><th>Status</th><th>Judged</th><th></th></tr></thead>
+      <thead><tr><th>Reference</th><th>Organisation</th><th>Award</th><th>Submitted</th><th>Status</th><th>Judged</th><th>Handled by</th><th></th></tr></thead>
       <tbody>
         {% for r in reports %}
           <tr>
@@ -63,15 +66,24 @@
             <td class="muted small">{{ r.submitted_at|date:"j M Y"|default:"—" }}</td>
             <td><span class="badge badge-{{ r.status }}">{{ r.get_status_display }}</span></td>
             <td>{% if r.status != "draft" and r.status != "rejected" %}{% judged_bar r %}{% else %}<span class="muted small">—</span>{% endif %}</td>
+            <td class="small">
+              {% if role == "manager" and r.status != "draft" %}
+                <form method="post" action="{% url 'awards:allocate_entry' r.pk %}" class="row" style="gap:.3rem">
+                  {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <select name="staff" aria-label="Handled by" style="width:150px"><option value="">Any staff member</option>{% for s in award_staff|get_item:r.award_id %}<option value="{{ s.pk }}" {% if r.handled_by_id == s.pk %}selected{% endif %}>{{ s.display_name }}</option>{% endfor %}</select>
+                  <button class="btn btn-outline btn-sm" type="submit">Save</button>
+                </form>
+              {% elif r.handled_by %}{% if r.handled_by_id == user.pk %}<strong>You</strong>{% else %}{{ r.handled_by.display_name }}{% endif %}{% else %}<span class="muted">Anyone</span>{% endif %}
+            </td>
             <td class="row">
-              {% if r.status == "accepted" or r.status == "assigned" or r.status == "in_review" %}<a class="btn btn-primary btn-sm" href="{% url 'awards:assign' r.pk %}">Judges</a>{% endif %}
-              {% if r.status == "submitted" %}
+              {% if role == "staff" %}{% if r.status == "accepted" or r.status == "assigned" or r.status == "in_review" %}<a class="btn btn-primary btn-sm" href="{% url 'awards:assign' r.pk %}">Judges</a>{% endif %}{% endif %}
+              {% if can_screen and r.status == "submitted" %}
                 <form method="post" action="{% url 'awards:accept_report' r.pk %}">
                   {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
                   <button class="btn btn-success btn-sm" type="submit" {% if r.applicant.applicant_profile.pk not in verified_ids %}disabled title="Verify the organisation first"{% endif %}>Accept</button>
                 </form>
               {% endif %}
-              {% if r.status == "submitted" or r.status == "accepted" %}
+              {% if can_screen and r.status == "submitted" or can_screen and r.status == "accepted" %}
                 <details class="decline">
                   <summary class="btn btn-outline btn-sm">Decline</summary>
                   <form method="post" action="{% url 'awards:reject_report' r.pk %}" class="row" style="margin-top:.4rem">
@@ -81,10 +93,21 @@
                   </form>
                 </details>
               {% endif %}
+              {% if can_screen and r.status != "draft" %}
+                <details class="decline">
+                  <summary class="btn btn-outline btn-sm" title="Pass this case to the award manager to decide">Ask the manager</summary>
+                  <form method="post" action="{% url 'awards:escalations' %}" class="row" style="margin-top:.4rem">
+                    {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <input type="hidden" name="award" value="{{ r.award_id }}"><input type="hidden" name="application" value="{{ r.pk }}">
+                    <input name="question" type="text" required placeholder="What should the manager decide?" style="width:240px">
+                    <button class="btn btn-dark btn-sm" type="submit">Send</button>
+                  </form>
+                </details>
+              {% endif %}
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="7" class="muted small">No applications match.</td></tr>
+          <tr><td colspan="8" class="muted small">No applications match.</td></tr>
         {% endfor %}
       </tbody>
     </table>

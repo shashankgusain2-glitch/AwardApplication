@@ -9,6 +9,7 @@ from django.utils import timezone
 from apps.audit.services import record
 from apps.core.services import BusinessRuleError
 
+from .access import check_can_set_up
 from .models import Award, AwardRound, Criterion, FormVersion
 
 # The portal screens use display labels; the database stores codes.
@@ -191,6 +192,7 @@ def create_award(*, by, name, rounds, sector="", summary="", opens_on=None, clos
 
 @transaction.atomic
 def update_award(award, *, by, rounds, **fields):
+    check_can_set_up(by, award)
     _check_award_fields(name=fields["name"], judges_per_report=fields["judges_per_report"],
                         opens_on=fields.get("opens_on"), closes_on=fields.get("closes_on"), rounds=rounds,
                         blind_judging=fields["blind_judging"], entry_fee=fields["entry_fee"])
@@ -250,6 +252,7 @@ def apply_date_rules(today=None):
 
 @transaction.atomic
 def set_status(award, *, by, status):
+    check_can_set_up(by, award)
     if status not in Award.Status.values:
         raise BusinessRuleError("Unknown award status.")
     if status == Award.Status.OPEN:
@@ -282,6 +285,7 @@ def save_criteria(award, *, by, rows):
     Weights must add up to 100 in every round. Locked once judging has started.
     """
     from django.utils.text import slugify
+    check_can_set_up(by, award)
     if criteria_locked(award):
         raise BusinessRuleError("Judges have already scored this award, so its criteria can't change.")
     rounds = {r.number for r in award.rounds.all()}
@@ -323,6 +327,7 @@ def save_criteria(award, *, by, rows):
 def set_panel(award, *, by, judges):
     """The judges who may be assigned this award's reports. Removing a judge keeps their existing assignments."""
     from apps.accounts.models import JudgeProfile, User
+    check_can_set_up(by, award)
     judges = [j for j in judges if j.role == User.Role.JUDGE]
     wanted = {j.pk for j in judges}
     for profile in JudgeProfile.objects.filter(awards=award).exclude(user_id__in=wanted):

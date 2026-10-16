@@ -4,12 +4,17 @@
 {% block title %}New form version{% endblock %}
 {% block breadcrumb %}<p class="muted small" style="margin:0 0 .25rem"><a href="{% url 'awards:form_builder' award.slug %}">Form builder</a> / {{ award.name }}</p>{% endblock %}
 {% block heading %}Edit questions: {{ award.name }}{% endblock %}
-{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Change, add or remove questions, then publish. {% if current %}Version {{ current.version }} stays exactly as it is.{% endif %}</p>{% endblock %}
+{% block subheading %}<p class="muted" style="margin:.25rem 0 0">Change, add or remove questions, then {% if manager %}send them to the award manager to approve{% else %}publish{% endif %}. {% if current %}Version {{ current.version }} stays exactly as it is.{% endif %}</p>{% endblock %}
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
+{% if draft.review_note %}
+<div class="callout callout-warning" style="margin-bottom:1rem">
+  <div><strong>Sent back by the award manager</strong>“{{ draft.review_note }}” ({{ draft.reviewed_by.display_name }}). You're editing that draft.</div>
+</div>
+{% endif %}
 <div class="callout callout-info" style="margin-bottom:1.5rem">
-  <div><strong>Publishing creates a new version</strong>New applications use the new questions. Applications already started keep the version they began with, so nobody's answers change or disappear.</div>
+  <div><strong>{% if manager %}The award manager publishes it{% else %}Publishing creates a new version{% endif %}</strong>{% if manager %}Saving sends this draft to {{ manager.display_name }}. Nothing changes for applicants until they approve it. {% endif %}Once published, new applications use the new questions. Applications already started keep the version they began with, so nobody's answers change or disappear.</div>
 </div>
 
 <form method="post" class="stack" data-form-editor>
@@ -33,7 +38,7 @@
   <template data-section-template>{% include "awards/_section_card.html" with section=None %}</template>
 
   <div class="row">
-    <button class="btn btn-primary" type="submit">Publish as version {% if current %}{{ current.version|add:1 }}{% else %}1{% endif %}</button>
+    <button class="btn btn-primary" type="submit">{% if manager %}Send version {% if draft %}{{ draft.version }}{% elif current %}{{ current.version|add:1 }}{% else %}1{% endif %} for approval{% else %}Publish as version {% if current %}{{ current.version|add:1 }}{% else %}1{% endif %}{% endif %}</button>
     <a class="btn btn-outline" href="{% url 'awards:form_builder' award.slug %}">Cancel</a>
   </div>
 </form>

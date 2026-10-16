@@ -20,11 +20,12 @@ from .models import ApplicantRequest, Application
 S = Application.Status
 
 # Which status changes staff/leaders may make by hand (the others happen
-# automatically when judges are assigned and evaluations are submitted).
+# automatically when judges are assigned and evaluations are submitted). Award managers
+# don't screen entries: that is staff work (apps/awards/access.py).
 MANUAL_TRANSITIONS = {
-    (S.SUBMITTED, S.ACCEPTED): ("staff", "manager", "leader"),     # passed the staff check
-    (S.SUBMITTED, S.REJECTED): ("staff", "manager", "leader"),     # failed the staff check
-    (S.ACCEPTED, S.REJECTED): ("staff", "manager", "leader"),      # found out later (e.g. a duplicate)
+    (S.SUBMITTED, S.ACCEPTED): ("staff", "leader"),     # passed the staff check
+    (S.SUBMITTED, S.REJECTED): ("staff", "leader"),     # failed the staff check
+    (S.ACCEPTED, S.REJECTED): ("staff", "leader"),      # found out later (e.g. a duplicate)
 }
 # An entry's result (successful / not) is the award manager's decision, published only when
 # leadership approves the award's result as a whole (apps/awards/results.py).
@@ -368,6 +369,10 @@ def _decide_reevaluation_request(req, *, by, approve, note):
     note_text = f" Note: {req.decision_note}" if req.decision_note else ""
     if status == ApplicantRequest.Status.APPROVED:
         _start_reevaluation(application, by)
+        for person in application.award.staff.filter(is_active=True):
+            notify(person, f"{what}: approved by the award manager. Choose the new judges (the first judges "
+                   f"aren't offered again).", kind=Notification.Kind.REQUEST,
+                   link=reverse("awards:assign", args=[application.pk]))
         notify(req.requested_by, f"{what}: approved by the award manager. New judges will score your application, "
                f"then the result will be decided again.{note_text}",
                kind=Notification.Kind.STATUS_CHANGE, link=reverse("core:results"))
@@ -429,6 +434,8 @@ def change_status(application, *, by, new_status, note=""):
     allowed_roles = MANUAL_TRANSITIONS.get((application.status, new_status))
     if allowed_roles is None:
         raise BusinessRuleError(f"Can't move an application from {application.status} to {new_status}.")
+    if by.role == User.Role.MANAGER:
+        raise BusinessRuleError("Programme staff accept or decline entries; the award manager doesn't.")
     if by.role not in allowed_roles:
         raise BusinessRuleError("Your role can't make this change.")
     check_can_work_on(by, application.award)

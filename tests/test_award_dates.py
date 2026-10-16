@@ -19,7 +19,7 @@ from apps.awards import services as award_services
 from apps.awards.models import Award
 from apps.core.services import BusinessRuleError
 
-from .factories import ApplicationFactory, AwardFactory, JudgeFactory, StaffFactory
+from .factories import ApplicationFactory, AwardFactory, JudgeFactory, ManagerFactory, StaffFactory
 
 TODAY = date(2026, 10, 14)
 
@@ -32,9 +32,9 @@ def _new_award(**fields):
 
 
 @pytest.mark.django_db
-def test_staff_can_open_an_award_with_only_a_form():
+def test_manager_can_open_an_award_with_only_a_form():
     award = _new_award()
-    award_services.set_status(award, by=StaffFactory(), status=Award.Status.OPEN)
+    award_services.set_status(award, by=ManagerFactory(awards=[award]), status=Award.Status.OPEN)
     assert award.status == Award.Status.OPEN
 
 
@@ -43,7 +43,7 @@ def test_an_award_without_a_form_cannot_open():
     award = _new_award()
     award.form_versions.all().delete()
     with pytest.raises(BusinessRuleError, match="Publish the application form"):
-        award_services.set_status(award, by=StaffFactory(), status=Award.Status.OPEN)
+        award_services.set_status(award, by=ManagerFactory(awards=[award]), status=Award.Status.OPEN)
 
 
 @pytest.mark.django_db
@@ -82,22 +82,22 @@ def test_award_closes_by_itself_after_its_closing_date_and_drafts_cannot_be_subm
 
 
 @pytest.mark.django_db
-def test_staff_cannot_reopen_an_award_whose_closing_date_has_passed():
+def test_manager_cannot_reopen_an_award_whose_closing_date_has_passed():
     award = _new_award(closes_on=timezone.localdate() - timedelta(1))
     with pytest.raises(BusinessRuleError, match="closing date has passed"):
-        award_services.set_status(award, by=StaffFactory(), status=Award.Status.OPEN)
+        award_services.set_status(award, by=ManagerFactory(awards=[award]), status=Award.Status.OPEN)
 
 
 @pytest.mark.django_db
 def test_judges_need_criteria_and_a_panel_first():
     award = _new_award()
-    award_services.set_status(award, by=StaffFactory(), status=Award.Status.OPEN)
+    award_services.set_status(award, by=ManagerFactory(awards=[award]), status=Award.Status.OPEN)
     report = ApplicationFactory(award=award)
     judge = JudgeFactory()
     with pytest.raises(BusinessRuleError, match="isn't ready for judging: Round 1 criteria"):
         assignments.assign(report, judge, by=StaffFactory())
     with pytest.raises(BusinessRuleError, match="Not ready for judging"):
-        award_services.set_status(award, by=StaffFactory(), status=Award.Status.JUDGING)
+        award_services.set_status(award, by=ManagerFactory(awards=[award]), status=Award.Status.JUDGING)
 
 
 @pytest.mark.django_db

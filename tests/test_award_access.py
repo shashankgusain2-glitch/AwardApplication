@@ -70,13 +70,14 @@ def test_staff_pages_show_only_their_awards(two):
         page = staff.get(reverse(name)).content.decode()
         assert "Beta Award" not in page and two["r_beta"].reference not in page, name
     assert "Alpha Award" in staff.get(reverse("awards:award_list")).content.decode()
-    for name in ("awards:award_edit", "awards:award_criteria", "awards:award_panel", "awards:form_edit",
-                 "awards:form_builder"):
+    for name in ("awards:form_edit", "awards:form_builder"):
         assert staff.get(reverse(name, args=[two["beta"].slug])).status_code == 404, name
         assert staff.get(reverse(name, args=[two["alpha"].slug])).status_code == 200, name
+    for name in ("awards:award_edit", "awards:award_criteria", "awards:award_panel"):   # set-up: the manager's job
+        assert staff.get(reverse(name, args=[two["alpha"].slug])).status_code == 403, name
     assert staff.get(reverse("awards:assign", args=[two["r_beta"].pk])).status_code == 404
-    response = staff.post(reverse("awards:award_status", args=[two["beta"].slug]), {"status": "closed"})
-    assert response.status_code == 404
+    response = staff.post(reverse("awards:award_status", args=[two["alpha"].slug]), {"status": "closed"})
+    assert response.status_code == 403
 
 
 @pytest.mark.django_db
@@ -95,7 +96,7 @@ def test_staff_cannot_assign_judges_or_reject_on_other_awards(two):
     with pytest.raises(BusinessRuleError, match="aren't on the team for Beta Award"):
         assignments.assign(two["r_beta"], judge, by=two["s_alpha"])
     with pytest.raises(BusinessRuleError, match="aren't on the team"):
-        applications.change_status(two["r_beta"], by=two["m_alpha"], new_status="rejected")
+        applications.change_status(two["r_beta"], by=two["s_alpha"], new_status="rejected", note="Not ours")
     assert assignments.assign(two["r_beta"], judge, by=two["s_beta"]).judge == judge
 
 
@@ -230,22 +231,39 @@ def test_manager_lands_on_the_staff_portal_with_a_team_step(two):
     assert response["Location"] == reverse("awards:staff_home")
     page = client.get(reverse("awards:award_edit", args=[two["alpha"].slug])).content.decode()
     assert reverse("awards:award_team", args=[two["alpha"].slug]) in page
-    staff_page = web(two["s_alpha"]).get(reverse("awards:award_edit", args=[two["alpha"].slug])).content.decode()
-    assert reverse("awards:award_team", args=[two["alpha"].slug]) not in staff_page
+    assert web(two["s_alpha"]).get(reverse("awards:award_edit", args=[two["alpha"].slug])).status_code == 403
     assert web(two["s_alpha"]).get(reverse("awards:award_team", args=[two["alpha"].slug])).status_code == 403
 
 
 @pytest.mark.django_db
-def test_award_managers_have_no_form_builder(two, client):
+def test_award_managers_approve_the_form_but_dont_edit_it(two, client):
     from .conftest import login
     manager = two["m_alpha"]
     manager.set_password("Test-pass-2026!")
     manager.save()
     login(client, manager.email, "Test-pass-2026!")
-    home = client.get(reverse("awards:staff_home")).content.decode()
-    assert "Form builder" not in home
     slug = two["r_alpha"].award.slug
-    assert client.get(reverse("awards:form_builder")).status_code == 403
+    assert client.get(reverse("awards:form_builder", args=[slug])).status_code == 200
     assert client.get(reverse("awards:form_edit", args=[slug])).status_code == 403
     page = client.get(reverse("awards:award_edit", args=[slug])).content.decode()
-    assert "2. Application form (staff)" in page and reverse("awards:form_edit", args=[slug]) not in page
+    assert "2. Application form (approve)" in page and reverse("awards:form_edit", args=[slug]) not in page
+
+
+@pytest.mark.django_db
+def test_award_managers_dont_assign_judges(two, client):
+    from apps.assignments import services as assignment_services
+    from apps.core.services import BusinessRuleError
+
+    from .conftest import login
+    from .factories import JudgeFactory
+    manager, report = two["m_alpha"], two["r_alpha"]
+    judge = JudgeFactory(awards=[report.award])
+    with pytest.raises(BusinessRuleError, match="award managers don't"):
+        assignment_services.assign(report, judge, by=manager)
+    manager.set_password("Test-pass-2026!")
+    manager.save()
+    login(client, manager.email, "Test-pass-2026!")
+    home = client.get(reverse("awards:staff_home")).content.decode()
+    assert "Assign judges" not in home and reverse("awards:assign") not in home
+    assert client.get(reverse("awards:assign")).status_code == 403
+    assert client.get(reverse("awards:assign", args=[report.pk])).status_code == 403
