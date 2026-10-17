@@ -6,8 +6,8 @@
 {% block user %}{% include "partials/user_chip.html" %}{% endblock %}
 
 {% block content %}
-{% if not profile %}
-  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>Add your organisation</strong>Fill your <a href="{% url 'entries:organisation' %}">organisation profile</a> (with GSTIN) so staff can verify it.</div></div>
+{% if not profile or not profile.gstin or not profile.holder_pan %}
+  <div class="callout callout-warning" style="margin-bottom:1.5rem"><div><strong>Add your organisation</strong>Fill your <a href="{% url 'entries:organisation' %}">organisation profile</a> with its GSTIN and PAN. You can't start or submit an application until they're filled in.</div></div>
 {% elif profile.verification_status == "pending" %}
   <div class="callout callout-info" style="margin-bottom:1.5rem"><div><strong>Staff are verifying your organisation</strong>You can fill and submit applications now. They go to judges once {{ profile.organisation_name }} is verified.</div></div>
 {% elif profile.verification_status == "rejected" %}

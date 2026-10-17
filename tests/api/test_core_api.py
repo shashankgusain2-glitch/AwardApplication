@@ -14,7 +14,15 @@ from apps.accounts.models import User
 from apps.assignments.models import JudgeAssignment
 
 from ..conftest import PASSWORD
-from ..factories import ApplicationFactory, AwardFactory, JudgeFactory, LeaderFactory, StaffFactory, UserFactory
+from ..factories import (
+    ApplicantProfileFactory,
+    ApplicationFactory,
+    AwardFactory,
+    JudgeFactory,
+    LeaderFactory,
+    StaffFactory,
+    UserFactory,
+)
 
 LOGIN = "/api/v1/auth/login/"
 
@@ -229,7 +237,7 @@ def test_deactivated_users_are_not_offered_as_judges(world, as_user):
 def test_deleting_a_draft_returns_an_empty_204(as_user):
     from apps.applications import services
     award = AwardFactory()
-    applicant = UserFactory()
+    applicant = ApplicantProfileFactory().user                # an organisation with its GSTIN and PAN
     draft = services.create_draft(applicant=applicant, award=award, title="Draft")
     response = as_user(applicant).delete(f"/api/v1/applications/{draft.id}/")
     assert response.status_code == 204

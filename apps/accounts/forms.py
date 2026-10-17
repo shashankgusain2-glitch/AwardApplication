@@ -41,12 +41,15 @@ class SignUpForm(forms.Form):
                                 help_text="At least 8 characters; not too common or all numbers.")
     password2 = forms.CharField(label="Confirm password", strip=False,
                                 widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}))
-    organisation_name = forms.CharField(label="Organisation name", max_length=200,
-                                        widget=forms.TextInput(attrs={"autocomplete": "organization"}))
-    gstin = forms.CharField(label="GSTIN", max_length=20, help_text="15 characters, like 27ABCDE1234F1Z5.",
+    # Marked * on the page: no account without the organisation, its GSTIN and the PAN.
+    organisation_name = forms.CharField(label="Organisation name *", max_length=200,
+                                        widget=forms.TextInput(attrs={"autocomplete": "organization"}),
+                                        help_text="Required.")
+    gstin = forms.CharField(label="GSTIN *", max_length=20,
+                            help_text="Required. 15 characters, like 27ABCDE1234F1Z5.",
                             error_messages={"required": "Enter the organisation's GSTIN."})
-    holder_pan = forms.CharField(label="PAN of authorised person", max_length=20,
-                                 help_text="10 characters, like ABCDE1234F.",
+    holder_pan = forms.CharField(label="PAN of authorised person *", max_length=20,
+                                 help_text="Required. 10 characters, like ABCDE1234F.",
                                  error_messages={"required": "Enter the PAN of the authorised person."})
 
     def clean_email(self):

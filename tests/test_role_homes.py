@@ -32,6 +32,7 @@ def real(applicant_client, judge_client, judge2_client):
     award = AwardFactory(name="Business Excellence Award", blind_judging=True)
     staff = StaffFactory()
     priya = User.objects.get(email=ACCOUNTS["applicant"])        # made by the login fixtures
+    ApplicantProfile.objects.filter(user=priya).delete()          # replace the login fixture's test organisation
     ApplicantProfileFactory(user=priya, organisation_name="Acme Precision Pvt Ltd")
     report_a = ApplicationFactory(applicant=priya, award=award, reference="BEA-2026-AAAAAA",
                                   content={"org": "Acme Precision Pvt Ltd", "city": "Pune", "story": "Less waste."})

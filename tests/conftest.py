@@ -38,6 +38,11 @@ def make_user(email, role, password=PASSWORD, **extra):
     if role == "manager":  # the test manager runs every award that has no manager yet
         from apps.awards.models import Award
         Award.objects.filter(manager=None).update(manager=user)
+    if role == "applicant":  # like a real sign-up: an organisation with its GSTIN and PAN
+        from apps.accounts.models import ApplicantProfile
+        n = ApplicantProfile.objects.count() + 1
+        ApplicantProfile.objects.create(user=user, organisation_name=f"Test Organisation {n}",
+                                        gstin=f"27TESTO{n:04d}T1Z5", holder_pan=f"TESTO{n:04d}T")
     return user
 
 

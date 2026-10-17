@@ -170,6 +170,8 @@ def application_form(request, slug=None):
                 messages.success(request, "Your request was sent to the programme staff.")
         except BusinessRuleError as error:
             messages.error(request, str(error))
+            if services.organisation_missing(request.user):
+                return redirect("entries:organisation")      # GSTIN or PAN missing: fill them in first
         section = request.POST.get("go") or request.POST.get("section") or "1"
         return redirect(f"{request.path}?section={section}")
 
