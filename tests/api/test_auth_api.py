@@ -69,11 +69,14 @@ def test_refresh_and_logout_blacklists_the_refresh_token(api):
 def test_register_creates_an_applicant_even_if_another_role_is_sent(api):
     r = api.post("/api/v1/auth/register/", {"email": "new@example.com", "name": "New Person",
                                             "password": "Strong-pass-123", "role": "leader",
-                                            "organisation_name": "New Co"}, format="json")
+                                            "organisation_name": "New Co", "gstin": "29qwert1234y1z9",
+                                            "holder_pan": "QWERT1234Y"}, format="json")
     assert r.status_code == 201
     user = User.objects.get(email="new@example.com")
     assert user.role == "applicant"
     assert user.applicant_profile.organisation_name == "New Co"
+    assert user.applicant_profile.gstin == "29QWERT1234Y1Z9"         # cleaned to upper case
+    assert user.applicant_profile.holder_pan == "QWERT1234Y"
     assert AccessToken(r.json()["data"]["access"])["role"] == "applicant"
 
 

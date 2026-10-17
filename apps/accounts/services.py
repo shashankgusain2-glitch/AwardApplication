@@ -20,16 +20,24 @@ def _check_new_email(email):
 
 
 @transaction.atomic
-def register_applicant(*, email, password, name, organisation_name=""):
-    """Self sign-up. Always creates an applicant, whatever the request says."""
+def register_applicant(*, email, password, name, organisation_name, gstin, holder_pan):
+    """
+    Self sign-up. Always creates an applicant, whatever the request says, with its
+    organisation profile: the organisation name, GSTIN and authorised person's PAN are required.
+    Raises a DRF ValidationError if those are missing or invalid.
+    """
+    from .api.serializers import ApplicantProfileSerializer
+
     _check_new_email(email)
     candidate = User(email=email, name=name)
     password_validation.validate_password(password, candidate)
+    organisation = ApplicantProfileSerializer(data={"organisation_name": organisation_name, "gstin": gstin,
+                                                    "holder_pan": holder_pan})
+    organisation.is_valid(raise_exception=True)   # before the account exists, so nothing half-made is left
     user = User.objects.create_user(email=email, password=password, name=name, role=User.Role.APPLICANT)
-    if organisation_name:
-        profile = ApplicantProfile.objects.create(user=user, organisation_name=organisation_name)
-        from .duplicates import scan
-        scan(profile)                          # flag a possible duplicate organisation for staff
+    profile = organisation.save(user=user)
+    from .duplicates import scan
+    scan(profile)                              # flag a possible duplicate organisation for staff
     record(user, "create", user, changes={"role": user.role, "via": "sign-up"})
     return user
 

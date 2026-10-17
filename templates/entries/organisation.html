@@ -23,11 +23,11 @@
     <div class="form-grid">
       {% include "entries/_field.html" with name="organisation_name" label="Registered name *" value=values.organisation_name error=errors.organisation_name %}
       <div class="field{% if errors.gstin %} field-invalid{% endif %}">
-        <label for="f-gstin">GSTIN</label>
+        <label for="f-gstin">GSTIN *</label>
         <input id="f-gstin" name="gstin" {% if errors.gstin %}aria-invalid="true" aria-describedby="err-gstin"{% endif %} type="text" maxlength="15" value="{{ values.gstin }}" {% if gstin_locked %}readonly{% endif %}>
         {% if errors.gstin %}<p class="hint field-error" id="err-gstin">⚠ {{ errors.gstin }}</p>{% else %}<p class="hint">15 characters, like 27ABCDE1234F1Z5. Locked once verified.</p>{% endif %}
       </div>
-      {% include "entries/_field.html" with name="holder_pan" label="PAN of authorised person" value=values.holder_pan error=errors.holder_pan %}
+      {% include "entries/_field.html" with name="holder_pan" label="PAN of authorised person *" value=values.holder_pan error=errors.holder_pan %}
       {% include "entries/_field.html" with name="sector" label="Sector" value=values.sector error=errors.sector %}
       <div class="field{% if errors.organisation_size %} field-invalid{% endif %}">
         <label for="f-size">Size</label>

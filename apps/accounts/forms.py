@@ -41,6 +41,13 @@ class SignUpForm(forms.Form):
                                 help_text="At least 8 characters; not too common or all numbers.")
     password2 = forms.CharField(label="Confirm password", strip=False,
                                 widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}))
+    organisation_name = forms.CharField(label="Organisation name", max_length=200,
+                                        widget=forms.TextInput(attrs={"autocomplete": "organization"}))
+    gstin = forms.CharField(label="GSTIN", max_length=20, help_text="15 characters, like 27ABCDE1234F1Z5.",
+                            error_messages={"required": "Enter the organisation's GSTIN."})
+    holder_pan = forms.CharField(label="PAN of authorised person", max_length=20,
+                                 help_text="10 characters, like ABCDE1234F.",
+                                 error_messages={"required": "Enter the PAN of the authorised person."})
 
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
@@ -59,9 +66,26 @@ class SignUpForm(forms.Form):
                 password_validation.validate_password(p1, candidate)
             except forms.ValidationError as error:
                 self.add_error("password1", error)
+        self._check_organisation(cleaned)
         return cleaned
+
+    def _check_organisation(self, cleaned):
+        """The same GSTIN and PAN rules as the organisation profile (format, one profile per GSTIN)."""
+        from .api.serializers import ApplicantProfileSerializer
+
+        fields = ("organisation_name", "gstin", "holder_pan")
+        if any(f not in cleaned for f in fields):
+            return                                     # already reported as missing
+        organisation = ApplicantProfileSerializer(data={f: cleaned[f] for f in fields})
+        if organisation.is_valid():
+            cleaned.update({f: organisation.validated_data[f] for f in fields})
+            return
+        for field, problems in organisation.errors.items():
+            self.add_error(field if field in fields else None, [str(p) for p in problems])
 
     def save(self):
         from .services import register_applicant
-        return register_applicant(email=self.cleaned_data["email"], password=self.cleaned_data["password1"],
-                                  name=self.cleaned_data["full_name"].strip())
+        data = self.cleaned_data
+        return register_applicant(email=data["email"], password=data["password1"], name=data["full_name"].strip(),
+                                  organisation_name=data["organisation_name"].strip(), gstin=data["gstin"],
+                                  holder_pan=data["holder_pan"])
