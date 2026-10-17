@@ -110,11 +110,14 @@ def test_applicant_home_shows_only_their_own_real_applications(real, applicant_c
 def test_new_applicant_home_is_empty(real):
     c = Client()
     c.post(reverse("accounts:signup"), {"full_name": "New Person", "email": "new@example.com",
-                                        "password1": "Strong-pass-123", "password2": "Strong-pass-123"})
+                                        "password1": "Strong-pass-123", "password2": "Strong-pass-123",
+                                        "organisation_name": "New Person Co", "gstin": "29QWERT1234Y1Z9",
+                                        "holder_pan": "QWERT1234Y"})
     page = c.get(reverse("entries:dashboard")).content.decode()
     assert "You have no applications yet" in page
     assert "BEA-2026" not in page
-    assert "Add your organisation" in page
+    assert "New Person Co" in page                               # the organisation given at sign-up
+    assert "Staff are verifying your organisation" in page
 
 
 @pytest.mark.django_db

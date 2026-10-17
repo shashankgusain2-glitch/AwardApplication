@@ -23,7 +23,8 @@ HOME = {"applicant": "entries:dashboard", "staff": "awards:staff_home",
 
 def _signup(client, **overrides):
     data = {"full_name": "Asha Rao", "email": "asha@newco.example",
-            "password1": "Strong-pass-123", "password2": "Strong-pass-123"}
+            "password1": "Strong-pass-123", "password2": "Strong-pass-123",
+            "organisation_name": "New Co Pvt Ltd", "gstin": "29QWERT1234Y1Z9", "holder_pan": "QWERT1234Y"}
     data.update(overrides)
     return client.post(reverse("accounts:signup"), data)
 

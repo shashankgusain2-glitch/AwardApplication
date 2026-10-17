@@ -71,7 +71,9 @@ class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
     name = serializers.CharField(max_length=150)
     password = serializers.CharField(write_only=True, style={"input_type": "password"})
-    organisation_name = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    organisation_name = serializers.CharField(max_length=200)
+    gstin = serializers.CharField(max_length=20)
+    holder_pan = serializers.CharField(max_length=20)
 
     def validate(self, attrs):
         if User.objects.filter(email__iexact=attrs["email"]).exists():
@@ -105,14 +107,29 @@ class ApplicantProfileSerializer(serializers.ModelSerializer):
                   "verified_at", "verification_note", "created_at", "updated_at"]
         read_only_fields = ["id", "user", "verification_status", "verified_at", "verification_note",
                             "created_at", "updated_at"]
+        # Every organisation must give its GSTIN and the authorised person's PAN (sign-up and profile alike).
+        extra_kwargs = {
+            "gstin": {"required": True, "allow_blank": False,
+                      "error_messages": {"required": "Enter the organisation's GSTIN.",
+                                         "blank": "Enter the organisation's GSTIN."}},
+            "holder_pan": {"required": True, "allow_blank": False,
+                           "error_messages": {"required": "Enter the PAN of the authorised person.",
+                                              "blank": "Enter the PAN of the authorised person."}},
+        }
 
     def validate_gstin(self, value):
         from apps.core.validators import validate_gstin
-        return validate_gstin(value) if value else value
+        value = validate_gstin(value)
+        others = ApplicantProfile.objects.filter(gstin=value)
+        if self.instance is not None:
+            others = others.exclude(pk=self.instance.pk)
+        if others.exists():
+            raise serializers.ValidationError("An organisation with this GSTIN is already registered.")
+        return value
 
     def validate_holder_pan(self, value):
         from apps.core.validators import validate_pan
-        return validate_pan(value) if value else value
+        return validate_pan(value)
 
     def validate(self, attrs):
         profile = self.instance

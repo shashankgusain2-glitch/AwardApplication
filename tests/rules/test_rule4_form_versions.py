@@ -99,7 +99,9 @@ def test_new_applications_use_the_new_version(seeded):
     from django.test import Client
     c = Client()
     c.post(reverse("accounts:signup"), {"full_name": "New Co", "email": "newco@example.com",
-                                        "password1": "Strong-pass-2026!x", "password2": "Strong-pass-2026!x"})
+                                        "password1": "Strong-pass-2026!x", "password2": "Strong-pass-2026!x",
+                                        "organisation_name": "New Co", "gstin": "29QWERT1234Y1Z9",
+                                        "holder_pan": "QWERT1234Y"})
     c.post(reverse("entries:form", args=["kaizen"]), {"action": "start", "title": "New entry"})
     assert Application.objects.get(applicant__email="newco@example.com").form_version.version == 2
 

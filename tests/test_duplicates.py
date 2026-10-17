@@ -49,7 +49,8 @@ def test_clean_name_drops_legal_words_and_punctuation():
 def test_signing_up_with_a_known_company_name_flags_it():
     profile("Coastal Marine Foods", "32AAAAA0003A1Z1")
     register_applicant(email="joseph@coastal.example", password=PASSWORD, name="Joseph",
-                       organisation_name="Coastal Marine Foods Pvt Ltd")
+                       organisation_name="Coastal Marine Foods Pvt Ltd", gstin="32BBBBB0003B1Z1",
+                       holder_pan="BBBBB0003B")
     pair = C.objects.get()
     assert pair.level == C.Level.HIGH and pair.status == C.Status.OPEN
 

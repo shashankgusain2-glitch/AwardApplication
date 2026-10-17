@@ -25,7 +25,9 @@ NEW = {"email": "new.org@example.com", "password": "Strong-pass-2026!x"}
 def _sign_up():
     c = Client()
     response = c.post(reverse("accounts:signup"), {"full_name": "Asha Rao", "email": NEW["email"],
-                                                   "password1": NEW["password"], "password2": NEW["password"]})
+                                                   "password1": NEW["password"], "password2": NEW["password"],
+                                                   "organisation_name": "Rao Castings", "gstin": "27RAOCA1234F1Z5",
+                                                   "holder_pan": "RAOCA1234F"})
     assert response.status_code == 302
     return c
 
@@ -60,7 +62,8 @@ def test_full_workflow_through_the_web_screens(seeded):
     # 1. Applicant: sign up, organisation profile, apply, submit
     applicant = _sign_up()
     response = applicant.post(reverse("entries:organisation"), {
-        "organisation_name": "Rao Castings Pvt Ltd", "gstin": "27RAOCA1234F1Z5", "city": "Kolhapur"})
+        "organisation_name": "Rao Castings Pvt Ltd", "gstin": "27RAOCA1234F1Z5", "holder_pan": "RAOCA1234F",
+        "city": "Kolhapur"})
     assert response.status_code == 302
     profile = ApplicantProfile.objects.get(user__email=NEW["email"])
     assert profile.verification_status == "pending"
@@ -177,7 +180,8 @@ def test_applicant_cannot_submit_with_missing_answers(seeded):
 @pytest.mark.django_db
 def test_bad_gstin_is_shown_on_the_organisation_form(seeded):
     applicant = _sign_up()
-    response = applicant.post(reverse("entries:organisation"), {"organisation_name": "X", "gstin": "BAD"})
+    response = applicant.post(reverse("entries:organisation"), {"organisation_name": "X", "gstin": "BAD",
+                                                                 "holder_pan": "RAOCA1234F"})
     assert response.status_code == 200
     assert "Enter a valid 15-character GSTIN" in response.content.decode()
-    assert not ApplicantProfile.objects.filter(user__email=NEW["email"]).exists()
+    assert ApplicantProfile.objects.get(user__email=NEW["email"]).gstin == "27RAOCA1234F1Z5"   # unchanged
