@@ -108,6 +108,7 @@ class ApplicantProfileFactory(factory.django.DjangoModelFactory):
     user = factory.SubFactory(UserFactory)
     organisation_name = factory.Sequence(lambda n: f"Organisation {n} Pvt Ltd")
     gstin = factory.Sequence(lambda n: f"27AAAAA{n:04d}A1Z5")
+    holder_pan = factory.Sequence(lambda n: f"AAAAA{n:04d}A")
     verification_status = ApplicantProfile.Verification.VERIFIED
 
 

@@ -62,10 +62,27 @@ def set_status(application, new_status, *, by=None, note=""):
     return application
 
 
+def organisation_missing(applicant):
+    """What the applicant's organisation profile still lacks before they may apply ([] if nothing)."""
+    profile = getattr(applicant, "applicant_profile", None)
+    missing = [label for field, label in (("gstin", "GSTIN"), ("holder_pan", "PAN"))
+               if not (profile and getattr(profile, field))]
+    return missing
+
+
+def _check_organisation(applicant):
+    """No application can be started or submitted until the organisation has its GSTIN and PAN."""
+    missing = organisation_missing(applicant)
+    if missing:
+        raise BusinessRuleError(f"Add your organisation's {' and '.join(missing)} on your Organisation profile "
+                                f"first. You can't apply without them.")
+
+
 @transaction.atomic
 def create_draft(*, applicant, award, title):
     if applicant.role != User.Role.APPLICANT:
         raise BusinessRuleError("Only applicants can create applications.")
+    _check_organisation(applicant)
     if award.status != award.Status.OPEN:
         raise BusinessRuleError("This award isn't open for applications.")
     form = award.current_form
@@ -130,6 +147,7 @@ def submit(application, *, by):
         raise BusinessRuleError("You can only submit your own application.")
     if not can_edit(application):
         raise BusinessRuleError("This application is already submitted.")
+    _check_organisation(by)
     award = application.award
     if application.status == S.DRAFT and award.status != award.Status.OPEN:
         closed = f" (it closed on {award.closes_on:%d %b %Y})" if award.closes_on else ""
