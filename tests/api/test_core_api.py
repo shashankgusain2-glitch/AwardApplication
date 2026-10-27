@@ -91,6 +91,15 @@ def test_leader_cannot_lock_themselves_out(as_user):
     assert leader.is_active and leader.role == "leader"
 
 
+@pytest.mark.django_db
+def test_leader_cannot_create_an_applicant_without_gstin_and_pan(as_user):
+    response = as_user(LeaderFactory()).post("/api/v1/users/", {"email": "new@example.com", "name": "New Person",
+                                                                "role": "applicant"}, format="json")
+    assert response.status_code == 400
+    assert "GSTIN and PAN" in response.json()["message"]
+    assert not User.objects.filter(email="new@example.com").exists()
+
+
 # --- Bulk assign ----------------------------------------------------------------------
 
 @pytest.mark.django_db

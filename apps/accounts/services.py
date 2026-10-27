@@ -54,6 +54,9 @@ def create_account(*, created_by, email, name, role, password=None, **judge_fiel
         raise BusinessRuleError("Only a leader can create accounts. Award managers can add programme staff.")
     if role not in User.Role.values:
         raise BusinessRuleError("Unknown role.")
+    if role == User.Role.APPLICANT:
+        # An applicant account needs its organisation's GSTIN and PAN, so applicants only sign up themselves.
+        raise BusinessRuleError("Applicants sign up themselves with their organisation's GSTIN and PAN.")
     _check_new_email(email)
     if password:
         password_validation.validate_password(password, User(email=email, name=name))
